@@ -1,6 +1,6 @@
 // Server-side fetch to FastAPI route
 async function getHealth() {
-  let baseUrl = "https://my-next-fastapi-app.vercel.app";
+  let baseUrl = "https://ai-recruitment-app-pi.vercel.app";
   if (process.env.NODE_ENV === "development") {
     baseUrl = "http://localhost:3000";
   }
