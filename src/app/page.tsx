@@ -1,7 +1,12 @@
 // Server-side fetch to FastAPI route
 async function getHealth() {
-  const res = await fetch("http://localhost:3000/api/py/health", {
-    // Uses Next.js rewrite proxy to forward to FastAPI
+  let baseUrl = "https://my-next-fastapi-app.vercel.app";
+  if (process.env.NODE_ENV === "development") {
+    baseUrl = "http://localhost:3000";
+  }
+
+  const res = await fetch(`${baseUrl}/api/health`, {
+    // Uses Vercel serverless function
     cache: "no-store",
   });
   console.log("Health response status:", res);

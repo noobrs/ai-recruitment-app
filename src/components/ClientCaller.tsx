@@ -15,8 +15,8 @@ export default function ClientCaller() {
         setLoading(true);
         setData(null);
         try {
-            // Relative path uses Next.js rewrite proxy to forward to FastAPI
-            const res = await fetch("/api/py/health", { cache: "no-store" });
+            // Calls Vercel serverless function
+            const res = await fetch("/api/health", { cache: "no-store" });
             const json = await res.json();
             setData(json);
         } catch (e) {
