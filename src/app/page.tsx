@@ -15,6 +15,7 @@ async function getHealth() {
 }
 
 import ClientCaller from "../components/ClientCaller";
+import SupabaseTest from "../components/SupabaseTest";
 
 export default async function Home() {
   const health = await getHealth();
@@ -43,6 +44,10 @@ export default async function Home() {
       <section>
         <h2 style={{ fontSize: 18, fontWeight: 600 }}>Client Component call</h2>
         <ClientCaller />
+      </section>
+
+      <section style={{ marginTop: 24 }}>
+        <SupabaseTest />
       </section>
     </main>
   );
