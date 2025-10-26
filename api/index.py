@@ -21,7 +21,7 @@ async def test_supabase():
     try:
         # This will fail if no tables exist, but shows connection works
         # Replace 'your_table_name' with an actual table name from your database
-        response = supabase.table('your_table_name').select("*").limit(1).execute()
+        response = supabase.table('users').select("*").limit(1).execute()
         return {
             "status": "connected",
             "message": "Supabase connection successful",

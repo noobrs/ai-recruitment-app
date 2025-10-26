@@ -9,7 +9,7 @@ load_dotenv(dotenv_path=env_path)
 
 # Get Supabase credentials
 url: str = os.environ.get("NEXT_PUBLIC_SUPABASE_URL", "")
-key: str = os.environ.get("SUPABASE_SERVICE_ROLE_KEY") or os.environ.get("NEXT_PUBLIC_SUPABASE_ANON_KEY", "")
+key: str = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
 
 # Validate credentials
 if not url:
