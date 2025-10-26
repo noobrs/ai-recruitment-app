@@ -17,7 +17,7 @@ export default function SupabaseTest() {
             // Example: Test connection by querying a table
             // Replace 'your_table_name' with an actual table from your database
             const { data, error } = await supabase
-                .from('your_table_name')
+                .from('users')
                 .select('*')
                 .limit(5);
 
