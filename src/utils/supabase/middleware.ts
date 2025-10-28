@@ -61,17 +61,39 @@ export async function updateSession(request: NextRequest) {
 
     // If user is logged in
     if (user) {
-        // Get user role from database
+        // Get user role and status from database
         const { data: userData } = await supabase
             .from('users')
-            .select('role')
+            .select('role, status')
             .eq('id', user.id)
             .single()
 
         const userRole = userData?.role
+        const userStatus = userData?.status
+
+        // Check if user needs to complete onboarding
+        if (userStatus === 'pending' || !userRole) {
+            // User hasn't completed onboarding
+            const intendedRole = user.user_metadata?.role || 'jobseeker'
+            const onboardingPath = intendedRole === 'jobseeker'
+                ? '/auth/jobseeker/onboarding'
+                : '/auth/recruiter/onboarding'
+
+            // Allow access to onboarding page
+            if (pathname === onboardingPath) {
+                return supabaseResponse
+            }
+
+            // Redirect to onboarding if trying to access other routes
+            if (!isAuthRoute && !isPublicRoute) {
+                const url = request.nextUrl.clone()
+                url.pathname = onboardingPath
+                return NextResponse.redirect(url)
+            }
+        }
 
         // Redirect if accessing wrong dashboard
-        if (isJobSeekerRoute && userRole !== 'job_seeker') {
+        if (isJobSeekerRoute && userRole !== 'jobseeker') {
             const url = request.nextUrl.clone()
             url.pathname = '/auth/jobseeker/login'
             return NextResponse.redirect(url)
@@ -83,10 +105,10 @@ export async function updateSession(request: NextRequest) {
             return NextResponse.redirect(url)
         }
 
-        // Redirect logged-in users away from auth pages to their dashboard
-        if (isAuthRoute) {
+        // Redirect logged-in users away from auth pages to their dashboard (only if onboarded)
+        if (isAuthRoute && userStatus === 'active' && userRole) {
             const url = request.nextUrl.clone()
-            url.pathname = userRole === 'job_seeker'
+            url.pathname = userRole === 'jobseeker'
                 ? '/jobseeker/dashboard'
                 : '/recruiter/dashboard'
             return NextResponse.redirect(url)

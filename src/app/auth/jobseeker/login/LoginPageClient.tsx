@@ -8,16 +8,16 @@ export default function LoginPageClient() {
         const email = formData.get('email') as string;
         const password = formData.get('password') as string;
 
-        return await signIn(email, password, 'job_seeker');
+        return await signIn(email, password, 'jobseeker');
     };
 
     const handleGoogleSignIn = async () => {
-        return await signInWithGoogle('job_seeker');
+        return await signInWithGoogle('jobseeker');
     };
 
     return (
         <AuthForm
-            role="job_seeker"
+            role="jobseeker"
             mode="login"
             onSubmit={handleSubmit}
             onGoogleSignIn={handleGoogleSignIn}

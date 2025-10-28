@@ -16,7 +16,7 @@ export default async function JobSeekerDashboard() {
         .eq('id', user.id)
         .single();
 
-    if (!userData || userData.role !== 'job_seeker') {
+    if (!userData || userData.role !== 'jobseeker') {
         redirect('/auth/jobseeker/login');
     }
 

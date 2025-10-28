@@ -15,7 +15,7 @@ export default async function JobSeekerLoginPage() {
             .eq('id', user.id)
             .single();
 
-        if (userData?.role === 'job_seeker') {
+        if (userData?.role === 'jobseeker') {
             redirect('/jobseeker/dashboard');
         } else if (userData?.role === 'recruiter') {
             redirect('/recruiter/dashboard');

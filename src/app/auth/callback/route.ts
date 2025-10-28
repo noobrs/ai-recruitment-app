@@ -4,8 +4,15 @@ import { NextResponse } from 'next/server';
 export async function GET(request: Request) {
     const requestUrl = new URL(request.url);
     const code = requestUrl.searchParams.get('code');
-    const role = requestUrl.searchParams.get('role') as 'job_seeker' | 'recruiter' | null;
+    const role = requestUrl.searchParams.get('role') as 'jobseeker' | 'recruiter' | null;
     const origin = process.env.NEXT_PUBLIC_SITE_URL || requestUrl.origin;
+
+    // Helper to convert role to URL path
+    const roleToPath = (r: 'jobseeker' | 'recruiter' | null) => {
+        if (r === 'jobseeker') return 'jobseeker';
+        if (r === 'recruiter') return 'recruiter';
+        return 'jobseeker'; // default
+    };
 
     if (code) {
         const supabase = await createClient();
@@ -14,98 +21,56 @@ export async function GET(request: Request) {
         const { data: { user }, error: authError } = await supabase.auth.exchangeCodeForSession(code);
 
         if (authError || !user) {
-            return NextResponse.redirect(`${origin}/auth/${role || 'jobseeker'}/login?error=auth_failed`);
+            return NextResponse.redirect(`${origin}/auth/${roleToPath(role)}/login?error=auth_failed`);
         }
 
         // Check if user record exists
         const { data: existingUser } = await supabase
             .from('users')
-            .select('id, role')
+            .select('id, role, status')
             .eq('id', user.id)
             .single();
 
         if (existingUser) {
-            // User exists - verify role matches
-            if (role && existingUser.role !== role) {
-                await supabase.auth.signOut();
-                return NextResponse.redirect(
-                    `${origin}/auth/${role}/login?error=Please use the ${role.replace('_', ' ')} login`
-                );
+            // User exists - check if onboarding is complete
+            if (existingUser.status === 'active' && existingUser.role) {
+                // Onboarding complete - verify role matches
+                if (role && existingUser.role !== role) {
+                    await supabase.auth.signOut();
+                    return NextResponse.redirect(
+                        `${origin}/auth/${roleToPath(role)}/login?error=Please use the ${role.replace('_', ' ')} login`
+                    );
+                }
+
+                // Redirect to appropriate dashboard
+                const dashboard = existingUser.role === 'jobseeker' ? '/jobseeker/dashboard' : '/recruiter/dashboard';
+                return NextResponse.redirect(`${origin}${dashboard}`);
             }
 
-            // Redirect to appropriate dashboard
-            const dashboard = existingUser.role === 'job_seeker' ? '/jobseeker/dashboard' : '/recruiter/dashboard';
-            return NextResponse.redirect(`${origin}${dashboard}`);
+            // User exists but onboarding incomplete - redirect to onboarding
+            // Use the role from database if available, otherwise use role from URL
+            const userRole = existingUser.role || role;
+            const onboardingPath = roleToPath(userRole as 'jobseeker' | 'recruiter');
+            return NextResponse.redirect(`${origin}/auth/${onboardingPath}/onboarding`);
         }
 
-        // New OAuth user - create user profile with specified role
+        // New OAuth user - database trigger already created basic user record
+        // Store intended role in user metadata and redirect to onboarding
         if (!role) {
             await supabase.auth.signOut();
             return NextResponse.redirect(`${origin}/auth/jobseeker/login?error=Role not specified`);
         }
 
-        // Extract name from user metadata
-        const fullName = user.user_metadata?.full_name || user.user_metadata?.name || '';
-        const nameParts = fullName.split(' ');
-        const firstName = nameParts[0] || '';
-        const lastName = nameParts.slice(1).join(' ') || '';
+        // Update user metadata with intended role
+        await supabase.auth.updateUser({
+            data: { role: role }
+        });
 
-        // Create user record
-        const { error: userError } = await supabase
-            .from('users')
-            .insert({
-                id: user.id,
-                email: user.email!,
-                first_name: firstName,
-                last_name: lastName,
-                role: role,
-            });
-
-        if (userError) {
-            await supabase.auth.signOut();
-            return NextResponse.redirect(`${origin}/auth/${role}/login?error=Failed to create profile`);
-        }
-
-        // Create role-specific profile
-        if (role === 'job_seeker') {
-            const { error: jobSeekerError } = await supabase
-                .from('job_seeker')
-                .insert({
-                    user_id: user.id,
-                });
-
-            if (jobSeekerError) {
-                await supabase.auth.signOut();
-                return NextResponse.redirect(`${origin}/auth/${role}/login?error=Failed to create job seeker profile`);
-            }
-
-            return NextResponse.redirect(`${origin}/jobseeker/dashboard`);
-        } else if (role === 'recruiter') {
-            // For OAuth recruiter sign-up, we cannot create recruiter profile without company_id
-            // We need to redirect to onboarding/setup page where they can select/create company
-            // For now, we'll just create the user record and redirect to a setup page
-            // You'll need to create this onboarding page later
-
-            // Option 1: Redirect to onboarding (recommended)
-            return NextResponse.redirect(`${origin}/recruiter/onboarding?new_user=true`);
-
-            // Option 2: Create with a default/placeholder company (not recommended)
-            // const { error: recruiterError } = await supabase
-            //     .from('recruiter')
-            //     .insert({
-            //         user_id: user.id,
-            //         company_id: 1, // Default company ID
-            //     });
-
-            // if (recruiterError) {
-            //     await supabase.auth.signOut();
-            //     return NextResponse.redirect(`${origin}/auth/${role}/login?error=Failed to create recruiter profile`);
-            // }
-
-            // return NextResponse.redirect(`${origin}/recruiter/dashboard`);
-        }
+        // Redirect to onboarding to complete profile
+        const onboardingPath = roleToPath(role);
+        return NextResponse.redirect(`${origin}/auth/${onboardingPath}/onboarding`);
     }
 
     // No code provided - redirect back to login
-    return NextResponse.redirect(`${origin}/auth/${role || 'jobseeker'}/login`);
+    return NextResponse.redirect(`${origin}/auth/${roleToPath(role)}/login`);
 }

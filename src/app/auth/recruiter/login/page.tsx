@@ -17,7 +17,7 @@ export default async function RecruiterLoginPage() {
 
         if (userData?.role === 'recruiter') {
             redirect('/recruiter/dashboard');
-        } else if (userData?.role === 'job_seeker') {
+        } else if (userData?.role === 'jobseeker') {
             redirect('/jobseeker/dashboard');
         }
     }

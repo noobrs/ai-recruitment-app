@@ -4,10 +4,10 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 interface AuthFormProps {
-    role: 'job_seeker' | 'recruiter';
+    role: 'jobseeker' | 'recruiter';
     mode: 'login' | 'register';
     onSubmit: (formData: FormData) => Promise<{ error?: string }>;
-    onGoogleSignIn: () => Promise<{ error?: string }>;
+    onGoogleSignIn: () => Promise<{ error?: string; url?: string }>;
 }
 
 export default function AuthForm({ role, mode, onSubmit, onGoogleSignIn }: AuthFormProps) {
@@ -15,7 +15,7 @@ export default function AuthForm({ role, mode, onSubmit, onGoogleSignIn }: AuthF
     const [error, setError] = useState<string | null>(null);
     const router = useRouter();
 
-    const roleLabel = role === 'job_seeker' ? 'Job Seeker' : 'Recruiter';
+    const roleLabel = role === 'jobseeker' ? 'Job Seeker' : 'Recruiter';
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -29,7 +29,14 @@ export default function AuthForm({ role, mode, onSubmit, onGoogleSignIn }: AuthF
             if (result.error) {
                 setError(result.error);
             }
-        } catch {
+            // If successful, redirect() will be called
+        } catch (error) {
+            // Check if this is a Next.js redirect (which is expected)
+            if (error && typeof error === 'object' && 'digest' in error) {
+                // This is a Next.js redirect - let it propagate
+                throw error;
+            }
+            // Only show error for actual errors
             setError('An unexpected error occurred');
         } finally {
             setIsLoading(false);
@@ -45,8 +52,10 @@ export default function AuthForm({ role, mode, onSubmit, onGoogleSignIn }: AuthF
             if (result.error) {
                 setError(result.error);
                 setIsLoading(false);
+            } else if (result.url) {
+                // Redirect to Google OAuth URL
+                window.location.href = result.url;
             }
-            // If successful, user will be redirected to Google
         } catch {
             setError('An unexpected error occurred');
             setIsLoading(false);
@@ -202,12 +211,12 @@ export default function AuthForm({ role, mode, onSubmit, onGoogleSignIn }: AuthF
                         </button>
                     </p>
                     <p className="text-sm text-gray-600">
-                        {role === 'job_seeker' ? 'Are you a recruiter? ' : 'Are you a job seeker? '}
+                        {role === 'jobseeker' ? 'Are you a recruiter? ' : 'Are you a job seeker? '}
                         <button
-                            onClick={() => router.push(`/auth/${role === 'job_seeker' ? 'recruiter' : 'jobseeker'}/login`)}
+                            onClick={() => router.push(`/auth/${role === 'jobseeker' ? 'recruiter' : 'jobseeker'}/login`)}
                             className="font-medium text-indigo-600 hover:text-indigo-500"
                         >
-                            {role === 'job_seeker' ? 'Recruiter login' : 'Job seeker login'}
+                            {role === 'jobseeker' ? 'Recruiter login' : 'Job seeker login'}
                         </button>
                     </p>
                 </div>

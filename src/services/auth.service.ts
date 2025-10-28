@@ -1,7 +1,7 @@
 import { createClient } from '@/utils/supabase/server';
 import { User } from '@/types';
 
-export type UserRole = 'job_seeker' | 'recruiter';
+export type UserRole = 'jobseeker' | 'recruiter';
 
 /**
  * Get the current authenticated user
@@ -42,7 +42,7 @@ export async function getCurrentUserRole(): Promise<UserRole | null> {
  */
 export async function isJobSeeker(): Promise<boolean> {
     const role = await getCurrentUserRole();
-    return role === 'job_seeker';
+    return role === 'jobseeker';
 }
 
 /**
@@ -60,7 +60,7 @@ export async function getCurrentJobSeeker() {
     const supabase = await createClient();
     const user = await getCurrentUser();
 
-    if (!user || user.role !== 'job_seeker') {
+    if (!user || user.role !== 'jobseeker') {
         return null;
     }
 
