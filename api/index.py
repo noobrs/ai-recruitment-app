@@ -11,11 +11,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.get("/api/health")
+@app.get("/api/py/health")
 def health():
-    return {"ok": True}
+    return {"ok": True, "service": "fastapi"}
 
-@app.get("/api/test-supabase")
+@app.get("/api/py/test-supabase")
 async def test_supabase():
     """Test Supabase connection by listing tables"""
     try:
