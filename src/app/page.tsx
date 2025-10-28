@@ -1,3 +1,5 @@
+import { getUserById } from "@/types/jobseeker"
+
 type HealthResponse = {
   ok: boolean
   service: string
@@ -23,6 +25,7 @@ async function getHealth(): Promise<HealthResponse | null> {
 export default async function Home() {
 
   const health = await getHealth()
+  const user = await getUserById('some-user-id')
 
   return (
     <main
@@ -37,6 +40,7 @@ export default async function Home() {
       }}
     >
       <div>{health?.ok ? health.service : 'Service is down'}</div>
+      <div>{user?.email}</div>
     </main>
   )
 }
