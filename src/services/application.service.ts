@@ -1,5 +1,5 @@
 import { createClient } from '@/utils/supabase/server';
-import { Application } from '@/types';
+import { Application, ApplicationStatus, ApplicationInsert } from '@/types';
 
 /**
  * Get an application by ID
@@ -77,14 +77,7 @@ export async function getBookmarkedApplications(jobSeekerId: number): Promise<Ap
 /**
  * Create a new application
  */
-export async function createApplication(application: {
-    job_id: number;
-    job_seeker_id: number;
-    resume_id: number;
-    status?: string | null;
-    match_score?: number | null;
-    is_bookmark?: boolean | null;
-}): Promise<Application | null> {
+export async function createApplication(application: ApplicationInsert): Promise<Application | null> {
     const supabase = await createClient();
     const { data, error } = await supabase
         .from('application')
@@ -102,7 +95,7 @@ export async function createApplication(application: {
 /**
  * Update application status
  */
-export async function updateApplicationStatus(applicationId: number, status: string): Promise<Application | null> {
+export async function updateApplicationStatus(applicationId: number, status: ApplicationStatus): Promise<Application | null> {
     const supabase = await createClient();
     const { data, error } = await supabase
         .from('application')

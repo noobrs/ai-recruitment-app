@@ -1,5 +1,3 @@
-import { getUserById } from "@/services/user.service"
-
 type HealthResponse = {
   ok: boolean
   service: string
@@ -25,22 +23,10 @@ async function getHealth(): Promise<HealthResponse | null> {
 export default async function Home() {
 
   const health = await getHealth()
-  const user = await getUserById('some-user-id')
 
   return (
-    <main
-      style={{
-        minHeight: '100vh',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '2.5rem',
-        padding: '3rem 1.25rem 4rem 1.25rem',
-        background: '#f8fafc',
-        fontFamily: 'ui-sans-serif, system-ui, -apple-system',
-      }}
-    >
-      <div>{health?.ok ? health.service : 'Service is down'}</div>
-      <div>{user?.email}</div>
+    <main>
+      <div>{health?.ok ? 'Service is operational' : 'Service is down'}</div>
     </main>
   )
 }

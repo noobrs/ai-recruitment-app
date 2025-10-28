@@ -8,14 +8,14 @@ export async function updateSession(request: NextRequest) {
 
     const supabase = createServerClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
         {
             cookies: {
                 getAll() {
                     return request.cookies.getAll()
                 },
                 setAll(cookiesToSet) {
-                    cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value))
+                    cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
                     supabaseResponse = NextResponse.next({
                         request,
                     })
@@ -27,40 +27,71 @@ export async function updateSession(request: NextRequest) {
         }
     )
 
-    // Do not run code between createServerClient and
-    // supabase.auth.getUser(). A simple mistake could make it very hard to debug
-    // issues with users being randomly logged out.
-
-    // IMPORTANT: DO NOT REMOVE auth.getUser()
-
+    // Get the user
     const {
         data: { user },
     } = await supabase.auth.getUser()
 
-    if (
-        !user &&
-        !request.nextUrl.pathname.startsWith('/login') &&
-        !request.nextUrl.pathname.startsWith('/auth') &&
-        !request.nextUrl.pathname.startsWith('/error')
-    ) {
-        // no user, potentially respond by redirecting the user to the login page
+    const pathname = request.nextUrl.pathname
+
+    // Define protected routes
+    const isJobSeekerRoute = pathname.startsWith('/jobseeker')
+    const isRecruiterRoute = pathname.startsWith('/recruiter')
+    const isAuthRoute = pathname.startsWith('/auth')
+    const isLandingPage = pathname === '/'
+    const isPublicRoute = isLandingPage || pathname.startsWith('/_next') || pathname.startsWith('/api')
+
+    // Allow public routes for everyone
+    if (isPublicRoute) {
+        return supabaseResponse
+    }
+
+    // If user is not logged in and trying to access protected routes
+    if (!user && (isJobSeekerRoute || isRecruiterRoute)) {
         const url = request.nextUrl.clone()
-        url.pathname = '/login'
+
+        if (isJobSeekerRoute) {
+            url.pathname = '/auth/jobseeker/login'
+        } else if (isRecruiterRoute) {
+            url.pathname = '/auth/recruiter/login'
+        }
+
         return NextResponse.redirect(url)
     }
 
-    // IMPORTANT: You *must* return the supabaseResponse object as it is.
-    // If you're creating a new response object with NextResponse.next() make sure to:
-    // 1. Pass the request in it, like so:
-    //    const myNewResponse = NextResponse.next({ request })
-    // 2. Copy over the cookies, like so:
-    //    myNewResponse.cookies.setAll(supabaseResponse.cookies.getAll())
-    // 3. Change the myNewResponse object to fit your needs, but avoid changing
-    //    the cookies!
-    // 4. Finally:
-    //    return myNewResponse
-    // If this is not done, you may be causing the browser and server to go out
-    // of sync and terminate the user's session prematurely!
+    // If user is logged in
+    if (user) {
+        // Get user role from database
+        const { data: userData } = await supabase
+            .from('users')
+            .select('role')
+            .eq('id', user.id)
+            .single()
+
+        const userRole = userData?.role
+
+        // Redirect if accessing wrong dashboard
+        if (isJobSeekerRoute && userRole !== 'job_seeker') {
+            const url = request.nextUrl.clone()
+            url.pathname = '/auth/jobseeker/login'
+            return NextResponse.redirect(url)
+        }
+
+        if (isRecruiterRoute && userRole !== 'recruiter') {
+            const url = request.nextUrl.clone()
+            url.pathname = '/auth/recruiter/login'
+            return NextResponse.redirect(url)
+        }
+
+        // Redirect logged-in users away from auth pages to their dashboard
+        if (isAuthRoute) {
+            const url = request.nextUrl.clone()
+            url.pathname = userRole === 'job_seeker'
+                ? '/jobseeker/dashboard'
+                : '/recruiter/dashboard'
+            return NextResponse.redirect(url)
+        }
+    }
 
     return supabaseResponse
 }

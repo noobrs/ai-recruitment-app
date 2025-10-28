@@ -1,5 +1,5 @@
 import { createClient } from '@/utils/supabase/server';
-import { Resume } from '@/types';
+import { Resume, ResumeInsert, ResumeUpdate, ResumeStatus } from '@/types';
 
 /**
  * Get a resume by ID
@@ -59,17 +59,7 @@ export async function getProfileResume(jobSeekerId: number): Promise<Resume | nu
 /**
  * Create a new resume
  */
-export async function createResume(resume: {
-    job_seeker_id: number;
-    original_file_path: string;
-    redacted_file_path?: string | null;
-    extracted_skills?: string | null;
-    extracted_experiences?: string | null;
-    extracted_education?: string | null;
-    feedback?: string | null;
-    status?: string | null;
-    is_profile?: boolean | null;
-}): Promise<Resume | null> {
+export async function createResume(resume: ResumeInsert): Promise<Resume | null> {
     const supabase = await createClient();
     const { data, error } = await supabase
         .from('resume')
@@ -87,15 +77,7 @@ export async function createResume(resume: {
 /**
  * Update a resume
  */
-export async function updateResume(resumeId: number, updates: {
-    redacted_file_path?: string | null;
-    extracted_skills?: string | null;
-    extracted_experiences?: string | null;
-    extracted_education?: string | null;
-    feedback?: string | null;
-    status?: string | null;
-    is_profile?: boolean | null;
-}): Promise<Resume | null> {
+export async function updateResume(resumeId: number, updates: ResumeUpdate): Promise<Resume | null> {
     const supabase = await createClient();
     const { data, error } = await supabase
         .from('resume')

@@ -1,5 +1,5 @@
 import { createClient } from '@/utils/supabase/server';
-import { Job, JobInsert, JobUpdate } from '@/types';
+import { Job, JobInsert, JobUpdate, JobStatus } from '@/types';
 
 /**
  * Get a job by ID
@@ -62,7 +62,7 @@ export async function getActiveJobs(): Promise<Job[]> {
     const { data, error } = await supabase
         .from('job')
         .select('*')
-        .eq('job_status', 'active')
+        .eq('job_status', 'open' as JobStatus)
         .order('created_at', { ascending: false });
 
     if (error) {

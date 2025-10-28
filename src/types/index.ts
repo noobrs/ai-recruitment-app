@@ -10,6 +10,14 @@ export type TablesInsert<T extends keyof Database['public']['Tables']> =
 export type TablesUpdate<T extends keyof Database['public']['Tables']> =
     Database['public']['Tables'][T]['Update'];
 
+// Enum types
+export type UserRole = Database['public']['Enums']['user_role_enum'];
+export type UserStatus = Database['public']['Enums']['user_status_enum'];
+export type ApplicationStatus = Database['public']['Enums']['application_status_enum'];
+export type JobStatus = Database['public']['Enums']['job_status_enum'];
+export type ResumeStatus = Database['public']['Enums']['resume_status_enum'];
+export type NotificationType = Database['public']['Enums']['notification_type_enum'];
+
 // Table-specific types
 export type User = Tables<'users'>;
 export type JobSeeker = Tables<'job_seeker'>;

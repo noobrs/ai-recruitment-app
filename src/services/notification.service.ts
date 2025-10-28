@@ -1,5 +1,5 @@
 import { createClient } from '@/utils/supabase/server';
-import { Notification } from '@/types';
+import { Notification, NotificationType, NotificationInsert } from '@/types';
 
 /**
  * Get a notification by ID
@@ -59,7 +59,7 @@ export async function getUnreadNotifications(userId: string): Promise<Notificati
 /**
  * Get notifications by type
  */
-export async function getNotificationsByType(userId: string, type: string): Promise<Notification[]> {
+export async function getNotificationsByType(userId: string, type: NotificationType): Promise<Notification[]> {
     const supabase = await createClient();
     const { data, error } = await supabase
         .from('notification')
@@ -78,12 +78,7 @@ export async function getNotificationsByType(userId: string, type: string): Prom
 /**
  * Create a new notification
  */
-export async function createNotification(notification: {
-    user_id: string;
-    message: string;
-    type?: string | null;
-    application_id?: number | null;
-}): Promise<Notification | null> {
+export async function createNotification(notification: NotificationInsert): Promise<Notification | null> {
     const supabase = await createClient();
     const { data, error } = await supabase
         .from('notification')
