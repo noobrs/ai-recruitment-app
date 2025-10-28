@@ -1,4 +1,4 @@
-import { getUserById } from "@/types/jobseeker"
+import { getUserById } from "@/services/user.service"
 
 type HealthResponse = {
   ok: boolean
