@@ -2,5 +2,15 @@ fastapi
 uvicorn
 python-multipart
 pydantic
+pydantic-settings
 supabase
 python-dotenv
+httpx
+
+spacy
+spacy-layout
+gliner
+torch
+pymupdf
+opencv-python-headless
+Pillow

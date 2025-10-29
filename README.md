@@ -34,3 +34,16 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Resume Processing Pipeline
+
+To enable the job seeker resume upload flow:
+
+1. Add the following variables to `.env.local` (sample values already included):
+   - `RESUME_PIPELINE_HMAC_SECRET`
+   - `RESUME_PIPELINE_URL`
+   - `RESUME_PIPELINE_WEBHOOK_URL`
+2. Start the Next.js app with `npm run dev`.
+3. Start the FastAPI service with `npm run fastapi-dev` (installs requirements and runs Uvicorn).
+
+When a resume is uploaded the Next.js server will store the original file in the `resumes-original` bucket, call the FastAPI `/api/py/process-resume` endpoint, and poll for processing updates. The FastAPI service parses the PDF, redacts bias-sensitive information, uploads a redacted copy to the `resumes-redacted` bucket, and notifies Next.js via the signed webhook endpoint.

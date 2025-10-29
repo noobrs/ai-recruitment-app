@@ -1,5 +1,5 @@
 import { createClient } from '@/utils/supabase/server';
-import { Resume, ResumeInsert, ResumeUpdate, ResumeStatus } from '@/types';
+import { Resume, ResumeInsert, ResumeUpdate } from '@/types';
 
 /**
  * Get a resume by ID

@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/utils/supabase/server';
 import { getUserWithJobSeeker } from '@/services/user.service';
+import UploadResumeAction from '@/components/resume/UploadResumeAction';
 
 export default async function JobSeekerDashboard() {
     const supabase = await createClient();
@@ -69,9 +70,7 @@ export default async function JobSeekerDashboard() {
                         <button className="flex items-center justify-center px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-700 hover:border-indigo-500 hover:text-indigo-600 transition-colors">
                             <span className="text-sm font-medium">Browse Jobs</span>
                         </button>
-                        <button className="flex items-center justify-center px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-700 hover:border-indigo-500 hover:text-indigo-600 transition-colors">
-                            <span className="text-sm font-medium">Upload Resume</span>
-                        </button>
+                        <UploadResumeAction />
                         <button className="flex items-center justify-center px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-700 hover:border-indigo-500 hover:text-indigo-600 transition-colors">
                             <span className="text-sm font-medium">View Applications</span>
                         </button>
