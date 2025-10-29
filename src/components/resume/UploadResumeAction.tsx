@@ -1,3 +1,15 @@
+/**
+ * Resume Upload Component
+ * 
+ * Handles the complete resume upload flow:
+ * 1. User selects a PDF or image file
+ * 2. File is validated and uploaded to Next.js API
+ * 3. Next.js uploads to Supabase Storage and triggers FastAPI processing
+ * 4. Component subscribes to Supabase Realtime for instant completion updates
+ * 5. Shows progress feedback and handles success/error states
+ * 
+ * Uses Supabase Realtime instead of polling for better performance and UX.
+ */
 'use client';
 
 import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
@@ -7,17 +19,27 @@ import {
     RESUME_PDF_MAX_BYTES,
     isAllowedResumeMime,
 } from '@/constants/resume';
+import { createClient } from '@/utils/supabase/client';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 
+// Progress states that track the resume upload and processing lifecycle
 type ProgressState = 'idle' | 'uploading' | 'processing' | 'finished' | 'error';
 
-const POLL_INTERVAL_MS = 3000;
+// Fallback timeout: If Realtime fails, check status once after 30 seconds
+const FALLBACK_CHECK_TIMEOUT_MS = 30000;
 
+// Visual progress indicators shown to the user during upload
 const PROGRESS_STEPS: Array<{ key: ProgressState; label: string }> = [
     { key: 'uploading', label: 'Uploading' },
     { key: 'processing', label: 'Processing' },
     { key: 'finished', label: 'Finished' },
 ];
 
+/**
+ * Formats file size in bytes to human-readable format (B, KB, MB, GB)
+ * @param bytes - File size in bytes
+ * @returns Formatted string like "2.5 MB" or "150 KB"
+ */
 function formatBytes(bytes: number) {
     if (!Number.isFinite(bytes)) {
         return '';
@@ -36,20 +58,37 @@ function formatBytes(bytes: number) {
 }
 
 export default function UploadResumeAction() {
+    // UI state
     const [isOpen, setIsOpen] = useState(false);
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [progress, setProgress] = useState<ProgressState>('idle');
     const [error, setError] = useState<string | null>(null);
     const [statusMessage, setStatusMessage] = useState<string | null>(null);
+    
+    // Resume identifier received after successful upload
     const [resumeId, setResumeId] = useState<number | null>(null);
 
-    const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    // Refs for cleanup: Supabase Realtime channel and fallback timeout
+    const channelRef = useRef<RealtimeChannel | null>(null);
+    const fallbackTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+    /**
+     * Resets all component state and cleans up active connections
+     * Called when closing modal or resetting the upload flow
+     */
     const resetState = useCallback(() => {
-        if (pollRef.current) {
-            clearInterval(pollRef.current);
-            pollRef.current = null;
+        // Clean up Realtime channel
+        if (channelRef.current) {
+            channelRef.current.unsubscribe();
+            channelRef.current = null;
         }
+        
+        // Clean up fallback timeout
+        if (fallbackTimeoutRef.current) {
+            clearTimeout(fallbackTimeoutRef.current);
+            fallbackTimeoutRef.current = null;
+        }
+        
         setSelectedFile(null);
         setProgress('idle');
         setError(null);
@@ -57,11 +96,19 @@ export default function UploadResumeAction() {
         setResumeId(null);
     }, []);
 
+    /**
+     * Closes the upload modal and resets all state
+     */
     const closeModal = useCallback(() => {
         setIsOpen(false);
         resetState();
     }, [resetState]);
 
+    /**
+     * Validates file type and size requirements
+     * @param file - The file to validate
+     * @returns Error message string if invalid, null if valid
+     */
     const validateFile = useCallback((file: File) => {
         if (!isAllowedResumeMime(file.type)) {
             return `Unsupported file type. Allowed: ${RESUME_ALLOWED_MIME_TYPES.join(', ')}`;
@@ -78,6 +125,10 @@ export default function UploadResumeAction() {
         return null;
     }, []);
 
+    /**
+     * Handles file input change events
+     * Validates the selected file and updates component state
+     */
     const handleFileChange = useCallback(
         (fileList: FileList | null) => {
             if (!fileList || fileList.length === 0) {
@@ -100,63 +151,130 @@ export default function UploadResumeAction() {
         [validateFile],
     );
 
-    const startPolling = useCallback(
+    /**
+     * Subscribes to Supabase Realtime updates for a specific resume
+     * 
+     * This replaces the old polling mechanism with instant WebSocket updates.
+     * When FastAPI completes processing and Next.js webhook updates the database,
+     * we receive an instant notification here.
+     * 
+     * Also sets up a 30-second fallback check in case Realtime fails.
+     * 
+     * @param resumeIdentifier - The resume ID to watch for updates
+     */
+    const subscribeToResumeUpdates = useCallback(
         (resumeIdentifier: number) => {
-            if (pollRef.current) {
-                clearInterval(pollRef.current);
-                pollRef.current = null;
+            // Clean up existing channel if any
+            if (channelRef.current) {
+                channelRef.current.unsubscribe();
+                channelRef.current = null;
             }
 
-            const poll = async () => {
+            const supabase = createClient();
+
+            // Subscribe to database changes for this specific resume
+            // Filter ensures we only get updates for our resume, not others
+            const channel = supabase
+                .channel(`resume-${resumeIdentifier}`)
+                .on(
+                    'postgres_changes',
+                    {
+                        event: 'UPDATE',
+                        schema: 'public',
+                        table: 'resume',
+                        filter: `resume_id=eq.${resumeIdentifier}`,
+                    },
+                    (payload) => {
+                        console.log('Resume update received:', payload);
+                        
+                        // Check if processing is complete by looking for redacted_file_path
+                        // This field is set by the webhook when FastAPI finishes processing
+                        if (payload.new && 'redacted_file_path' in payload.new) {
+                            const redactedPath = payload.new.redacted_file_path;
+                            
+                            if (redactedPath) {
+                                setStatusMessage('Resume processed successfully.');
+                                setProgress('finished');
+                                
+                                // Clean up subscription
+                                if (channelRef.current) {
+                                    channelRef.current.unsubscribe();
+                                    channelRef.current = null;
+                                }
+                                
+                                // Clear fallback timeout
+                                if (fallbackTimeoutRef.current) {
+                                    clearTimeout(fallbackTimeoutRef.current);
+                                    fallbackTimeoutRef.current = null;
+                                }
+                            }
+                        }
+                    },
+                )
+                .subscribe((status) => {
+                    console.log('Realtime subscription status:', status);
+                    
+                    // Handle connection status updates
+                    if (status === 'SUBSCRIBED') {
+                        setStatusMessage('Resume is being processed…');
+                    } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+                        setStatusMessage('Connection issue. Waiting for processing…');
+                    }
+                });
+
+            channelRef.current = channel;
+
+            // Safety net: If Realtime doesn't work, check status via HTTP after 30 seconds
+            // This ensures we don't leave users stuck waiting indefinitely
+            fallbackTimeoutRef.current = setTimeout(async () => {
                 try {
                     const response = await fetch(`/api/resumes/${resumeIdentifier}`);
-                    if (!response.ok) {
-                        if (response.status >= 500) {
-                            setStatusMessage('Waiting for resume processing service…');
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.processingComplete) {
+                            setStatusMessage('Resume processed successfully.');
+                            setProgress('finished');
+                            
+                            if (channelRef.current) {
+                                channelRef.current.unsubscribe();
+                                channelRef.current = null;
+                            }
                         }
-                        return;
-                    }
-                    const data = await response.json();
-                    if (data.processingComplete) {
-                        setStatusMessage('Resume processed successfully.');
-                        setProgress('finished');
-                        if (pollRef.current) {
-                            clearInterval(pollRef.current);
-                            pollRef.current = null;
-                        }
-                    } else {
-                        setStatusMessage('Resume is being processed…');
                     }
                 } catch (err) {
-                    console.error('Failed to poll resume status', err);
-                    setStatusMessage('Unable to check processing status. Retrying…');
+                    console.error('Fallback check failed', err);
                 }
-            };
-
-            poll();
-            pollRef.current = setInterval(poll, POLL_INTERVAL_MS);
+            }, FALLBACK_CHECK_TIMEOUT_MS);
         },
         [],
     );
 
+    /**
+     * Effect: Subscribe to resume updates when processing starts
+     * Cleanup: Unsubscribe and clear timeouts when component unmounts or state changes
+     */
     useEffect(() => {
         if (progress === 'processing' && resumeId) {
-            startPolling(resumeId);
+            subscribeToResumeUpdates(resumeId);
         }
 
-        if (progress !== 'processing' && pollRef.current) {
-            clearInterval(pollRef.current);
-            pollRef.current = null;
-        }
-
+        // Clean up on unmount or when dependencies change
         return () => {
-            if (pollRef.current) {
-                clearInterval(pollRef.current);
-                pollRef.current = null;
+            if (channelRef.current) {
+                channelRef.current.unsubscribe();
+                channelRef.current = null;
+            }
+            
+            if (fallbackTimeoutRef.current) {
+                clearTimeout(fallbackTimeoutRef.current);
+                fallbackTimeoutRef.current = null;
             }
         };
-    }, [progress, resumeId, startPolling]);
+    }, [progress, resumeId, subscribeToResumeUpdates]);
 
+    /**
+     * Effect: Show final success message when processing completes
+     */
     useEffect(() => {
         if (progress === 'finished') {
             const timeout = setTimeout(() => {
@@ -167,6 +285,16 @@ export default function UploadResumeAction() {
         return undefined;
     }, [progress]);
 
+    /**
+     * Handles form submission - uploads resume to Next.js API
+     * 
+     * Flow:
+     * 1. Validate file
+     * 2. Upload to /api/resumes/upload
+     * 3. Receive resumeId
+     * 4. Set progress to 'processing'
+     * 5. subscribeToResumeUpdates will be triggered by useEffect
+     */
     const handleSubmit = useCallback(
         async (event: FormEvent<HTMLFormElement>) => {
             event.preventDefault();
@@ -186,9 +314,11 @@ export default function UploadResumeAction() {
             setProgress('uploading');
 
             try {
+                // Create multipart form data with the file
                 const formData = new FormData();
                 formData.append('file', selectedFile);
 
+                // Upload to Next.js API (which handles Supabase Storage + FastAPI trigger)
                 const response = await fetch('/api/resumes/upload', {
                     method: 'POST',
                     body: formData,
@@ -202,14 +332,17 @@ export default function UploadResumeAction() {
                     return;
                 }
 
+                // Store resume ID for Realtime subscription
                 if (payload?.resumeId) {
                     setResumeId(payload.resumeId);
                 }
 
+                // Show warning if FastAPI trigger failed (resume uploaded but processing pending)
                 if (payload?.warning) {
                     setStatusMessage(payload.warning);
                 }
 
+                // Transition to processing state (triggers useEffect to subscribe to Realtime)
                 setProgress('processing');
             } catch (err) {
                 console.error('Resume upload failed', err);
@@ -220,6 +353,10 @@ export default function UploadResumeAction() {
         [selectedFile, validateFile],
     );
 
+    /**
+     * Renders progress indicator pills showing upload → processing → finished
+     * Changes color based on current state
+     */
     const renderProgress = () => {
         if (progress === 'idle') {
             return null;
