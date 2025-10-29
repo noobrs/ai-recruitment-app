@@ -1,5 +1,8 @@
 import { createClient } from '@/utils/supabase/server';
 import { User } from '@/types';
+import { getUserById } from './user.service';
+import { getJobSeekerByUserId } from './jobseeker.service';
+import { getRecruiterByUserId } from './recruiter.service';
 
 export type UserRole = 'jobseeker' | 'recruiter';
 
@@ -15,17 +18,8 @@ export async function getCurrentUser(): Promise<User | null> {
         return null;
     }
 
-    const { data: user, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', authUser.id)
-        .single();
-
-    if (error) {
-        console.error('Error fetching user:', error);
-        return null;
-    }
-
+    // Use user service to get user data
+    const user = await getUserById(authUser.id);
     return user;
 }
 
@@ -57,50 +51,30 @@ export async function isRecruiter(): Promise<boolean> {
  * Get job seeker profile for current user
  */
 export async function getCurrentJobSeeker() {
-    const supabase = await createClient();
     const user = await getCurrentUser();
 
     if (!user || user.role !== 'jobseeker') {
         return null;
     }
 
-    const { data, error } = await supabase
-        .from('job_seeker')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
-
-    if (error) {
-        console.error('Error fetching job seeker:', error);
-        return null;
-    }
-
-    return data;
+    // Use jobseeker service to get profile
+    const jobSeeker = await getJobSeekerByUserId(user.id);
+    return jobSeeker;
 }
 
 /**
  * Get recruiter profile for current user
  */
 export async function getCurrentRecruiter() {
-    const supabase = await createClient();
     const user = await getCurrentUser();
 
     if (!user || user.role !== 'recruiter') {
         return null;
     }
 
-    const { data, error } = await supabase
-        .from('recruiter')
-        .select('*, company:company_id(*)')
-        .eq('user_id', user.id)
-        .single();
-
-    if (error) {
-        console.error('Error fetching recruiter:', error);
-        return null;
-    }
-
-    return data;
+    // Use recruiter service to get profile
+    const recruiter = await getRecruiterByUserId(user.id);
+    return recruiter;
 }
 
 /**

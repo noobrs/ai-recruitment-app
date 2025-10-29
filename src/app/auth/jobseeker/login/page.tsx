@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/utils/supabase/server';
+import { getUserRole } from '@/services/user.service';
 import LoginPageClient from '@/app/auth/jobseeker/login/LoginPageClient';
 
 export default async function JobSeekerLoginPage() {
@@ -9,11 +10,7 @@ export default async function JobSeekerLoginPage() {
 
     if (user) {
         // Get user role to redirect appropriately
-        const { data: userData } = await supabase
-            .from('users')
-            .select('role')
-            .eq('id', user.id)
-            .single();
+        const userData = await getUserRole(user.id);
 
         if (userData?.role === 'jobseeker') {
             redirect('/jobseeker/dashboard');

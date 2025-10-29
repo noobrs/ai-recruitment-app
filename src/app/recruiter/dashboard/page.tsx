@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/utils/supabase/server';
+import { getUserWithRecruiter } from '@/services/user.service';
 
 export default async function RecruiterDashboard() {
     const supabase = await createClient();
@@ -10,11 +11,7 @@ export default async function RecruiterDashboard() {
     }
 
     // Get user details with role
-    const { data: userData } = await supabase
-        .from('users')
-        .select('*, recruiter(*, company(*))')
-        .eq('id', user.id)
-        .single();
+    const userData = await getUserWithRecruiter(user.id);
 
     if (!userData || userData.role !== 'recruiter') {
         redirect('/auth/recruiter/login');

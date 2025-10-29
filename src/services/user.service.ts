@@ -73,3 +73,107 @@ export async function updateUser(userId: string, updates: UserUpdate): Promise<U
     }
     return data;
 }
+
+/**
+ * Update user role
+ */
+export async function updateUserRole(userId: string, role: 'jobseeker' | 'recruiter'): Promise<User | null> {
+    return updateUser(userId, { role });
+}
+
+/**
+ * Update user status
+ */
+export async function updateUserStatus(userId: string, status: 'pending' | 'active' | 'inactive'): Promise<User | null> {
+    return updateUser(userId, { status });
+}
+
+/**
+ * Get user with role and status check
+ */
+export async function getUserWithRoleStatus(userId: string): Promise<{ role: string | null; status: string | null } | null> {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+        .from('users')
+        .select('role, status')
+        .eq('id', userId)
+        .single();
+
+    if (error) {
+        console.error('Error fetching user role and status:', error);
+        return null;
+    }
+    return data;
+}
+
+/**
+ * Get user with role only
+ */
+export async function getUserRole(userId: string): Promise<{ role: string | null } | null> {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', userId)
+        .single();
+
+    if (error) {
+        console.error('Error fetching user role:', error);
+        return null;
+    }
+    return data;
+}
+
+/**
+ * Get user with basic profile info
+ */
+export async function getUserProfile(userId: string): Promise<{ role: string | null; status: string | null; first_name: string | null; last_name: string | null } | null> {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+        .from('users')
+        .select('role, status, first_name, last_name')
+        .eq('id', userId)
+        .single();
+
+    if (error) {
+        console.error('Error fetching user profile:', error);
+        return null;
+    }
+    return data;
+}
+
+/**
+ * Get user with job seeker details
+ */
+export async function getUserWithJobSeeker(userId: string): Promise<User | null> {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+        .from('users')
+        .select('*, job_seeker(*)')
+        .eq('id', userId)
+        .single();
+
+    if (error) {
+        console.error('Error fetching user with job seeker:', error);
+        return null;
+    }
+    return data;
+}
+
+/**
+ * Get user with recruiter and company details
+ */
+export async function getUserWithRecruiter(userId: string): Promise<User | null> {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+        .from('users')
+        .select('*, recruiter(*, company(*))')
+        .eq('id', userId)
+        .single();
+
+    if (error) {
+        console.error('Error fetching user with recruiter:', error);
+        return null;
+    }
+    return data;
+}

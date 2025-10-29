@@ -26,7 +26,7 @@ export async function getRecruiterByUserId(userId: string): Promise<Recruiter | 
     const supabase = await createClient();
     const { data, error } = await supabase
         .from('recruiter')
-        .select('*')
+        .select('*, company:company_id(*)')
         .eq('user_id', userId)
         .single();
 

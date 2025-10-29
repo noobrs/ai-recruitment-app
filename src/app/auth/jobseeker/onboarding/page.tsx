@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/utils/supabase/server';
+import { getUserProfile } from '@/services/user.service';
 import OnboardingClient from '@/app/auth/jobseeker/onboarding/OnboardingClient';
 
 export default async function JobSeekerOnboardingPage() {
@@ -12,11 +13,7 @@ export default async function JobSeekerOnboardingPage() {
     }
 
     // Check if already onboarded
-    const { data: userData } = await supabase
-        .from('users')
-        .select('role, status, first_name, last_name')
-        .eq('id', user.id)
-        .single();
+    const userData = await getUserProfile(user.id);
 
     if (userData?.status === 'active' && userData?.role === 'jobseeker') {
         redirect('/jobseeker/dashboard');

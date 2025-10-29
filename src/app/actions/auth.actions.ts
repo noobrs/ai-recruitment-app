@@ -2,6 +2,9 @@
 
 import { createClient } from '@/utils/supabase/server';
 import { redirect } from 'next/navigation';
+import { updateUserRole, getUserWithRoleStatus, updateUser, updateUserStatus } from '@/services/user.service';
+import { createJobSeeker } from '@/services/jobseeker.service';
+import { createRecruiter } from '@/services/recruiter.service';
 
 export type SignUpData = {
     email: string;
@@ -50,10 +53,7 @@ export async function signUpWithEmail(email: string, password: string, role: 'jo
     // Set role immediately in public.users (even in pending state)
     // This allows login to work before onboarding is complete
     if (authData.user) {
-        await supabase
-            .from('users')
-            .update({ role: role })
-            .eq('id', authData.user.id);
+        await updateUserRole(authData.user.id, role);
     }
 
     // Database trigger will auto-create public.users record with status='pending'
@@ -81,11 +81,7 @@ export async function completeJobSeekerOnboarding(data: JobSeekerOnboardingData)
     }
 
     // Check if already onboarded
-    const { data: existingUser } = await supabase
-        .from('users')
-        .select('role, status')
-        .eq('id', user.id)
-        .single();
+    const existingUser = await getUserWithRoleStatus(user.id);
 
     if (existingUser?.status === 'active' && existingUser?.role === 'jobseeker') {
         redirect('/jobseeker/dashboard');
@@ -93,44 +89,32 @@ export async function completeJobSeekerOnboarding(data: JobSeekerOnboardingData)
 
     // Update user record with complete profile
     // Role should already be set from registration, but ensure it's 'jobseeker'
-    const { error: userError } = await supabase
-        .from('users')
-        .update({
-            first_name: data.firstName,
-            last_name: data.lastName,
-            role: 'jobseeker', // Ensure role is set (in case it wasn't)
-            status: 'pending', // Still pending until job_seeker record is created
-        })
-        .eq('id', user.id);
+    const updatedUser = await updateUser(user.id, {
+        first_name: data.firstName,
+        last_name: data.lastName,
+        role: 'jobseeker', // Ensure role is set (in case it wasn't)
+        status: 'pending', // Still pending until job_seeker record is created
+    });
 
-    if (userError) {
-        return { error: 'Failed to update profile: ' + userError.message };
+    if (!updatedUser) {
+        return { error: 'Failed to update profile' };
     }
 
     // Create job seeker profile
-    const { error: jobSeekerError } = await supabase
-        .from('job_seeker')
-        .insert({
-            user_id: user.id,
-            location: data.location,
-            about_me: data.aboutMe,
-        });
+    const jobSeeker = await createJobSeeker({
+        user_id: user.id,
+        location: data.location,
+        about_me: data.aboutMe,
+    });
 
-    if (jobSeekerError) {
+    if (!jobSeeker) {
         // Rollback user update
-        await supabase
-            .from('users')
-            .update({ status: 'pending', role: null })
-            .eq('id', user.id);
-
-        return { error: 'Failed to create job seeker profile: ' + jobSeekerError.message };
+        await updateUser(user.id, { status: 'pending' });
+        return { error: 'Failed to create job seeker profile' };
     }
 
     // Mark onboarding as complete
-    await supabase
-        .from('users')
-        .update({ status: 'active' })
-        .eq('id', user.id);
+    await updateUserStatus(user.id, 'active');
 
     redirect('/jobseeker/dashboard');
 }
@@ -150,55 +134,39 @@ export async function completeRecruiterOnboarding(data: RecruiterOnboardingData)
     }
 
     // Check if already onboarded
-    const { data: existingUser } = await supabase
-        .from('users')
-        .select('role, status')
-        .eq('id', user.id)
-        .single();
+    const existingUser = await getUserWithRoleStatus(user.id);
 
     if (existingUser?.status === 'active' && existingUser?.role === 'recruiter') {
         redirect('/recruiter/dashboard');
     }
 
     // Update user record with complete profile
-    const { error: userError } = await supabase
-        .from('users')
-        .update({
-            first_name: data.firstName,
-            last_name: data.lastName,
-            role: 'recruiter',
-            status: 'pending',
-        })
-        .eq('id', user.id);
+    const updatedUser = await updateUser(user.id, {
+        first_name: data.firstName,
+        last_name: data.lastName,
+        role: 'recruiter',
+        status: 'pending',
+    });
 
-    if (userError) {
-        return { error: 'Failed to update profile: ' + userError.message };
+    if (!updatedUser) {
+        return { error: 'Failed to update profile' };
     }
 
     // Create recruiter profile
-    const { error: recruiterError } = await supabase
-        .from('recruiter')
-        .insert({
-            user_id: user.id,
-            company_id: data.companyId,
-            position: data.position,
-        });
+    const recruiter = await createRecruiter({
+        user_id: user.id,
+        company_id: data.companyId,
+        position: data.position,
+    });
 
-    if (recruiterError) {
+    if (!recruiter) {
         // Rollback user update
-        await supabase
-            .from('users')
-            .update({ status: 'pending', role: null })
-            .eq('id', user.id);
-
-        return { error: 'Failed to create recruiter profile: ' + recruiterError.message };
+        await updateUser(user.id, { status: 'pending' });
+        return { error: 'Failed to create recruiter profile' };
     }
 
     // Mark onboarding as complete
-    await supabase
-        .from('users')
-        .update({ status: 'active' })
-        .eq('id', user.id);
+    await updateUserStatus(user.id, 'active');
 
     redirect('/recruiter/dashboard');
 }
@@ -219,11 +187,7 @@ export async function signIn(email: string, password: string, expectedRole?: 'jo
     }
 
     // Get user role and status
-    const { data: user } = await supabase
-        .from('users')
-        .select('role, status')
-        .eq('id', authData.user.id)
-        .single();
+    const user = await getUserWithRoleStatus(authData.user.id);
 
     // Verify role if expected role is provided
     if (expectedRole && user?.role !== expectedRole) {

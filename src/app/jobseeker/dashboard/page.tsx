@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/utils/supabase/server';
+import { getUserWithJobSeeker } from '@/services/user.service';
 
 export default async function JobSeekerDashboard() {
     const supabase = await createClient();
@@ -10,11 +11,7 @@ export default async function JobSeekerDashboard() {
     }
 
     // Get user details with role
-    const { data: userData } = await supabase
-        .from('users')
-        .select('*, job_seeker(*)')
-        .eq('id', user.id)
-        .single();
+    const userData = await getUserWithJobSeeker(user.id);
 
     if (!userData || userData.role !== 'jobseeker') {
         redirect('/auth/jobseeker/login');
