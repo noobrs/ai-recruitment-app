@@ -3,9 +3,9 @@ import { createClient } from '@/utils/supabase/server';
 import { createAdminClient } from '@/utils/supabase/admin';
 
 type RouteContext = {
-    params: {
+    params: Promise<{
         resumeId: string;
-    };
+    }>;
 };
 
 function parseJsonArray(value: string | null) {
