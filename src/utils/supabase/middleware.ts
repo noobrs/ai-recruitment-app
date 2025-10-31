@@ -1,3 +1,4 @@
+import { getUserWithRoleStatus } from '@/services/user.service'
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
@@ -62,14 +63,9 @@ export async function updateSession(request: NextRequest) {
     // If user is logged in
     if (user) {
         // Get user role and status from database
-        const { data: userData } = await supabase
-            .from('users')
-            .select('role, status')
-            .eq('id', user.id)
-            .single()
-
-        const userRole = userData?.role
-        const userStatus = userData?.status
+        const userInfo = await getUserWithRoleStatus(user.id)
+        const userRole = userInfo?.role
+        const userStatus = userInfo?.status
 
         // Check if user needs to complete onboarding
         if (userStatus === 'pending' || !userRole) {

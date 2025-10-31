@@ -14,14 +14,16 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Context Manager
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    yield
-    # Clean up
-    await resume_pipeline.aclose()
+# # Context Manager
+# @asynccontextmanager
+# async def lifespan(app: FastAPI):
+#     yield
+#     # Clean up
+#     await resume_pipeline.aclose()
 
-app = FastAPI(lifespan=lifespan, docs_url="/api/py/docs")
+# app = FastAPI(lifespan=lifespan, docs_url="/api/py/docs")
+
+app = FastAPI(docs_url="/api/py/docs")
 
 app.add_middleware(
     CORSMiddleware,
