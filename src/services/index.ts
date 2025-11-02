@@ -1,4 +1,5 @@
 // Export all services for easy importing
+export * from './auth.service';
 export * from './user.service';
 export * from './jobseeker.service';
 export * from './job.service';

@@ -48,7 +48,8 @@ export async function isRecruiter(): Promise<boolean> {
 }
 
 /**
- * Get job seeker profile for current user
+ * Get current user with job seeker profile
+ * Returns null if user is not authenticated or not a job seeker
  */
 export async function getCurrentJobSeeker() {
     const user = await getCurrentUser();
@@ -59,11 +60,17 @@ export async function getCurrentJobSeeker() {
 
     // Use jobseeker service to get profile
     const jobSeeker = await getJobSeekerByUserId(user.id);
-    return jobSeeker;
+
+    // Return user with job seeker profile
+    return {
+        ...user,
+        job_seeker: jobSeeker
+    };
 }
 
 /**
- * Get recruiter profile for current user
+ * Get current user with recruiter profile
+ * Returns null if user is not authenticated or not a recruiter
  */
 export async function getCurrentRecruiter() {
     const user = await getCurrentUser();
@@ -74,7 +81,12 @@ export async function getCurrentRecruiter() {
 
     // Use recruiter service to get profile
     const recruiter = await getRecruiterByUserId(user.id);
-    return recruiter;
+
+    // Return user with recruiter profile
+    return {
+        ...user,
+        recruiter: recruiter
+    };
 }
 
 /**

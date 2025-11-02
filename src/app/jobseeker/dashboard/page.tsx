@@ -1,20 +1,12 @@
 import { redirect } from 'next/navigation';
-import { createClient } from '@/utils/supabase/server';
-import { getUserWithJobSeeker } from '@/services/user.service';
+import { getCurrentJobSeeker } from '@/services';
 import UploadResumeAction from '@/components/resume/UploadResumeAction';
 
 export default async function JobSeekerDashboard() {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    // Get current job seeker (includes authentication and role check)
+    const userData = await getCurrentJobSeeker();
 
-    if (!user) {
-        redirect('/auth/jobseeker/login');
-    }
-
-    // Get user details with role
-    const userData = await getUserWithJobSeeker(user.id);
-
-    if (!userData || userData.role !== 'jobseeker') {
+    if (!userData) {
         redirect('/auth/jobseeker/login');
     }
 

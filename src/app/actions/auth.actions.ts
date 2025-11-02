@@ -2,7 +2,7 @@
 
 import { createClient } from '@/utils/supabase/server';
 import { redirect } from 'next/navigation';
-import { updateUserRole, getUserWithRoleStatus, updateUser, updateUserStatus } from '@/services/user.service';
+import { getCurrentUser, updateUserRole, getUserWithRoleStatus, updateUser, updateUserStatus } from '@/services';
 import { createJobSeeker } from '@/services/jobseeker.service';
 import { createRecruiter } from '@/services/recruiter.service';
 
@@ -71,19 +71,15 @@ export async function signUpWithEmail(email: string, password: string, role: 'jo
  * Creates user profile and job seeker record after auth is complete
  */
 export async function completeJobSeekerOnboarding(data: JobSeekerOnboardingData) {
-    const supabase = await createClient();
-
     // Get authenticated user
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const user = await getCurrentUser();
 
-    if (authError || !user) {
+    if (!user) {
         return { error: 'Not authenticated. Please log in again.' };
     }
 
     // Check if already onboarded
-    const existingUser = await getUserWithRoleStatus(user.id);
-
-    if (existingUser?.status === 'active' && existingUser?.role === 'jobseeker') {
+    if (user.status === 'active' && user.role === 'jobseeker') {
         redirect('/jobseeker/dashboard');
     }
 
@@ -124,19 +120,15 @@ export async function completeJobSeekerOnboarding(data: JobSeekerOnboardingData)
  * Creates user profile and recruiter record after auth is complete
  */
 export async function completeRecruiterOnboarding(data: RecruiterOnboardingData) {
-    const supabase = await createClient();
-
     // Get authenticated user
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const user = await getCurrentUser();
 
-    if (authError || !user) {
+    if (!user) {
         return { error: 'Not authenticated. Please log in again.' };
     }
 
     // Check if already onboarded
-    const existingUser = await getUserWithRoleStatus(user.id);
-
-    if (existingUser?.status === 'active' && existingUser?.role === 'recruiter') {
+    if (user.status === 'active' && user.role === 'recruiter') {
         redirect('/recruiter/dashboard');
     }
 

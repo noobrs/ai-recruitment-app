@@ -1,19 +1,11 @@
 import { redirect } from 'next/navigation';
-import { createClient } from '@/utils/supabase/server';
-import { getUserWithRecruiter } from '@/services/user.service';
+import { getCurrentRecruiter } from '@/services';
 
 export default async function RecruiterDashboard() {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    // Get current recruiter (includes authentication and role check)
+    const userData = await getCurrentRecruiter();
 
-    if (!user) {
-        redirect('/auth/recruiter/login');
-    }
-
-    // Get user details with role
-    const userData = await getUserWithRecruiter(user.id);
-
-    if (!userData || userData.role !== 'recruiter') {
+    if (!userData) {
         redirect('/auth/recruiter/login');
     }
 
