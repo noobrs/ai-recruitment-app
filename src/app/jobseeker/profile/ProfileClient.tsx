@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { User, Resume, JobSeeker } from '@/types';
 import { updateJobSeekerProfile, updateUserProfile, setProfileResume } from './actions';
 import {
@@ -34,6 +35,9 @@ interface ProfileClientProps {
  */
 
 export default function ProfileClient({ user, profileResume, allResumes }: ProfileClientProps) {
+    // Hooks
+    const router = useRouter();
+
     // State Management
     const [isEditing, setIsEditing] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
@@ -81,7 +85,7 @@ export default function ProfileClient({ user, profileResume, allResumes }: Profi
             });
 
             setIsEditing(false);
-            window.location.reload(); // Refresh to show updated data
+            router.refresh(); // Refresh to show updated data
         } catch (error) {
             console.error('Error updating profile:', error);
             alert('Failed to update profile. Please try again.');
@@ -94,7 +98,7 @@ export default function ProfileClient({ user, profileResume, allResumes }: Profi
         setSettingProfile(resumeId);
         try {
             await setProfileResume(user.job_seeker.job_seeker_id, resumeId);
-            window.location.reload(); // Refresh to show updated profile resume
+            router.refresh(); // Refresh to show updated profile resume
         } catch (error) {
             console.error('Error setting profile resume:', error);
             alert('Failed to set profile resume. Please try again.');
