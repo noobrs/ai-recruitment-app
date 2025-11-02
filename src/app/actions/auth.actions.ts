@@ -2,9 +2,15 @@
 
 import { createClient } from '@/utils/supabase/server';
 import { redirect } from 'next/navigation';
-import { getCurrentUser, updateUserRole, getUserWithRoleStatus, updateUser, updateUserStatus } from '@/services';
-import { createJobSeeker } from '@/services/jobseeker.service';
-import { createRecruiter } from '@/services/recruiter.service';
+import {
+    getCurrentUser,
+    updateUserRole,
+    getUserWithRoleStatus,
+    updateUser,
+    updateUserStatus,
+    createJobSeeker,
+    createRecruiter
+} from '@/services';
 
 export type SignUpData = {
     email: string;

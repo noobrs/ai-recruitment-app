@@ -1,20 +1,16 @@
 import { redirect } from 'next/navigation';
-import { createClient } from '@/utils/supabase/server';
-import { getUserRole } from '@/services/user.service';
+import { getCurrentUser } from '@/services';
 import LoginPageClient from '@/app/auth/recruiter/login/LoginPageClient';
 
 export default async function RecruiterLoginPage() {
     // Check if user is already logged in
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getCurrentUser();
 
     if (user) {
-        // Get user role to redirect appropriately
-        const userData = await getUserRole(user.id);
-
-        if (userData?.role === 'recruiter') {
+        // Redirect to appropriate dashboard based on role
+        if (user.role === 'recruiter') {
             redirect('/recruiter/dashboard');
-        } else if (userData?.role === 'jobseeker') {
+        } else if (user.role === 'jobseeker') {
             redirect('/jobseeker/dashboard');
         }
     }

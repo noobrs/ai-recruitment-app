@@ -142,38 +142,4 @@ export async function getUserProfile(userId: string): Promise<{ role: string | n
     return data;
 }
 
-/**
- * Get user with job seeker details
- */
-export async function getUserWithJobSeeker(userId: string): Promise<User | null> {
-    const supabase = await createClient();
-    const { data, error } = await supabase
-        .from('users')
-        .select('*, job_seeker(*)')
-        .eq('id', userId)
-        .single();
 
-    if (error) {
-        console.error('Error fetching user with job seeker:', error);
-        return null;
-    }
-    return data;
-}
-
-/**
- * Get user with recruiter and company details
- */
-export async function getUserWithRecruiter(userId: string): Promise<User | null> {
-    const supabase = await createClient();
-    const { data, error } = await supabase
-        .from('users')
-        .select('*, recruiter(*, company(*))')
-        .eq('id', userId)
-        .single();
-
-    if (error) {
-        console.error('Error fetching user with recruiter:', error);
-        return null;
-    }
-    return data;
-}

@@ -1,6 +1,6 @@
 import { createClient } from '@/utils/supabase/server';
 import { NextResponse } from 'next/server';
-import { getUserWithRoleStatus } from '@/services/user.service';
+import { getCurrentUser } from '@/services';
 
 export async function GET(request: Request) {
     const requestUrl = new URL(request.url);
@@ -19,14 +19,14 @@ export async function GET(request: Request) {
         const supabase = await createClient();
 
         // Exchange the code for a session
-        const { data: { user }, error: authError } = await supabase.auth.exchangeCodeForSession(code);
+        const { error: authError } = await supabase.auth.exchangeCodeForSession(code);
 
-        if (authError || !user) {
+        if (authError) {
             return NextResponse.redirect(`${origin}/auth/${roleToPath(role)}/login?error=auth_failed`);
         }
 
-        // Check if user record exists using service layer
-        const existingUser = await getUserWithRoleStatus(user.id);
+        // Get current user with profile data
+        const existingUser = await getCurrentUser();
 
         if (existingUser) {
             // User exists - check if onboarding is complete

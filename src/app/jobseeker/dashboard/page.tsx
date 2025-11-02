@@ -12,25 +12,15 @@ export default async function JobSeekerDashboard() {
 
     return (
         <div className="min-h-screen bg-gray-50">
-            {/* Header */}
-            <header className="bg-white shadow">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex justify-between items-center">
-                    <div>
-                        <h1 className="text-3xl font-bold text-gray-900">
-                            Welcome back, {userData.first_name}!
-                        </h1>
-                        <p className="text-gray-600 mt-1">Job Seeker Dashboard</p>
-                    </div>
-                    <form action="/api/auth/signout" method="post">
-                        <button
-                            type="submit"
-                            className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
-                        >
-                            Sign Out
-                        </button>
-                    </form>
+            {/* Page Header */}
+            <div className="bg-white shadow-sm border-b border-gray-200">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+                    <h1 className="text-3xl font-bold text-gray-900">
+                        Welcome back, {userData.first_name}!
+                    </h1>
+                    <p className="text-gray-600 mt-1">Job Seeker Dashboard</p>
                 </div>
-            </header>
+            </div>
 
             {/* Main Content */}
             <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

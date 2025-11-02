@@ -1,4 +1,4 @@
-import { getUserWithRoleStatus } from '@/services/user.service'
+import { getUserWithRoleStatus } from '@/services'
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 

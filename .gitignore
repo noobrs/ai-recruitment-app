@@ -51,3 +51,6 @@ api/__pycache__/
 venv/
 ENV/
 env/
+
+*.md
+!README.md
