@@ -2,6 +2,7 @@
 
 import { createClient } from '@/utils/supabase/server';
 import { redirect } from 'next/navigation';
+import { revalidatePath } from 'next/cache';
 import {
     getCurrentUser,
     updateUserRole,
@@ -118,6 +119,9 @@ export async function completeJobSeekerOnboarding(data: JobSeekerOnboardingData)
     // Mark onboarding as complete
     await updateUserStatus(user.id, 'active');
 
+    // Revalidate to refresh auth state in Header
+    revalidatePath('/', 'layout');
+
     redirect('/jobseeker/dashboard');
 }
 
@@ -166,6 +170,9 @@ export async function completeRecruiterOnboarding(data: RecruiterOnboardingData)
     // Mark onboarding as complete
     await updateUserStatus(user.id, 'active');
 
+    // Revalidate to refresh auth state in Header
+    revalidatePath('/', 'layout');
+
     redirect('/recruiter/dashboard');
 }
 
@@ -199,6 +206,10 @@ export async function signIn(email: string, password: string, expectedRole?: 'jo
         const rolePath = user.role === 'recruiter' ? 'recruiter' : 'jobseeker';
         redirect(`/auth/${rolePath}/onboarding`);
     }
+
+    // Revalidate root path to refresh all cached data (especially auth state in Header)
+    // This ensures the Header updates immediately after login
+    revalidatePath('/', 'layout');
 
     // Redirect based on role
     if (user?.role === 'jobseeker') {

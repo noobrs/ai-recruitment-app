@@ -1,14 +1,17 @@
+import { Suspense } from 'react';
 import { redirect } from 'next/navigation';
 import { getCurrentJobSeeker } from '@/services/auth.service';
 import { getProfileResume, getResumesByJobSeekerId } from '@/services/resume.service';
 import ProfileClient from './ProfileClient';
+import ProfileLoading from './loading';
 import { User, JobSeeker } from '@/types';
 
 type UserWithJobSeeker = User & {
     job_seeker: JobSeeker;
 };
 
-export default async function JobSeekerProfilePage() {
+// Separate component for data fetching to enable streaming
+async function ProfileData() {
     const jobSeeker = await getCurrentJobSeeker();
 
     if (!jobSeeker || !jobSeeker.job_seeker) {
@@ -32,5 +35,15 @@ export default async function JobSeekerProfilePage() {
             profileResume={profileResume}
             allResumes={allResumes}
         />
+    );
+}
+
+// Main page component with Suspense boundary
+// This shows loading state immediately while data is being fetched
+export default function JobSeekerProfilePage() {
+    return (
+        <Suspense fallback={<ProfileLoading />}>
+            <ProfileData />
+        </Suspense>
     );
 }

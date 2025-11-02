@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
+import { usePathname } from "next/navigation";
 import { User } from "@/types";
 
 export interface AuthUser extends User {
@@ -32,6 +33,7 @@ export interface AuthProviderProps {
  * 
  * Features:
  * - Automatic auth state loading on mount
+ * - Refreshes auth state on route changes (fixes header not updating after login)
  * - Global user state management
  * - Role-based helpers (isJobSeeker, isRecruiter)
  * - Manual refresh capability
@@ -60,6 +62,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [isInitialLoad, setIsInitialLoad] = useState(true);
+    const pathname = usePathname(); // Track route changes
 
     const fetchUser = useCallback(async (isRefresh = false) => {
         try {
@@ -69,7 +72,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
             }
             setError(null);
 
-            const res = await fetch("/api/auth/getuser");
+            const res = await fetch("/api/auth/getuser", {
+                // Disable cache to ensure fresh data on route changes
+                cache: 'no-store',
+            });
 
             if (!res.ok) {
                 if (res.status === 401) {
@@ -106,9 +112,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
         }
     }, []);
 
+    // Initial fetch on mount
     useEffect(() => {
         fetchUser(false);
     }, [fetchUser]);
+
+    // Refresh auth state when route changes (e.g., after login redirect)
+    // This fixes the bug where Header doesn't update after login
+    useEffect(() => {
+        if (!isInitialLoad) {
+            // Only refresh after initial load to avoid double-fetching
+            fetchUser(false);
+        }
+    }, [pathname, isInitialLoad, fetchUser]);
 
     const value: AuthContextValue = {
         user,
