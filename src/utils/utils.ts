@@ -1,3 +1,5 @@
+import type { UserRole } from "@/types";
+
 export const getErrorMessage = (
     error: unknown,
     defaultMessage: string = "Something went wrong"
@@ -9,3 +11,10 @@ export const getErrorMessage = (
     }
     return errorMessage;
 };
+
+export function isValidRole(r: string | null | undefined): r is UserRole {
+    return r === "jobseeker" || r === "recruiter";
+}
+export function roleLabel(role: UserRole) {
+    return role === "jobseeker" ? "Job Seeker" : "Recruiter";
+}

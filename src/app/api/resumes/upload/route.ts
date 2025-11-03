@@ -2,12 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { randomUUID } from 'crypto';
 import { createClient } from '@/utils/supabase/server';
 import { createAdminClient } from '@/utils/supabase/admin';
-import {
-    RESUME_IMAGE_MAX_BYTES,
-    RESUME_PDF_MAX_BYTES,
-    getExtensionForMime,
-    isAllowedResumeMime,
-} from '@/constants/resume';
+// import {
+//     RESUME_IMAGE_MAX_BYTES,
+//     RESUME_PDF_MAX_BYTES,
+//     getExtensionForMime,
+//     isAllowedResumeMime,
+// } from '@/constants/resume';
 import { createHmacSignature } from '@/utils/security/hmac';
 
 const RESUMES_BUCKET = 'resumes-original';
@@ -37,18 +37,18 @@ export async function POST(request: NextRequest) {
         }
 
         const mimeType = file.type;
-        if (!isAllowedResumeMime(mimeType)) {
-            return NextResponse.json({ error: 'Unsupported file type' }, { status: 400 });
-        }
+        // if (!isAllowedResumeMime(mimeType)) {
+        //     return NextResponse.json({ error: 'Unsupported file type' }, { status: 400 });
+        // }
 
         const size = file.size;
-        if (mimeType === 'application/pdf' && size > RESUME_PDF_MAX_BYTES) {
-            return NextResponse.json({ error: 'PDF exceeds 20MB limit' }, { status: 400 });
-        }
+        // if (mimeType === 'application/pdf' && size > RESUME_PDF_MAX_BYTES) {
+        //     return NextResponse.json({ error: 'PDF exceeds 20MB limit' }, { status: 400 });
+        // }
 
-        if (mimeType !== 'application/pdf' && size > RESUME_IMAGE_MAX_BYTES) {
-            return NextResponse.json({ error: 'Image exceeds size limit' }, { status: 400 });
-        }
+        // if (mimeType !== 'application/pdf' && size > RESUME_IMAGE_MAX_BYTES) {
+        //     return NextResponse.json({ error: 'Image exceeds size limit' }, { status: 400 });
+        // }
 
         const fileBuffer = Buffer.from(await file.arrayBuffer());
 
@@ -65,7 +65,8 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Job seeker profile not found' }, { status: 404 });
         }
 
-        const extension = getExtensionForMime(mimeType) || `.${file.name.split('.').pop() || 'pdf'}`;
+        // const extension = getExtensionForMime(mimeType) || `.${file.name.split('.').pop() || 'pdf'}`;
+        const extension = ".pdf"; // Simplified for this example
         const storageObjectPath = `${user.id}/${randomUUID()}${extension}`;
         const storagePathWithBucket = `${RESUMES_BUCKET}/${storageObjectPath}`;
 

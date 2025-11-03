@@ -79,6 +79,8 @@ export default function Header() {
         );
     }
 
+    console.log("Rendering Header: isAuthenticated =", isAuthenticated, ", isJobSeeker =", isJobSeeker, ", isRecruiter =", isRecruiter);
+
     return (
         <header className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-50">
             {/* First Row */}
@@ -88,6 +90,7 @@ export default function Header() {
                     <Link href="/" className="flex items-center">
                         <h1 className="text-xl sm:text-2xl font-bold text-primary">AI-Powered Recruitment</h1>
                     </Link>
+                    <SignOutButton />
 
                     {/* Right side */}
                     {isAuthenticated && (

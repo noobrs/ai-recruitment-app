@@ -4,6 +4,27 @@ import { useEffect, useMemo, useState, useCallback } from "react";
 import { createClient } from "@/utils/supabase/client";
 import type { BaseUser } from "@/types";
 
+// export function useGetUser2() {
+//     const [user, setUser] = useState<BaseUser | null>(null);
+//     const [loading, setLoading] = useState(true);
+//     const supabase = createClient();
+
+//     supabase.auth.onAuthStateChange(async (event, session) => {
+//     const sessionUser = session?.user;
+//     const shouldUpdate = sessionUser?.updated_at !== user?.updated_at;
+//     if (shouldUpdate) {
+//       if (sessionUser) {
+//         const user: BaseUser = await fetch("/api/getuser").then((res) =>
+//           res.json()
+//         );
+//         setUser(user);
+//       } else {
+//         setUser(null);
+//       }
+//     }
+//   });
+// }
+
 export function useGetUser() {
     const supabase = useMemo(() => createClient(), []);
     const [user, setUser] = useState<BaseUser | null>(null);
@@ -11,10 +32,10 @@ export function useGetUser() {
 
     const fetchMergedUser = useCallback(async () => {
         try {
-            const res = await fetch("/api/get-user", { credentials: "include" });
+            const res = await fetch("/api/auth/getuser", { credentials: "include" });
             if (!res.ok) throw new Error("Failed to fetch user");
-            const data: BaseUser = await res.json();
-            setUser(data);
+            const data = await res.json();
+            setUser(data.user);
         } catch {
             setUser(null);
         } finally {

@@ -16,9 +16,9 @@ export type BaseUser = SupabaseUser & DBUser;
  * User with JobSeeker profile joined
  * Used when displaying job seeker information with user details
  */
-// export type UserWithJobSeeker = User & {
-//     job_seeker: JobSeeker;
-// };
+export type UserWithJobSeeker = DBUser & {
+    job_seeker: JobSeeker;
+};
 
 // /**
 //  * User with Recruiter profile joined

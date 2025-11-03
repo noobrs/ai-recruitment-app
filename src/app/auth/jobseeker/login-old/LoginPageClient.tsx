@@ -1,7 +1,7 @@
 'use client';
 
 import { signIn, signInWithGoogle } from '@/app/actions/auth.actions';
-import AuthForm from '@/components/auth/AuthForm';
+import AuthForm from '@/components/auth-old/AuthForm';
 
 export default function LoginPageClient() {
     const handleSubmit = async (formData: FormData) => {

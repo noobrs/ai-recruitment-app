@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@/services';
-import LoginPageClient from '@/app/auth/jobseeker/login/LoginPageClient';
+import LoginPageClient from '@/app/auth/jobseeker/login-old/LoginPageClient';
 
 export default async function JobSeekerLoginPage() {
     // Check if user is already logged in

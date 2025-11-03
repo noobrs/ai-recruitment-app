@@ -2,9 +2,9 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import FormContainer from '@/components/auth/FormContainer';
-import FormInput from '@/components/auth/FormInput';
-import SocialButton from '@/components/auth/SocialButton';
+import FormContainer from '@/components/auth-old/FormContainer';
+import FormInput from '@/components/auth-old/FormInput';
+import SocialButton from '@/components/auth-old/SocialButton';
 
 interface RegisterPageClientProps {
     onEmailSignUp: (formData: FormData) => Promise<{ error?: string; success?: boolean; message?: string }>;
@@ -45,7 +45,7 @@ export default function RegisterPageClient({ onEmailSignUp, onGoogleSignIn }: Re
 
         try {
             const result = await onEmailSignUp(formData);
-            
+
             if (result.error) {
                 setError(result.error);
             } else if (result.success) {

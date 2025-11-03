@@ -13,12 +13,10 @@
  */
 
 import { createClient } from '@/utils/supabase/server';
-import { User } from '@/types';
+import type { BaseUser, UserRole } from '@/types';
 import { getUserById } from './user.service';
 import { getJobSeekerByUserId } from './jobseeker.service';
 import { getRecruiterByUserId } from './recruiter.service';
-
-export type UserRole = 'jobseeker' | 'recruiter';
 
 /**
  * Get the current authenticated user (Server-Side Only)
@@ -28,7 +26,7 @@ export type UserRole = 'jobseeker' | 'recruiter';
  * 
  * @returns User object or null if not authenticated
  */
-export async function getCurrentUser(): Promise<User | null> {
+export async function getCurrentUser(): Promise<BaseUser | null> {
     const supabase = await createClient();
 
     const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
@@ -39,7 +37,7 @@ export async function getCurrentUser(): Promise<User | null> {
 
     // Use user service to get user data
     const user = await getUserById(authUser.id);
-    return user;
+    return { ...authUser, ...user } as BaseUser;
 }
 
 /**

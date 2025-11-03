@@ -2,10 +2,10 @@
 
 import { useState } from 'react';
 import { completeJobSeekerOnboarding } from '@/app/actions/auth.actions';
-import FormContainer from '@/components/auth/FormContainer';
-import FormInput from '@/components/auth/FormInput';
-import ProgressStepper from '@/components/auth/ProgressStepper';
-import ProfilePictureUpload from '@/components/auth/ProfilePictureUpload';
+import FormContainer from '@/components/auth-old/FormContainer';
+import FormInput from '@/components/auth-old/FormInput';
+import ProgressStepper from '@/components/auth-old/ProgressStepper';
+import ProfilePictureUpload from '@/components/auth-old/ProfilePictureUpload';
 
 interface OnboardingClientProps {
     email: string;
