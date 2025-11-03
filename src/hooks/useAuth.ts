@@ -1,11 +1,7 @@
 "use client";
 
-import { User } from "@/types";
+import { AuthUser } from "@/types";
 import { useEffect, useState, useCallback } from "react";
-
-export interface AuthUser extends User {
-    email?: string;
-}
 
 export interface UseAuthReturn {
     user: AuthUser | null;

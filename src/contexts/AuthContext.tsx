@@ -2,11 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { usePathname } from "next/navigation";
-import { User } from "@/types";
-
-export interface AuthUser extends User {
-    email?: string;
-}
+import { AuthUser } from "@/types";
 
 export interface AuthContextValue {
     user: AuthUser | null;

@@ -1,11 +1,7 @@
 "use client";
 
-import { User, Recruiter } from "@/types";
+import { RecruiterProfile } from "@/types";
 import { useEffect, useState, useCallback } from "react";
-
-export interface RecruiterProfile extends User {
-    recruiter: Recruiter | null;
-}
 
 export interface UseRecruiterReturn {
     recruiter: RecruiterProfile | null;

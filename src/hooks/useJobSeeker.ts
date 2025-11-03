@@ -1,11 +1,7 @@
 "use client";
 
-import { User, JobSeeker } from "@/types";
+import { JobSeekerProfile } from "@/types";
 import { useEffect, useState, useCallback } from "react";
-
-export interface JobSeekerProfile extends User {
-    job_seeker: JobSeeker | null;
-}
 
 export interface UseJobSeekerReturn {
     jobSeeker: JobSeekerProfile | null;

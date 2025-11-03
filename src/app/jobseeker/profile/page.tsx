@@ -4,11 +4,7 @@ import { getCurrentJobSeeker } from '@/services/auth.service';
 import { getProfileResume, getResumesByJobSeekerId } from '@/services/resume.service';
 import ProfileClient from './ProfileClient';
 import ProfileLoading from './loading';
-import { User, JobSeeker } from '@/types';
-
-type UserWithJobSeeker = User & {
-    job_seeker: JobSeeker;
-};
+import { UserWithJobSeeker } from '@/types';
 
 // Separate component for data fetching to enable streaming
 async function ProfileData() {

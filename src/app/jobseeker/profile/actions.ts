@@ -4,21 +4,12 @@ import { revalidatePath } from 'next/cache';
 import { updateUser } from '@/services/user.service';
 import { updateJobSeeker } from '@/services/jobseeker.service';
 import { setAsProfileResume } from '@/services/resume.service';
-
-interface UserProfileUpdate {
-    first_name?: string;
-    last_name?: string;
-}
-
-interface JobSeekerProfileUpdate {
-    location?: string;
-    about_me?: string;
-}
+import { UserUpdate, JobSeekerUpdate } from '@/types';
 
 /**
  * Update user profile (name, etc.)
  */
-export async function updateUserProfile(userId: string, data: UserProfileUpdate) {
+export async function updateUserProfile(userId: string, data: UserUpdate) {
     try {
         const result = await updateUser(userId, data);
         if (!result) {
@@ -35,7 +26,7 @@ export async function updateUserProfile(userId: string, data: UserProfileUpdate)
 /**
  * Update job seeker profile (location, about_me)
  */
-export async function updateJobSeekerProfile(jobSeekerId: number, data: JobSeekerProfileUpdate) {
+export async function updateJobSeekerProfile(jobSeekerId: number, data: JobSeekerUpdate) {
     try {
         const result = await updateJobSeeker(jobSeekerId, data);
         if (!result) {
