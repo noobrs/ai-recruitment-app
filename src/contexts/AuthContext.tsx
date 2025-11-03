@@ -22,17 +22,29 @@ export interface AuthProviderProps {
 }
 
 /**
- * Authentication Context Provider
+ * Authentication Context Provider - Server-First Architecture with Smart Refresh
  * 
- * Provides global authentication state management across the application.
+ * Provides cached authentication state for client components across the application.
  * Wraps the app and makes auth state available to all child components.
  * 
+ * Architecture:
+ * - Server Components: Use getCurrentJobSeeker() / getCurrentRecruiter() for auth
+ * - Client Components: Use this AuthContext for cached user state
+ * - Fetches auth state ONCE on mount, then caches for the session
+ * - Smart refresh: Auto-refreshes when navigating FROM auth pages TO protected pages
+ * - Server components handle fresh auth checks on each page navigation
+ * 
+ * Smart Refresh Logic:
+ * - Refreshes when: coming from /auth/* → going to /dashboard or /profile
+ * - Does NOT refresh: on regular page navigation (dashboard → profile)
+ * - Result: Header updates immediately after login, no redundant fetches during normal navigation
+ * 
  * Features:
- * - Automatic auth state loading on mount
- * - Refreshes auth state on route changes (fixes header not updating after login)
- * - Global user state management
+ * - Automatic auth state loading on mount (once per session)
+ * - Smart refresh after login/register/onboarding
+ * - Global user state cache for client components
  * - Role-based helpers (isJobSeeker, isRecruiter)
- * - Manual refresh capability
+ * - Manual refresh capability when needed
  * - Sign out functionality
  * 
  * @example
@@ -58,7 +70,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [isInitialLoad, setIsInitialLoad] = useState(true);
-    const pathname = usePathname(); // Track route changes
+    const pathname = usePathname();
+    const [previousPath, setPreviousPath] = useState<string | null>(null);
 
     const fetchUser = useCallback(async (isRefresh = false) => {
         try {
@@ -69,7 +82,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
             setError(null);
 
             const res = await fetch("/api/auth/getuser", {
-                // Disable cache to ensure fresh data on route changes
+                // Disable cache for manual refreshes to ensure fresh data
                 cache: 'no-store',
             });
 
@@ -108,19 +121,29 @@ export function AuthProvider({ children }: AuthProviderProps) {
         }
     }, []);
 
-    // Initial fetch on mount
+    // Initial fetch on mount only
+    // Server components handle auth for protected pages
+    // This context serves as a cache for client components (Header, etc.)
     useEffect(() => {
         fetchUser(false);
     }, [fetchUser]);
 
-    // Refresh auth state when route changes (e.g., after login redirect)
-    // This fixes the bug where Header doesn't update after login
+    // Smart refresh: Only refresh when navigating AWAY FROM auth pages
+    // This ensures Header updates after login/register/onboarding
     useEffect(() => {
-        if (!isInitialLoad) {
-            // Only refresh after initial load to avoid double-fetching
-            fetchUser(false);
+        if (!isInitialLoad && previousPath && pathname !== previousPath) {
+            // Check if we're coming from an auth page (login, register, onboarding, callback)
+            const isComingFromAuth = previousPath.includes('/auth/');
+            const isGoingToDashboard = pathname.includes('/dashboard') || pathname.includes('/profile');
+
+            // Refresh auth state when leaving auth pages and going to protected pages
+            if (isComingFromAuth && isGoingToDashboard) {
+                fetchUser(false);
+            }
         }
-    }, [pathname, isInitialLoad, fetchUser]);
+
+        setPreviousPath(pathname);
+    }, [pathname, previousPath, isInitialLoad, fetchUser]);
 
     const value: AuthContextValue = {
         user,
