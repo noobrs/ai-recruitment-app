@@ -94,7 +94,6 @@ export async function loginAction(formData: FormData) {
 
     const supabase = await createClient();
 
-    // Your existing auth flow here:
     const { error } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error) {

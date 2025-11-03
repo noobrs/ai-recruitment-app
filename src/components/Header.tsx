@@ -90,7 +90,8 @@ export default function Header() {
                     <Link href="/" className="flex items-center">
                         <h1 className="text-xl sm:text-2xl font-bold text-primary">AI-Powered Recruitment</h1>
                     </Link>
-                    <SignOutButton />
+
+                    {user ? <SignOutButton /> : "Not Signed In"}
 
                     {/* Right side */}
                     {isAuthenticated && (

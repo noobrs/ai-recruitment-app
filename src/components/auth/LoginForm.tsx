@@ -23,6 +23,7 @@ export default function LoginForm({ role }: { role: UserRole }) {
             } else {
                 toast.success("Successfully logged in");
                 router.push("/");
+                router.refresh();
             }
         });
     };

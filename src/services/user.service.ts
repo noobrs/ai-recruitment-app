@@ -1,5 +1,5 @@
 import { createClient } from '@/utils/supabase/server';
-import { User, UserInsert, UserUpdate } from '@/types';
+import { User, UserInsert, UserRole, UserStatus, UserUpdate } from '@/types';
 
 /**
  * Get a user by ID
@@ -91,7 +91,7 @@ export async function updateUserStatus(userId: string, status: 'pending' | 'acti
 /**
  * Get user with role and status check
  */
-export async function getUserWithRoleStatus(userId: string): Promise<{ role: string | null; status: string | null } | null> {
+export async function getUserWithRoleStatus(userId: string): Promise<{ role: UserRole | null; status: UserStatus | null } | null> {
     const supabase = await createClient();
     const { data, error } = await supabase
         .from('users')

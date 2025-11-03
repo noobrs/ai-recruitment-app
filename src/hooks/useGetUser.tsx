@@ -4,27 +4,6 @@ import { useEffect, useMemo, useState, useCallback } from "react";
 import { createClient } from "@/utils/supabase/client";
 import type { BaseUser } from "@/types";
 
-// export function useGetUser2() {
-//     const [user, setUser] = useState<BaseUser | null>(null);
-//     const [loading, setLoading] = useState(true);
-//     const supabase = createClient();
-
-//     supabase.auth.onAuthStateChange(async (event, session) => {
-//     const sessionUser = session?.user;
-//     const shouldUpdate = sessionUser?.updated_at !== user?.updated_at;
-//     if (shouldUpdate) {
-//       if (sessionUser) {
-//         const user: BaseUser = await fetch("/api/getuser").then((res) =>
-//           res.json()
-//         );
-//         setUser(user);
-//       } else {
-//         setUser(null);
-//       }
-//     }
-//   });
-// }
-
 export function useGetUser() {
     const supabase = useMemo(() => createClient(), []);
     const [user, setUser] = useState<BaseUser | null>(null);
