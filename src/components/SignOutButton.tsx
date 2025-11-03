@@ -18,6 +18,8 @@ function SignOutButton() {
                 toast.error(errorMessage);
             } else {
                 toast.success("Successfully signed out");
+                // Force a router refresh to update all client components
+                router.refresh();
                 router.push("/");
             }
         });
