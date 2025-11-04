@@ -10,8 +10,15 @@ export default function OAuthButtons({ role }: { role: UserRole }) {
 
     const signInGoogle = () => {
         startTransition(async () => {
-            await googleSignInAction(role);
-            // The action should redirect; if not, you can add a toast or router here.
+            const result = await googleSignInAction(role);
+
+            // Handle the redirect URL returned from the action
+            if (result?.url) {
+                window.location.href = result.url;
+            } else if (result?.error) {
+                console.error('Google sign-in error:', result.error);
+                // You can add a toast notification here if needed
+            }
         });
     };
 

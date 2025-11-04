@@ -18,6 +18,8 @@ export default async function AuthCallback({
     const { token_hash, type, email, next, role, code } = params;
     const supabase = await createClient();
 
+    // const origin = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
+
     try {
         // Handle OAuth callback (code exchange)
         if (code) {
