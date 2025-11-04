@@ -5,12 +5,12 @@ import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 import toast from "react-hot-toast";
-import { createClient } from "@/utils/supabase/client";
+// import { createClient } from "@/utils/supabase/client";
 
-function getAuth() {
-    const supabase = createClient();
-    return supabase.auth;
-}
+// function getAuth() {
+//     const supabase = createClient();
+//     return supabase.auth;
+// }
 
 function SignOutButton() {
     const router = useRouter();
@@ -19,11 +19,11 @@ function SignOutButton() {
 
     const handleClickSignOutButton = () => {
         startTransition(async () => {
-            const { error } = await getAuth().signOut(); // Sign out from Supabase auth
+            // const { error } = await getAuth().signOut(); // Sign out from Supabase auth
 
-            // const { errorMessage } = await signOutAction();
+            const { errorMessage: error } = await signOutAction();
             if (error) {
-                toast.error(error.message);
+                toast.error(error);
             } else {
                 toast.success("Successfully signed out");
                 router.refresh();
