@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { getUserById } from '@/services/user.service';
+import { UserRole } from '@/types';
+import { isValidRole } from '@/utils/utils';
+import { createAdminClient } from '@/utils/supabase/admin';
 
 export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
@@ -8,38 +11,40 @@ export async function GET(request: NextRequest) {
     const type = searchParams.get('type');
     const email = searchParams.get('email');
     const next = searchParams.get('next');
+    // const flow = searchParams.get("flow"); // "register" | "login" | null
     const role = searchParams.get('role');
+    const desiredRole = isValidRole(role ?? "") ? (role as UserRole) : "jobseeker";
     const code = searchParams.get('code');
 
     const supabase = await createClient();
+    const supabaseAdmin = await createAdminClient();
     const origin = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
 
     try {
-        // Handle OAuth callback (code exchange)
+        // OAuth code exchange
         if (code) {
             const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-
             if (exchangeError) {
-                console.error('Code exchange error:', exchangeError);
-                return NextResponse.redirect(
-                    new URL(`/auth/${role || 'jobseeker'}/login?error=oauth_failed`, origin)
-                );
+                console.error("Code exchange error:", exchangeError);
+                return NextResponse.redirect(new URL(`/auth/${desiredRole}/login?error=oauth_failed`, origin));
             }
 
-            // Get the authenticated user
             const { data: { user } } = await supabase.auth.getUser();
-
             if (user) {
-                // Get user role from database
-                const dbUser = await getUserById(user.id);
-                const userRole = dbUser?.role || role || 'jobseeker';
+                const { data: existedUser } = await supabaseAdmin
+                    .from("users")
+                    .select("id, role, status")
+                    .eq("id", user.id)
+                    .maybeSingle();
 
-                // Check if user profile is complete
-                if (dbUser?.status === 'pending' || !dbUser?.first_name) {
-                    return NextResponse.redirect(new URL(`/${userRole}/dashboard`, origin));
+                if (existedUser && existedUser.status === "pending") {
+                    await supabaseAdmin
+                        .from("users")
+                        .update({ status: "active", role: desiredRole })
+                        .eq("id", existedUser.id);
+                    return NextResponse.redirect(new URL(`/${desiredRole}/dashboard`, origin));
                 }
 
-                // User is verified and has completed profile
                 return NextResponse.redirect(new URL(next || `/${userRole}/dashboard`, origin));
             }
         }

@@ -2,27 +2,22 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/utils/supabase/client";
 import { Mail, Loader2, CheckCircle2, AlertCircle, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import type { UserRole } from "@/types";
-import { createRealtimeClient } from "@/utils/supabase/realtime";
 
 interface VerifyEmailContentProps {
     email: string;
     role: UserRole;
-    userId: string;
 }
 
-export default function VerifyEmailContent({ email, role, userId }: VerifyEmailContentProps) {
-    const router = useRouter();
+export default function VerifyEmailContent({ email, role }: VerifyEmailContentProps) {
     const [isResending, setIsResending] = useState(false);
     const [resendStatus, setResendStatus] = useState<{
         type: "success" | "error" | null;
         message: string;
     }>({ type: null, message: "" });
     const [countdown, setCountdown] = useState(0);
-    const [isVerified, setIsVerified] = useState(false);
 
     // Handle resend verification email via API
     const handleResend = useCallback(async () => {
@@ -72,122 +67,6 @@ export default function VerifyEmailContent({ email, role, userId }: VerifyEmailC
             return () => clearTimeout(timer);
         }
     }, [countdown]);
-
-    // Subscribe to realtime changes and poll verification status
-    // useEffect(() => {
-    //     const supabase = createClient();
-    //     let authCheckInterval: NodeJS.Timeout | null = null;
-
-    //     const setupRealtimeSubscription = async () => {
-    //         try {
-    //             // Check via API endpoint first
-    //             const checkVerification = async () => {
-    //                 try {
-    //                     const response = await fetch('/api/auth/verify/check');
-    //                     if (response.ok) {
-    //                         const data = await response.json();
-    //                         if (data.verified) {
-    //                             setIsVerified(true);
-    //                             if (authCheckInterval) clearInterval(authCheckInterval);
-    //                             setTimeout(() => {
-    //                                 router.push(`/${role}/dashboard`);
-    //                                 router.refresh();
-    //                             }, 1500);
-    //                             return true;
-    //                         }
-    //                     }
-    //                 } catch (error) {
-    //                     console.error('Verification check error:', error);
-    //                 }
-    //                 return false;
-    //             };
-
-    //             // Initial check
-    //             const isAlreadyVerified = await checkVerification();
-    //             if (isAlreadyVerified) return;
-
-    //             // Set up periodic API check
-    //             authCheckInterval = setInterval(checkVerification, 3000); // Check every 3 seconds
-
-    //             // Subscribe to auth state changes (for immediate feedback)
-    //             const { data: { subscription } } = supabase.auth.onAuthStateChange(
-    //                 async (event, session) => {
-    //                     if (event === "SIGNED_IN" && session?.user?.email_confirmed_at) {
-    //                         setIsVerified(true);
-    //                         if (authCheckInterval) clearInterval(authCheckInterval);
-    //                         // Redirect to onboarding/dashboard
-    //                         setTimeout(() => {
-    //                             router.push(`/${role}/dashboard`);
-    //                             router.refresh();
-    //                         }, 1500);
-    //                     }
-    //                 }
-    //             );
-
-    //             return () => {
-    //                 subscription.unsubscribe();
-    //                 if (authCheckInterval) clearInterval(authCheckInterval);
-    //             };
-    //         } catch (error) {
-    //             console.error("Error setting up verification listener:", error);
-    //         }
-    //     };
-
-    //     setupRealtimeSubscription();
-
-    //     return () => {
-    //         if (authCheckInterval) {
-    //             clearInterval(authCheckInterval);
-    //         }
-    //     };
-    // }, [email, role, router]);
-
-    // Real time subscription to user status changes
-    // useEffect(() => {
-    //     // const supabase = createClient();
-    //     const supabase = createRealtimeClient();
-
-    //     const channel = supabase
-    //         .channel('user_verification_channel')
-    //         .on(
-    //             'postgres_changes',
-    //             {
-    //                 event: 'UPDATE',
-    //                 schema: 'public',
-    //                 table: 'users',
-    //                 filter: `id=eq.${userId}`, // current user’s id
-    //             },
-    //             (payload) => {
-    //                 const newStatus = payload.new.status;
-    //                 if (newStatus === 'verified') {
-    //                     setIsVerified(true);
-    //                     router.push(`/${role}/dashboard`);
-    //                     router.refresh();
-    //                 }
-    //             }
-    //         )
-    //         .subscribe();
-
-    //     return () => {
-    //         supabase.removeChannel(channel);
-    //     };
-    // }, [userId, role, router]);
-
-
-    if (isVerified) {
-        return (
-            <div className="mx-auto max-w-md space-y-6 text-center p-8">
-                <div className="flex justify-center">
-                    <CheckCircle2 className="h-16 w-16 text-green-500 animate-pulse" />
-                </div>
-                <div className="space-y-2">
-                    <h1 className="text-2xl font-bold text-neutral-900">Email Verified!</h1>
-                    <p className="text-neutral-600">Redirecting you to your dashboard...</p>
-                </div>
-                <Loader2 className="h-6 w-6 animate-spin mx-auto text-neutral-400" />
-            </div>
-        );
-    }
 
     return (
         <div className="mx-auto max-w-md space-y-6 p-8">

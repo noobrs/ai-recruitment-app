@@ -10,30 +10,24 @@ import { createAdminClient } from "@/utils/supabase/admin";
 /*
 * Google SSO Action
 */
-export const googleSignInAction = async (role: UserRole) => {
+export const googleSignInAction = async (role: UserRole, flow: "register" | "login") => {
     const supabase = await createClient();
+    const base = process.env.NEXT_PUBLIC_SITE_URL;
 
     const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
+        provider: "google",
         options: {
-            redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/api/auth/callback?role=${role}`,
+            redirectTo: `${base}/api/auth/callback?flow=${flow}&role=${role}`,
             queryParams: {
-                access_type: 'offline',
-                prompt: 'consent',
+                access_type: "offline",
+                prompt: "consent",
             },
         },
     });
 
-    if (error) {
-        return { error: error.message };
-    }
-
-    if (data.url) {
-        // Return URL for client-side redirect instead of server redirect
-        return { url: data.url };
-    }
-
-    return { error: 'Failed to initiate Google sign in' };
+    if (error) return { error: error.message };
+    if (data.url) return { url: data.url };
+    return { error: "Failed to initiate Google sign in" };
 };
 
 /*
@@ -65,7 +59,6 @@ export async function registerAction(formData: FormData) {
 
     const supabase = await createClient();
     const supabaseAdmin = await createAdminClient();
-    let userId = null;
 
     try {
         // Check if user already exists with this email via auth.users
@@ -124,14 +117,13 @@ export async function registerAction(formData: FormData) {
             return { errorMessage: "Failed to set user role. Please try again." };
         }
 
-        userId = authData.user.id;
     } catch (error) {
         console.error('Registration error:', error);
         return { errorMessage: "An unexpected error occurred. Please try again." };
     }
 
     // Redirect to verification page via page route (displays UI)
-    redirect(`/auth/verify/${role}?email=${encodeURIComponent(email)}&userId=${encodeURIComponent(userId ?? '')}`);
+    redirect(`/auth/verify/${role}?email=${encodeURIComponent(email)}`);
 }
 
 /*
