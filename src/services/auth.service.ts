@@ -1,17 +1,3 @@
-/**
- * Auth Service - Server-Side Authentication
- * 
- * These functions are designed for Server Components and Server Actions.
- * They use Supabase server client with cookies for authentication.
- * 
- * Architecture:
- * - Server Components: Use these functions for fresh auth checks
- * - Client Components: Use AuthContext for cached auth state
- * - API Routes: Use these functions for auth validation
- * 
- * DO NOT call these from client components - use useAuthContext() instead.
- */
-
 import { createClient } from '@/utils/supabase/server';
 import type { BaseUser, UserRole } from '@/types';
 import { getUserById } from './user.service';

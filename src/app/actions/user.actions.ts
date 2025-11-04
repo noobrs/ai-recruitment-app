@@ -3,7 +3,11 @@
 import { createClient, protectRoute } from "@/utils/supabase/server";
 import type { UserRole } from "@/types";
 import { getErrorMessage } from "@/utils/utils";
+import { updateUserRole } from "@/services/user.service";
 
+/*
+* Google SSO Action
+*/
 export const googleSignInAction = async (role: UserRole) => {
     const supabase = await createClient();
 
@@ -30,27 +34,9 @@ export const googleSignInAction = async (role: UserRole) => {
     return { error: 'Failed to initiate Google sign in' };
 };
 
-
-// export const createAccountAction = async (formData: FormData) => {
-//     try {
-//         const email = formData.get("email") as string;
-//         const password = formData.get("password") as string;
-
-//         const { auth } = await createClient();
-
-//         const { error } = await auth.signUp({
-//             email,
-//             password,
-//         });
-
-//         if (error) throw error;
-
-//         return { errorMessage: null };
-//     } catch (error) {
-//         return { errorMessage: getErrorMessage(error) };
-//     }
-// };
-
+/*
+* Register Action
+*/
 export async function registerAction(formData: FormData) {
     const email = String(formData.get("email") ?? "");
     const password = String(formData.get("password") ?? "");
@@ -65,7 +51,7 @@ export async function registerAction(formData: FormData) {
     const supabase = await createClient();
 
     // Register user
-    const { data, error } = await supabase.auth.signUp({
+    const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -76,17 +62,20 @@ export async function registerAction(formData: FormData) {
         },
     });
 
-    if (error) {
-        return { errorMessage: error.message };
+    if (authError) {
+        return { errorMessage: authError.message };
     }
 
-    // Optionally insert into public.user table
-    // await supabase.from("user").insert({ id: data.user.id, name, role });
+    if (authData.user) {
+        await updateUserRole(authData.user.id, role);
+    }
 
     return { errorMessage: null };
 }
 
-
+/*
+* Log In Action
+*/
 export async function loginAction(formData: FormData) {
     const email = String(formData.get("email") ?? "");
     const password = String(formData.get("password") ?? "");
@@ -104,26 +93,9 @@ export async function loginAction(formData: FormData) {
     return { errorMessage: null };
 }
 
-// export const loginAction = async (formData: FormData) => {
-//     try {
-//         const email = formData.get("email") as string;
-//         const password = formData.get("password") as string;
-
-//         const { auth } = await createClient();
-
-//         const { error } = await auth.signInWithPassword({
-//             email,
-//             password,
-//         });
-
-//         if (error) throw error;
-
-//         return { errorMessage: null };
-//     } catch (error) {
-//         return { errorMessage: getErrorMessage(error) };
-//     }
-// };
-
+/*
+* Sign Out Action
+*/
 export const signOutAction = async () => {
     try {
         await protectRoute();

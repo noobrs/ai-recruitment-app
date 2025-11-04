@@ -70,7 +70,7 @@ export default function LoginForm({ role }: { role: UserRole }) {
 
             <div className="text-center text-sm text-neutral-600">
                 Don&apos;t have an account?{" "}
-                <Link href="/create-account" className={`${linkClass} hover:underline`}>
+                <Link href={`/auth/${role}/register`} className={`${linkClass} hover:underline`}>
                     Create Account
                 </Link>
             </div>
