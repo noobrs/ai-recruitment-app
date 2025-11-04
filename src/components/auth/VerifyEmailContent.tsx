@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
 import { Mail, Loader2, CheckCircle2, AlertCircle, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import type { UserRole } from "@/types";
