@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { completeJobSeekerOnboarding } from '@/app/actions/auth.actions';
 import FormContainer from '@/components/auth-old/FormContainer';
 import FormInput from '@/components/auth-old/FormInput';
 import ProgressStepper from '@/components/auth-old/ProgressStepper';
@@ -39,7 +38,7 @@ export default function OnboardingClient({ email, defaultFirstName, defaultLastN
         };
 
         try {
-            const result = await completeJobSeekerOnboarding(data);
+            const result = { error: "Function not implemented." }; // TODO: Replace with actual onboarding action call
             if (result?.error) {
                 setError(result.error);
                 setIsLoading(false);

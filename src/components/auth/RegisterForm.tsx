@@ -1,50 +1,33 @@
 "use client";
 
 import { useTransition } from "react";
-import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import { Loader2, Mail, Lock, User } from "lucide-react";
+import { Loader2, Mail, Lock } from "lucide-react";
 import Link from "next/link";
 import type { UserRole } from "@/types";
 import { registerAction } from "@/app/actions/user.actions";
 
 export default function RegisterForm({ role }: { role: UserRole }) {
-    const router = useRouter();
     const [isPending, startTransition] = useTransition();
     const ringClass = role === "jobseeker" ? "focus:ring-primary" : "focus:ring-secondary";
     const linkClass = role === "jobseeker" ? "text-primary" : "text-secondary";
 
     const onSubmit = (formData: FormData) => {
         formData.set("role", role);
+
         startTransition(async () => {
             const { errorMessage } = await registerAction(formData);
             if (errorMessage) {
                 toast.error(errorMessage);
-            } else {
-                toast.success("Account created successfully!");
-                router.push(`/auth/${role}/login`);
             }
+            // Note: registerAction will redirect to verification page on success
+            // No need to show success toast or manual redirect here
         });
     };
 
     return (
         <form action={onSubmit} className="space-y-4">
             <input type="hidden" name="role" value={role} />
-
-            <label className="block">
-                <span className="mb-1 block text-sm text-neutral-700">Full Name</span>
-                <div className="relative">
-                    <User className="absolute left-3 top-2.5 h-4 w-4 text-neutral-400" />
-                    <input
-                        type="text"
-                        name="name"
-                        required
-                        placeholder="Jane Doe"
-                        disabled={isPending}
-                        className={`w-full rounded-lg border border-neutral-200 bg-white/70 pl-10 pr-3 py-2 outline-none focus:ring-2 ${ringClass}`}
-                    />
-                </div>
-            </label>
 
             <label className="block">
                 <span className="mb-1 block text-sm text-neutral-700">Email</span>
