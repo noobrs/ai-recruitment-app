@@ -4,6 +4,7 @@ import Header2 from "@/components/header/Header";
 import "./globals.css";
 import { Toaster } from "react-hot-toast";
 import AuthListener from "@/components/AuthListener";
+import Footer from "@/components/footer";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -33,6 +34,7 @@ export default function RootLayout({
         <AuthListener />
         <Header2 />
         {children}
+        <Footer />
 
         <Toaster
           toastOptions={{
