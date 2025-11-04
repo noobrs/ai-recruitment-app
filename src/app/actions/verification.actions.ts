@@ -31,7 +31,7 @@ export async function resendVerificationAction(email: string, role: UserRole) {
             type: 'signup',
             email,
             options: {
-                emailRedirectTo: `${origin}/auth/callback?role=${role}&next=/${role}/dashboard`,
+                emailRedirectTo: `${origin}/api/auth/callback?role=${role}&next=/${role}/dashboard`,
             },
         });
 

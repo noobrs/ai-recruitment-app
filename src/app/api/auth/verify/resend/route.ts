@@ -12,7 +12,7 @@ export async function POST(req: Request) {
         type: 'signup',
         email,
         options: {
-            emailRedirectTo: `${origin}/auth/callback?next=/onboarding`,
+            emailRedirectTo: `${origin}/api/auth/callback?role=${role}&next=/onboarding`,
         },
     })
 

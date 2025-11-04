@@ -37,7 +37,7 @@ export default function VerifyEmailContent({ email, role }: VerifyEmailContentPr
                 type: "signup",
                 email,
                 options: {
-                    emailRedirectTo: `${origin}/auth/callback?role=${role}&next=/${role}/dashboard`,
+                    emailRedirectTo: `${origin}/api/auth/callback?role=${role}&next=/${role}/dashboard`,
                 },
             });
 
@@ -185,8 +185,8 @@ export default function VerifyEmailContent({ email, role }: VerifyEmailContentPr
                 {resendStatus.type && (
                     <div
                         className={`rounded-lg p-4 flex items-start gap-3 ${resendStatus.type === "success"
-                                ? "bg-green-50 border border-green-200"
-                                : "bg-red-50 border border-red-200"
+                            ? "bg-green-50 border border-green-200"
+                            : "bg-red-50 border border-red-200"
                             }`}
                     >
                         {resendStatus.type === "success" ? (

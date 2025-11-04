@@ -15,7 +15,7 @@ export const googleSignInAction = async (role: UserRole) => {
     const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-            redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback?role=${role}`,
+            redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/api/auth/callback?role=${role}`,
             queryParams: {
                 access_type: 'offline',
                 prompt: 'consent',
@@ -73,7 +73,7 @@ export async function registerAction(formData: FormData) {
             email,
             password,
             options: {
-                emailRedirectTo: `${origin}/auth/callback?role=${role}&next=/${role}/dashboard`,
+                emailRedirectTo: `${origin}/api/auth/callback?role=${role}&next=/${role}/dashboard`,
                 data: {
                     role,
                     // email_confirm: false // User must verify email
@@ -91,7 +91,7 @@ export async function registerAction(formData: FormData) {
                     type: 'signup',
                     email,
                     options: {
-                        emailRedirectTo: `${origin}/auth/callback?role=${role}&next=/${role}/dashboard`,
+                        emailRedirectTo: `${origin}/api/auth/callback?role=${role}&next=/${role}/dashboard`,
                     },
                 });
 

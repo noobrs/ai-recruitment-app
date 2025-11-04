@@ -1,24 +1,18 @@
-import { redirect } from 'next/navigation';
+import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { getUserById } from '@/services/user.service';
 
-export default async function AuthCallback({
-    searchParams,
-}: {
-    searchParams: Promise<{
-        token_hash?: string;
-        type?: string;
-        email?: string;
-        next?: string;
-        role?: string;
-        code?: string;
-    }>
-}) {
-    const params = await searchParams;
-    const { token_hash, type, email, next, role, code } = params;
-    const supabase = await createClient();
+export async function GET(request: NextRequest) {
+    const searchParams = request.nextUrl.searchParams;
+    const token_hash = searchParams.get('token_hash');
+    const type = searchParams.get('type');
+    const email = searchParams.get('email');
+    const next = searchParams.get('next');
+    const role = searchParams.get('role');
+    const code = searchParams.get('code');
 
-    // const origin = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
+    const supabase = await createClient();
+    const origin = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
 
     try {
         // Handle OAuth callback (code exchange)
@@ -27,7 +21,9 @@ export default async function AuthCallback({
 
             if (exchangeError) {
                 console.error('Code exchange error:', exchangeError);
-                redirect(`/auth/${role || 'jobseeker'}/login?error=oauth_failed`);
+                return NextResponse.redirect(
+                    new URL(`/auth/${role || 'jobseeker'}/login?error=oauth_failed`, origin)
+                );
             }
 
             // Get the authenticated user
@@ -40,11 +36,11 @@ export default async function AuthCallback({
 
                 // Check if user profile is complete
                 if (dbUser?.status === 'pending' || !dbUser?.first_name) {
-                    redirect(`/${userRole}/dashboard`); // Redirect to onboarding
+                    return NextResponse.redirect(new URL(`/${userRole}/dashboard`, origin));
                 }
 
                 // User is verified and has completed profile
-                redirect(next || `/${userRole}/dashboard`);
+                return NextResponse.redirect(new URL(next || `/${userRole}/dashboard`, origin));
             }
         }
 
@@ -65,7 +61,9 @@ export default async function AuthCallback({
                     ...(email && { email })
                 });
 
-                redirect(`/auth/verify/${role || 'jobseeker'}/error?${errorParams.toString()}`);
+                return NextResponse.redirect(
+                    new URL(`/auth/verify/${role || 'jobseeker'}/error?${errorParams.toString()}`, origin)
+                );
             }
 
             // Verification successful - get user data
@@ -83,20 +81,22 @@ export default async function AuthCallback({
                 }
 
                 // Redirect to next page or dashboard
-                redirect(next || `/${userRole}/dashboard`);
+                return NextResponse.redirect(new URL(next || `/${userRole}/dashboard`, origin));
             }
         }
 
         // Handle password reset or other callback types
         if (type === 'recovery' && token_hash) {
-            redirect('/auth/reset-password');
+            return NextResponse.redirect(new URL('/auth/reset-password', origin));
         }
 
         // If no valid params, redirect to home
-        redirect('/');
+        return NextResponse.redirect(new URL('/', origin));
 
     } catch (error) {
         console.error('Callback error:', error);
-        redirect('/auth/jobseeker/login?error=callback_failed');
+        return NextResponse.redirect(
+            new URL('/auth/jobseeker/login?error=callback_failed', origin)
+        );
     }
 }
