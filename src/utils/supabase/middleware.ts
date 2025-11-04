@@ -35,7 +35,7 @@ export async function updateSession(request: NextRequest) {
     const isJobSeekerRoute = pathname.startsWith('/jobseeker')
     const isRecruiterRoute = pathname.startsWith('/recruiter')
     const isAuthRoute = pathname.startsWith('/auth')
-    const isLandingPage = pathname === '/'
+    // const isLandingPage = pathname === '/'
 
     if (isAuthRoute) {
         const {

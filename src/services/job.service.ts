@@ -59,26 +59,26 @@ export async function getJobsByRecruiterId(recruiterId: number): Promise<Job[]> 
  * Get jobs by status
  */
 export async function getJobsByStatus(status: JobStatus) {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from('job')
-    .select('*')
-    .eq('job_status', status)
-    .order('created_at', { ascending: false });
+    const supabase = await createClient();
+    const { data, error } = await supabase
+        .from('job')
+        .select('*')
+        .eq('job_status', status)
+        .order('created_at', { ascending: false });
 
-  if (error) {
-    logError('getJobsByStatus', error);
-    return [];
-  }
+    if (error) {
+        logError('getJobsByStatus', error);
+        return [];
+    }
 
-  return data || [];
+    return data || [];
 }
 
 /**
  * Get active jobs
  */
 export async function getActiveJobs() {
-  return getJobsByStatus('open');
+    return getJobsByStatus('open');
 }
 
 /**
@@ -134,3 +134,5 @@ export async function deleteJob(jobId: number): Promise<boolean> {
     }
     return true;
 }
+
+export async function getAllJobsWithRelations() { }

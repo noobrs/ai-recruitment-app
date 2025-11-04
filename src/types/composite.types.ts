@@ -7,7 +7,7 @@
  * All types here are built on top of the base types from database.types.ts
  */
 
-import { User as DBUser, JobSeeker, Recruiter } from './index';
+import { User as DBUser, JobSeeker } from './index';
 import { User as SupabaseUser } from '@supabase/supabase-js';
 
 export type BaseUser = SupabaseUser & DBUser;
