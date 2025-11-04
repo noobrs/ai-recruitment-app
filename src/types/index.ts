@@ -50,3 +50,6 @@ export type RecruiterUpdate = TablesUpdate<'recruiter'>;
 export type CompanyUpdate = TablesUpdate<'company'>;
 export type JobRequirementUpdate = TablesUpdate<'job_requirement'>;
 export type NotificationUpdate = TablesUpdate<'notification'>;
+
+// Export composite types
+export * from './composite.types';

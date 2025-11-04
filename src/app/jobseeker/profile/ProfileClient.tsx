@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { User, Resume, JobSeeker } from '@/types';
+import { Resume, UserWithJobSeeker } from '@/types';
 import { updateJobSeekerProfile, updateUserProfile, setProfileResume } from './actions';
 import {
     ProfileHeader,
@@ -10,10 +10,6 @@ import {
     ProfileResumeCard,
     ResumesList,
 } from '@/components/jobseeker/profile';
-
-type UserWithJobSeeker = User & {
-    job_seeker: JobSeeker;
-};
 
 interface ProfileClientProps {
     user: UserWithJobSeeker;

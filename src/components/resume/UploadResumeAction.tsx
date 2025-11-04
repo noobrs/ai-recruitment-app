@@ -13,12 +13,12 @@
 'use client';
 
 import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
-import {
-    RESUME_ALLOWED_MIME_TYPES,
-    RESUME_IMAGE_MAX_BYTES,
-    RESUME_PDF_MAX_BYTES,
-    isAllowedResumeMime,
-} from '@/constants/resume';
+// import {
+//     RESUME_ALLOWED_MIME_TYPES,
+//     RESUME_IMAGE_MAX_BYTES,
+//     RESUME_PDF_MAX_BYTES,
+//     isAllowedResumeMime,
+// } from '@/constants/resume';
 import { createClient } from '@/utils/supabase/client';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
@@ -64,7 +64,7 @@ export default function UploadResumeAction() {
     const [progress, setProgress] = useState<ProgressState>('idle');
     const [error, setError] = useState<string | null>(null);
     const [statusMessage, setStatusMessage] = useState<string | null>(null);
-    
+
     // Resume identifier received after successful upload
     const [resumeId, setResumeId] = useState<number | null>(null);
 
@@ -82,13 +82,13 @@ export default function UploadResumeAction() {
             channelRef.current.unsubscribe();
             channelRef.current = null;
         }
-        
+
         // Clean up fallback timeout
         if (fallbackTimeoutRef.current) {
             clearTimeout(fallbackTimeoutRef.current);
             fallbackTimeoutRef.current = null;
         }
-        
+
         setSelectedFile(null);
         setProgress('idle');
         setError(null);
@@ -110,17 +110,17 @@ export default function UploadResumeAction() {
      * @returns Error message string if invalid, null if valid
      */
     const validateFile = useCallback((file: File) => {
-        if (!isAllowedResumeMime(file.type)) {
-            return `Unsupported file type. Allowed: ${RESUME_ALLOWED_MIME_TYPES.join(', ')}`;
-        }
+        // if (!isAllowedResumeMime(file.type)) {
+        //     return `Unsupported file type. Allowed: ${RESUME_ALLOWED_MIME_TYPES.join(', ')}`;
+        // }
 
-        if (file.type === 'application/pdf' && file.size > RESUME_PDF_MAX_BYTES) {
-            return 'PDF exceeds 20MB limit.';
-        }
+        // if (file.type === 'application/pdf' && file.size > RESUME_PDF_MAX_BYTES) {
+        //     return 'PDF exceeds 20MB limit.';
+        // }
 
-        if (file.type !== 'application/pdf' && file.size > RESUME_IMAGE_MAX_BYTES) {
-            return 'Image file exceeds allowed size.';
-        }
+        // if (file.type !== 'application/pdf' && file.size > RESUME_IMAGE_MAX_BYTES) {
+        //     return 'Image file exceeds allowed size.';
+        // }
 
         return null;
     }, []);
@@ -186,22 +186,22 @@ export default function UploadResumeAction() {
                     },
                     (payload) => {
                         console.log('Resume update received:', payload);
-                        
+
                         // Check if processing is complete by looking for redacted_file_path
                         // This field is set by the webhook when FastAPI finishes processing
                         if (payload.new && 'redacted_file_path' in payload.new) {
                             const redactedPath = payload.new.redacted_file_path;
-                            
+
                             if (redactedPath) {
                                 setStatusMessage('Resume processed successfully.');
                                 setProgress('finished');
-                                
+
                                 // Clean up subscription
                                 if (channelRef.current) {
                                     channelRef.current.unsubscribe();
                                     channelRef.current = null;
                                 }
-                                
+
                                 // Clear fallback timeout
                                 if (fallbackTimeoutRef.current) {
                                     clearTimeout(fallbackTimeoutRef.current);
@@ -213,7 +213,7 @@ export default function UploadResumeAction() {
                 )
                 .subscribe((status) => {
                     console.log('Realtime subscription status:', status);
-                    
+
                     // Handle connection status updates
                     if (status === 'SUBSCRIBED') {
                         setStatusMessage('Resume is being processed…');
@@ -234,7 +234,7 @@ export default function UploadResumeAction() {
                         if (data.processingComplete) {
                             setStatusMessage('Resume processed successfully.');
                             setProgress('finished');
-                            
+
                             if (channelRef.current) {
                                 channelRef.current.unsubscribe();
                                 channelRef.current = null;
@@ -264,7 +264,7 @@ export default function UploadResumeAction() {
                 channelRef.current.unsubscribe();
                 channelRef.current = null;
             }
-            
+
             if (fallbackTimeoutRef.current) {
                 clearTimeout(fallbackTimeoutRef.current);
                 fallbackTimeoutRef.current = null;
@@ -438,7 +438,7 @@ export default function UploadResumeAction() {
                                 <input
                                     id="resume-input"
                                     type="file"
-                                    accept={RESUME_ALLOWED_MIME_TYPES.join(',')}
+                                    // accept={RESUME_ALLOWED_MIME_TYPES.join(',')}
                                     className="hidden"
                                     onChange={(event) => handleFileChange(event.target.files)}
                                 />
@@ -467,8 +467,8 @@ export default function UploadResumeAction() {
                                     {progress === 'uploading'
                                         ? 'Uploading…'
                                         : progress === 'processing'
-                                        ? 'Processing…'
-                                        : 'Upload'}
+                                            ? 'Processing…'
+                                            : 'Upload'}
                                 </button>
                             </div>
                         </form>

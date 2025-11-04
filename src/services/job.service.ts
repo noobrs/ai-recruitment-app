@@ -1,5 +1,6 @@
 import { createClient } from '@/utils/supabase/server';
 import { Job, JobInsert, JobUpdate, JobStatus } from '@/types';
+import { logError, logInfo } from '@/utils/logger';
 
 /**
  * Get a job by ID
@@ -13,7 +14,7 @@ export async function getJobById(jobId: number): Promise<Job | null> {
         .single();
 
     if (error) {
-        console.error('Error fetching job:', error);
+        logError('getJobById', error);
         return null;
     }
     return data;
@@ -30,7 +31,7 @@ export async function getAllJobs(): Promise<Job[]> {
         .order('created_at', { ascending: false });
 
     if (error) {
-        console.error('Error fetching jobs:', error);
+        logError('getAllJobs', error);
         return [];
     }
     return data || [];
@@ -48,28 +49,36 @@ export async function getJobsByRecruiterId(recruiterId: number): Promise<Job[]> 
         .order('created_at', { ascending: false });
 
     if (error) {
-        console.error('Error fetching jobs by recruiter:', error);
+        logError('getJobsByRecruiterId', error);
         return [];
     }
     return data || [];
 }
 
 /**
- * Get active jobs
+ * Get jobs by status
  */
-export async function getActiveJobs(): Promise<Job[]> {
+export async function getJobsByStatus(status: JobStatus) {
     const supabase = await createClient();
     const { data, error } = await supabase
         .from('job')
         .select('*')
-        .eq('job_status', 'open' as JobStatus)
+        .eq('job_status', status)
         .order('created_at', { ascending: false });
 
     if (error) {
-        console.error('Error fetching active jobs:', error);
+        logError('getJobsByStatus', error);
         return [];
     }
+
     return data || [];
+}
+
+/**
+ * Get active jobs
+ */
+export async function getActiveJobs() {
+    return getJobsByStatus('open');
 }
 
 /**
@@ -84,7 +93,7 @@ export async function createJob(job: JobInsert): Promise<Job | null> {
         .single();
 
     if (error) {
-        console.error('Error creating job:', error);
+        logError('createJob', error);
         return null;
     }
     return data;
@@ -103,7 +112,7 @@ export async function updateJob(jobId: number, updates: JobUpdate): Promise<Job 
         .single();
 
     if (error) {
-        console.error('Error updating job:', error);
+        logError('updateJob', error);
         return null;
     }
     return data;
@@ -120,8 +129,10 @@ export async function deleteJob(jobId: number): Promise<boolean> {
         .eq('job_id', jobId);
 
     if (error) {
-        console.error('Error deleting job:', error);
+        logError('deleteJob', error);
         return false;
     }
     return true;
 }
+
+export async function getAllJobsWithRelations() { }

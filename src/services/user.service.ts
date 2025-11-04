@@ -1,5 +1,5 @@
 import { createClient } from '@/utils/supabase/server';
-import { User, UserInsert, UserUpdate } from '@/types';
+import { User, UserInsert, UserRole, UserStatus, UserUpdate } from '@/types';
 
 /**
  * Get a user by ID
@@ -20,14 +20,31 @@ export async function getUserById(userId: string): Promise<User | null> {
 }
 
 /**
- * Get a user by email
+ * Get a user by email (from auth.users)
+ * Note: Email is stored in auth.users, not public.users
  */
 export async function getUserByEmail(email: string): Promise<User | null> {
     const supabase = await createClient();
+    
+    // First get the user from auth.users by email
+    const { data: { users }, error: authError } = await supabase.auth.admin.listUsers();
+    
+    if (authError) {
+        console.error('Error fetching auth users:', authError);
+        return null;
+    }
+
+    const authUser = users?.find(u => u.email === email);
+    
+    if (!authUser) {
+        return null;
+    }
+
+    // Now get the user from public.users by id
     const { data, error } = await supabase
         .from('users')
         .select('*')
-        .eq('email', email)
+        .eq('id', authUser.id)
         .single();
 
     if (error) {
@@ -91,7 +108,7 @@ export async function updateUserStatus(userId: string, status: 'pending' | 'acti
 /**
  * Get user with role and status check
  */
-export async function getUserWithRoleStatus(userId: string): Promise<{ role: string | null; status: string | null } | null> {
+export async function getUserWithRoleStatus(userId: string): Promise<{ role: UserRole | null; status: UserStatus | null } | null> {
     const supabase = await createClient();
     const { data, error } = await supabase
         .from('users')

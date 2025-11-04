@@ -28,3 +28,36 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans);
 }
+
+/* ===== Role-aware accent using your tokens ===== */
+:root {
+  --accent: var(--primary);
+  /* default to primary */
+}
+
+/* Role switches accent between your two base tokens */
+[data-role="jobseeker"] {
+  --accent: var(--primary);
+}
+
+[data-role="recruiter"] {
+  --accent: var(--secondary);
+}
+
+/* Fancy background + glass card (keeps your palette) */
+.auth-gradient {
+  background:
+    radial-gradient(1200px 600px at 10% -10%, hsl(var(--accent) / 0.20), transparent 60%),
+    radial-gradient(800px 400px at 110% 10%, hsl(var(--accent) / 0.15), transparent 60%),
+    linear-gradient(180deg, #fff 0%, #fafafa 100%);
+}
+
+.glass {
+  backdrop-filter: blur(16px);
+  background: linear-gradient(180deg, hsl(0 0% 100% / 0.75), hsl(0 0% 100% / 0.60));
+  box-shadow:
+    0 10px 30px -10px hsl(var(--accent) / 0.25),
+    0 6px 20px -15px hsl(0 0% 0% / 0.15);
+  border: 1px solid hsl(0 0% 100% / 0.35);
+  border-radius: 1.25rem;
+}

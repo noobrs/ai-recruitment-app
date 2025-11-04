@@ -1,13 +1,9 @@
 'use client';
 
-import { User, JobSeeker } from '@/types';
+import { UserWithJobSeeker } from '@/types';
 import ProfilePicture from './ProfilePicture';
 import ProfileBasicInfo from './ProfileBasicInfo';
 import ProfileEditActions from './ProfileEditActions';
-
-type UserWithJobSeeker = User & {
-    job_seeker: JobSeeker;
-};
 
 interface ProfileHeaderProps {
     user: UserWithJobSeeker;
