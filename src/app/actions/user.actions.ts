@@ -76,7 +76,7 @@ export async function registerAction(formData: FormData) {
                 emailRedirectTo: `${origin}/auth/callback?role=${role}&next=/${role}/dashboard`,
                 data: {
                     role,
-                    email_confirm: false // User must verify email
+                    // email_confirm: false // User must verify email
                 },
             },
         });
