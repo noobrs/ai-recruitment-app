@@ -6,13 +6,15 @@ import { createClient } from "@/utils/supabase/client";
 import { Mail, Loader2, CheckCircle2, AlertCircle, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import type { UserRole } from "@/types";
+import { createRealtimeClient } from "@/utils/supabase/realtime";
 
 interface VerifyEmailContentProps {
     email: string;
     role: UserRole;
+    userId: string;
 }
 
-export default function VerifyEmailContent({ email, role }: VerifyEmailContentProps) {
+export default function VerifyEmailContent({ email, role, userId }: VerifyEmailContentProps) {
     const router = useRouter();
     const [isResending, setIsResending] = useState(false);
     const [resendStatus, setResendStatus] = useState<{
@@ -22,7 +24,7 @@ export default function VerifyEmailContent({ email, role }: VerifyEmailContentPr
     const [countdown, setCountdown] = useState(0);
     const [isVerified, setIsVerified] = useState(false);
 
-    // Handle resend verification email
+    // Handle resend verification email via API
     const handleResend = useCallback(async () => {
         if (countdown > 0 || isResending) return;
 
@@ -30,30 +32,30 @@ export default function VerifyEmailContent({ email, role }: VerifyEmailContentPr
         setResendStatus({ type: null, message: "" });
 
         try {
-            const supabase = createClient();
-            const origin = window.location.origin;
-
-            const { error } = await supabase.auth.resend({
-                type: "signup",
-                email,
-                options: {
-                    emailRedirectTo: `${origin}/api/auth/callback?role=${role}&next=/${role}/dashboard`,
+            const response = await fetch('/api/auth/verify/resend', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
                 },
+                body: JSON.stringify({ email, role }),
             });
 
-            if (error) {
+            const data = await response.json();
+
+            if (!response.ok || !data.ok) {
                 setResendStatus({
                     type: "error",
-                    message: error.message || "Failed to resend verification email",
+                    message: data.message || "Failed to resend verification email",
                 });
             } else {
                 setResendStatus({
                     type: "success",
-                    message: "Verification email sent! Please check your inbox.",
+                    message: data.message || "Verification email sent! Please check your inbox.",
                 });
                 setCountdown(60); // 60 second cooldown
             }
-        } catch {
+        } catch (error) {
+            console.error('Resend error:', error);
             setResendStatus({
                 type: "error",
                 message: "An unexpected error occurred. Please try again.",
@@ -71,71 +73,106 @@ export default function VerifyEmailContent({ email, role }: VerifyEmailContentPr
         }
     }, [countdown]);
 
-    // Subscribe to realtime changes for email verification
-    useEffect(() => {
-        const supabase = createClient();
-        let authCheckInterval: NodeJS.Timeout | null = null;
+    // Subscribe to realtime changes and poll verification status
+    // useEffect(() => {
+    //     const supabase = createClient();
+    //     let authCheckInterval: NodeJS.Timeout | null = null;
 
-        const setupRealtimeSubscription = async () => {
-            try {
-                // Get current user to check if already verified
-                const { data: { user } } = await supabase.auth.getUser();
+    //     const setupRealtimeSubscription = async () => {
+    //         try {
+    //             // Check via API endpoint first
+    //             const checkVerification = async () => {
+    //                 try {
+    //                     const response = await fetch('/api/auth/verify/check');
+    //                     if (response.ok) {
+    //                         const data = await response.json();
+    //                         if (data.verified) {
+    //                             setIsVerified(true);
+    //                             if (authCheckInterval) clearInterval(authCheckInterval);
+    //                             setTimeout(() => {
+    //                                 router.push(`/${role}/dashboard`);
+    //                                 router.refresh();
+    //                             }, 1500);
+    //                             return true;
+    //                         }
+    //                     }
+    //                 } catch (error) {
+    //                     console.error('Verification check error:', error);
+    //                 }
+    //                 return false;
+    //             };
 
-                if (user?.email_confirmed_at) {
-                    setIsVerified(true);
-                    // Small delay to show success state
-                    setTimeout(() => {
-                        router.push(`/${role}/dashboard`);
-                        router.refresh();
-                    }, 1500);
-                    return;
-                }
+    //             // Initial check
+    //             const isAlreadyVerified = await checkVerification();
+    //             if (isAlreadyVerified) return;
 
-                // Set up periodic auth check (fallback for missed realtime events)
-                authCheckInterval = setInterval(async () => {
-                    const { data: { user: currentUser } } = await supabase.auth.getUser();
-                    if (currentUser?.email_confirmed_at) {
-                        setIsVerified(true);
-                        if (authCheckInterval) clearInterval(authCheckInterval);
-                        setTimeout(() => {
-                            router.push(`/${role}/dashboard`);
-                            router.refresh();
-                        }, 1500);
-                    }
-                }, 3000); // Check every 3 seconds
+    //             // Set up periodic API check
+    //             authCheckInterval = setInterval(checkVerification, 3000); // Check every 3 seconds
 
-                // Subscribe to auth state changes
-                const { data: { subscription } } = supabase.auth.onAuthStateChange(
-                    async (event, session) => {
-                        if (event === "SIGNED_IN" && session?.user?.email_confirmed_at) {
-                            setIsVerified(true);
-                            if (authCheckInterval) clearInterval(authCheckInterval);
-                            // Redirect to onboarding/dashboard
-                            setTimeout(() => {
-                                router.push(`/${role}/dashboard`);
-                                router.refresh();
-                            }, 1500);
-                        }
-                    }
-                );
+    //             // Subscribe to auth state changes (for immediate feedback)
+    //             const { data: { subscription } } = supabase.auth.onAuthStateChange(
+    //                 async (event, session) => {
+    //                     if (event === "SIGNED_IN" && session?.user?.email_confirmed_at) {
+    //                         setIsVerified(true);
+    //                         if (authCheckInterval) clearInterval(authCheckInterval);
+    //                         // Redirect to onboarding/dashboard
+    //                         setTimeout(() => {
+    //                             router.push(`/${role}/dashboard`);
+    //                             router.refresh();
+    //                         }, 1500);
+    //                     }
+    //                 }
+    //             );
 
-                return () => {
-                    subscription.unsubscribe();
-                    if (authCheckInterval) clearInterval(authCheckInterval);
-                };
-            } catch (error) {
-                console.error("Error setting up verification listener:", error);
-            }
-        };
+    //             return () => {
+    //                 subscription.unsubscribe();
+    //                 if (authCheckInterval) clearInterval(authCheckInterval);
+    //             };
+    //         } catch (error) {
+    //             console.error("Error setting up verification listener:", error);
+    //         }
+    //     };
 
-        setupRealtimeSubscription();
+    //     setupRealtimeSubscription();
 
-        return () => {
-            if (authCheckInterval) {
-                clearInterval(authCheckInterval);
-            }
-        };
-    }, [email, role, router]);
+    //     return () => {
+    //         if (authCheckInterval) {
+    //             clearInterval(authCheckInterval);
+    //         }
+    //     };
+    // }, [email, role, router]);
+
+    // Real time subscription to user status changes
+    // useEffect(() => {
+    //     // const supabase = createClient();
+    //     const supabase = createRealtimeClient();
+
+    //     const channel = supabase
+    //         .channel('user_verification_channel')
+    //         .on(
+    //             'postgres_changes',
+    //             {
+    //                 event: 'UPDATE',
+    //                 schema: 'public',
+    //                 table: 'users',
+    //                 filter: `id=eq.${userId}`, // current user’s id
+    //             },
+    //             (payload) => {
+    //                 const newStatus = payload.new.status;
+    //                 if (newStatus === 'verified') {
+    //                     setIsVerified(true);
+    //                     router.push(`/${role}/dashboard`);
+    //                     router.refresh();
+    //                 }
+    //             }
+    //         )
+    //         .subscribe();
+
+    //     return () => {
+    //         supabase.removeChannel(channel);
+    //     };
+    // }, [userId, role, router]);
+
 
     if (isVerified) {
         return (

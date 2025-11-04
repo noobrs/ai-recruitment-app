@@ -8,10 +8,10 @@ export default async function VerifyEmailPage({
     searchParams,
 }: {
     params: Promise<{ role: string }>;
-    searchParams: Promise<{ email?: string }>;
+    searchParams: Promise<{ email?: string, userId: string }>;
 }) {
     const { role: rawRole } = await params;
-    const { email } = await searchParams;
+    const { email, userId } = await searchParams;
 
     // Validate role
     const role: UserRole = isValidRole(rawRole) ? rawRole : 'jobseeker';
@@ -21,5 +21,5 @@ export default async function VerifyEmailPage({
         redirect(`/auth/${role}/register`);
     }
 
-    return <VerifyEmailContent email={email} role={role} />;
+    return <VerifyEmailContent email={email} role={role} userId={userId} />;
 }

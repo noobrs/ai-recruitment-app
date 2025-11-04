@@ -5,6 +5,7 @@ import type { UserRole } from "@/types";
 import { getErrorMessage } from "@/utils/utils";
 import { updateUserRole } from "@/services/user.service";
 import { redirect } from 'next/navigation';
+import { createAdminClient } from "@/utils/supabase/admin";
 
 /*
 * Google SSO Action
@@ -63,6 +64,8 @@ export async function registerAction(formData: FormData) {
     }
 
     const supabase = await createClient();
+    const supabaseAdmin = await createAdminClient();
+    let userId = null;
 
     try {
         // Check if user already exists with this email via auth.users
@@ -110,33 +113,25 @@ export async function registerAction(formData: FormData) {
             return { errorMessage: "Registration failed. Please try again." };
         }
 
-        // Set role in public.users table via trigger
-        // The trigger should handle this, but we'll ensure it's set correctly
-        // Note: The trigger creates the user row when auth.users is inserted
-        // We need to ensure the role is set even when user is in pending state
-
-        // Wait a brief moment for trigger to complete
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-        // Verify and update role if needed
-        const { data: userData } = await supabase
+        // Set role in public.users table
+        const { error: roleError } = await supabaseAdmin
             .from('users')
-            .select('id, role, status')
-            .eq('id', authData.user.id)
-            .maybeSingle();
+            .update({ role })
+            .eq('id', authData.user.id);
 
-        if (!userData || userData.role !== role) {
-            // Update role if not set correctly by trigger
-            await updateUserRole(authData.user.id, role);
+        if (roleError) {
+            console.error('Error setting user role:', roleError);
+            return { errorMessage: "Failed to set user role. Please try again." };
         }
 
-        // Redirect to verification page with role
-        redirect(`/auth/verify/${role}?email=${encodeURIComponent(email)}`);
-
+        userId = authData.user.id;
     } catch (error) {
         console.error('Registration error:', error);
         return { errorMessage: "An unexpected error occurred. Please try again." };
     }
+
+    // Redirect to verification page via page route (displays UI)
+    redirect(`/auth/verify/${role}?email=${encodeURIComponent(email)}&userId=${encodeURIComponent(userId ?? '')}`);
 }
 
 /*
