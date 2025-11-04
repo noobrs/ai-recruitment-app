@@ -40,9 +40,11 @@ export async function updateSession(request: NextRequest) {
     const isRecruiterRoute = pathname.startsWith('/recruiter')
     const isAuthRoute = pathname.startsWith('/auth')
     const isLandingPage = pathname === '/'
-    const isPublicRoute = isLandingPage || pathname.startsWith('/_next') || pathname.startsWith('/api')
 
     // Allow public routes for everyone
+    const publicPaths = ['/', '/_next', '/api', '/contact-us']
+    const isPublicRoute = publicPaths.some(path => pathname.startsWith(path))
+
     if (isPublicRoute) {
         return supabaseResponse
     }
