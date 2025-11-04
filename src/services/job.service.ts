@@ -1,6 +1,7 @@
 import { createClient } from '@/utils/supabase/server';
 import { Job, JobInsert, JobUpdate, JobStatus } from '@/types';
 import { logError, logInfo } from '@/utils/logger';
+import { JobWithRelations } from '@/types/job.types';
 
 /**
  * Get a job by ID
@@ -133,4 +134,26 @@ export async function deleteJob(jobId: number): Promise<boolean> {
         return false;
     }
     return true;
+}
+
+export async function getAllJobsWithRelations(): Promise<JobWithRelations[]> {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+        .from('job')
+        .select(`
+            *,
+            recruiter (
+                recruiter_id,
+                position,
+                company:company_id (*)
+            ),
+            job_requirement (*)
+        `)
+        .order('created_at', { ascending: false });
+
+    if (error) {
+        console.error('Error fetching jobs with relations:', error);
+        return [];
+    }
+    return data || [];
 }
