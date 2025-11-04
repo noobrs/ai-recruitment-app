@@ -40,12 +40,12 @@ export async function GET(request: NextRequest) {
                 if (existedUser && existedUser.status === "pending") {
                     await supabaseAdmin
                         .from("users")
-                        .update({ status: "active", role: desiredRole })
+                        .update({ role: desiredRole })
                         .eq("id", existedUser.id);
-                    return NextResponse.redirect(new URL(`/${desiredRole}/dashboard`, origin));
+                    return NextResponse.redirect(new URL(`/auth/${desiredRole}/onboarding`, origin));
                 }
 
-                return NextResponse.redirect(new URL(next || `/${userRole}/dashboard`, origin));
+                return NextResponse.redirect(new URL(next || `/${desiredRole}/dashboard`, origin));
             }
         }
 
