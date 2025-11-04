@@ -37,9 +37,9 @@ export default function JobCard(props: JobCardProps) {
       </p>
 
       <div className="flex flex-row">
-        <Link href={readMoreHref} className="text-blue-500 grow-1">
+        {/* <Link href={readMoreHref} className="text-blue-500 grow-1">
           Read More
-        </Link>
+        </Link> */}
         <p className="text-black">{props.createdAt}</p>
       </div>
     </div>
