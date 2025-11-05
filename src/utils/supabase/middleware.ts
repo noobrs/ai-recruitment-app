@@ -58,6 +58,7 @@ export async function updateSession(request: NextRequest) {
     const isRecruiterRoute = pathname.startsWith('/recruiter')
     const isAuthRoute = pathname.startsWith('/auth')
     const isResetPasswordPage = pathname === '/auth/reset-password'
+    const isChangePasswordPage = pathname === '/auth/change-password'
 
     // 1) Get user
     const {
@@ -81,7 +82,7 @@ export async function updateSession(request: NextRequest) {
     const isReset = user?.user_metadata?.reset_password === true
 
     if (user && isReset) {
-        // Allow only: public pages and the reset page
+        // Allow only: reset page
         if (isResetPasswordPage) {
             return supabaseResponse
         }
@@ -89,6 +90,11 @@ export async function updateSession(request: NextRequest) {
         const url = request.nextUrl.clone()
         url.pathname = '/auth/reset-password'
         return NextResponse.redirect(url)
+    }
+
+    if (user && isChangePasswordPage) {
+        // Allow only: change password page
+        return supabaseResponse
     }
 
     // 4) Pending users go to onboarding (unless on onboarding/verification)
