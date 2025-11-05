@@ -5,7 +5,7 @@ import { createAdminClient } from '@/utils/supabase/admin';
 export async function POST(request: NextRequest) {
     try {
         const supabase = await createClient();
-        const supabaseAdmin = await createAdminClient();
+
 
         // Get current user
         const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -16,6 +16,8 @@ export async function POST(request: NextRequest) {
                 { status: 401 }
             );
         }
+
+        const supabaseAdmin = createAdminClient();
 
         const body = await request.json();
         const { role, firstName, lastName, location, aboutMe, companyName, companyWebsite, companyIndustry } = body;
@@ -63,7 +65,7 @@ export async function POST(request: NextRequest) {
                 .from('job_seeker')
                 .upsert({
                     user_id: user.id,
-                    js_location: location || null,
+                    location: location || null,
                     about_me: aboutMe || null,
                 }, {
                     onConflict: 'user_id'

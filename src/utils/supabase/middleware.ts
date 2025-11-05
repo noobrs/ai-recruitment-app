@@ -36,6 +36,15 @@ export async function updateSession(request: NextRequest) {
     const publicPaths = ['/', '/_next', '/api', '/contact-us', '/favicon.ico', '/robots.txt']
     const isPublicRoute = publicPaths.some((p) => pathname.startsWith(p))
 
+    if (
+        pathname.startsWith('/api') ||
+        pathname.startsWith('/_next') ||
+        pathname === '/favicon.ico' ||
+        pathname === '/robots.txt'
+    ) {
+        return supabaseResponse
+    }
+
     // 1) Always fetch the signed-in user first
     const {
         data: { user },
