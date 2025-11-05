@@ -28,112 +28,93 @@ export async function updateSession(request: NextRequest) {
             },
         }
     )
-
     const pathname = request.nextUrl.pathname
-
-    // Define protected routes
     const isJobSeekerRoute = pathname.startsWith('/jobseeker')
     const isRecruiterRoute = pathname.startsWith('/recruiter')
     const isAuthRoute = pathname.startsWith('/auth')
-    // const isLandingPage = pathname === '/'
 
-    if (isAuthRoute) {
-        const {
-            data: { user },
-        } = await supabase.auth.getUser();
+    const publicPaths = ['/', '/_next', '/api', '/contact-us', '/favicon.ico', '/robots.txt']
+    const isPublicRoute = publicPaths.some((p) => pathname.startsWith(p))
 
-        if (user) {
-            // Try to resolve role/status to decide destination; if unknown, fall back to "/"
-            const roleStatus = await getUserWithRoleStatus(user.id);
-            const role = (roleStatus?.role as UserRole) ?? null;
-            const status = (roleStatus?.status as UserStatus) ?? null;
+    // 1) Always fetch the signed-in user first
+    const {
+        data: { user },
+    } = await supabase.auth.getUser()
 
-            if (status === "active" && role) {
-                const url = request.nextUrl.clone()
-                url.pathname = role === "jobseeker" ? "/jobseeker/dashboard" : "/recruiter/dashboard"
-                return NextResponse.redirect(url);
-            }
-            // If still onboarding/unknown, keep them on auth flow
-        }
-        // Return the cookie-plumbed response for other /auth cases
-        return supabaseResponse;
+    // 2) Edge-safe fetch of role & status using THIS supabase client
+    let userRole: UserRole | null = null
+    let userStatus: UserStatus | null = null
+    if (user) {
+        const { data: info } = await supabase
+            .from('users')
+            .select('role,status')
+            .eq('id', user.id)
+            .maybeSingle()
+        userRole = (info?.role as UserRole) ?? null
+        userStatus = (info?.status as UserStatus) ?? null
     }
 
-    // Allow public routes for everyone
-    const publicPaths = ['/', '/_next', '/api', '/contact-us']
-    const isPublicRoute = publicPaths.some(path => pathname.startsWith(path))
+    // Helper: infer intended role when unknown
+    const intendedRole: UserRole =
+        (user?.user_metadata?.role as UserRole) ??
+        (isRecruiterRoute ? 'recruiter' : isJobSeekerRoute ? 'jobseeker' : (userRole ?? 'jobseeker'))
 
-    if (isPublicRoute) {
-        return supabaseResponse
-    }
+    const onboardingPath =
+        intendedRole === 'recruiter'
+            ? '/auth/recruiter/onboarding'
+            : '/auth/jobseeker/onboarding'
 
-    // If user is not logged in and trying to access protected routes
-    if (isJobSeekerRoute || isRecruiterRoute) {
-        // Get the user
-        const {
-            data: { user },
-        } = await supabase.auth.getUser()
-        if (!user) {
+    const dashboardPath =
+        userRole === 'recruiter'
+            ? '/recruiter/dashboard'
+            : '/jobseeker/dashboard'
+
+    // 3) TOP-LEVEL pending redirect: apply on ANY route except the onboarding (and auth verification pages if you have them)
+    if (user && (userStatus === 'pending' || !userRole)) {
+        const alreadyOnOnboarding = pathname === onboardingPath
+        const isVerificationFlow = pathname.startsWith('/auth/verify') || pathname.startsWith('/auth/verification')
+
+        if (!alreadyOnOnboarding && !isVerificationFlow) {
             const url = request.nextUrl.clone()
-
-            if (isJobSeekerRoute) {
-                url.pathname = '/auth/jobseeker/login'
-            } else if (isRecruiterRoute) {
-                url.pathname = '/auth/recruiter/login'
-            }
-
+            url.pathname = onboardingPath
             return NextResponse.redirect(url)
         }
-        else {
-            // Get user role and status from database
-            const userInfo = await getUserWithRoleStatus(user.id)
-            const userRole = userInfo?.role
-            const userStatus = userInfo?.status
-
-            // Check if user needs to complete onboarding
-            if (userStatus === 'pending' || !userRole) {
-                // User hasn't completed onboarding
-                const intendedRole = user.user_metadata?.role || 'jobseeker'
-                const onboardingPath = intendedRole === 'jobseeker'
-                    ? '/auth/jobseeker/onboarding'
-                    : '/auth/recruiter/onboarding'
-
-                // Allow access to onboarding page
-                if (pathname === onboardingPath) {
-                    return supabaseResponse
-                }
-
-                // Redirect to onboarding if trying to access other routes
-                if (!isAuthRoute && !isPublicRoute) {
-                    const url = request.nextUrl.clone()
-                    url.pathname = onboardingPath
-                    return NextResponse.redirect(url)
-                }
-            }
-
-            // Redirect if accessing wrong dashboard
-            if (isJobSeekerRoute && userRole !== 'jobseeker') {
-                const url = request.nextUrl.clone()
-                url.pathname = '/auth/jobseeker/login'
-                return NextResponse.redirect(url)
-            }
-
-            if (isRecruiterRoute && userRole !== 'recruiter') {
-                const url = request.nextUrl.clone()
-                url.pathname = '/auth/recruiter/login'
-                return NextResponse.redirect(url)
-            }
-
-            // Redirect logged-in users away from auth pages to their dashboard (only if onboarded)
-            if (isAuthRoute && userStatus === 'active' && userRole) {
-                const url = request.nextUrl.clone()
-                url.pathname = userRole === 'jobseeker'
-                    ? '/jobseeker/dashboard'
-                    : '/recruiter/dashboard'
-                return NextResponse.redirect(url)
-            }
-        }
-
+        // allow onboarding/verification to proceed
         return supabaseResponse
     }
+
+    // Auth area: if already active & has role, push to dashboard
+    if (isAuthRoute) {
+        if (user && userStatus === 'active' && userRole) {
+            const url = request.nextUrl.clone()
+            url.pathname = dashboardPath
+            return NextResponse.redirect(url)
+        }
+        return supabaseResponse
+    }
+
+    // Protected areas: require auth
+    if (isJobSeekerRoute || isRecruiterRoute) {
+        if (!user) {
+            const url = request.nextUrl.clone()
+            url.pathname = isJobSeekerRoute ? '/auth/jobseeker/login' : '/auth/recruiter/login'
+            return NextResponse.redirect(url)
+        }
+
+        // Wrong-role guard (user is active here because pending handled above)
+        if (isJobSeekerRoute && userRole !== 'jobseeker') {
+            const url = request.nextUrl.clone()
+            url.pathname = '/auth/jobseeker/login'
+            return NextResponse.redirect(url)
+        }
+        if (isRecruiterRoute && userRole !== 'recruiter') {
+            const url = request.nextUrl.clone()
+            url.pathname = '/auth/recruiter/login'
+            return NextResponse.redirect(url)
+        }
+        return supabaseResponse
+    }
+
+    // Public routes
+    return supabaseResponse
 }

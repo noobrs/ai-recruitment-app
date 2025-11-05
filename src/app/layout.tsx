@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import Header2 from "@/components/header/Header";
+
 import "./globals.css";
 import { Toaster } from "react-hot-toast";
 import AuthListener from "@/components/AuthListener";
 import Footer from "@/components/footer/Footer";
+import Header from "@/components/header/Header";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -32,7 +33,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <AuthListener />
-        <Header2 />
+        <Header />
         {children}
         <Footer />
 

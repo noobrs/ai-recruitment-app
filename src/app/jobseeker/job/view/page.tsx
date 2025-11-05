@@ -66,7 +66,7 @@ export default function Job() {
                                 to create meaningful user experiences. Your journey with us is an opportunity to drive innovation and make a significant impact.
                             </p>
 
-                            <h3 className="text-xl font-bold py-3">What You'll Bring</h3>
+                            <h3 className="text-xl font-bold py-3">{`What You'll Bring`}</h3>
                             <ul className="list-disc list-inside">
                                 <li>Showcase proficiency in collaborative design environments.</li>
                                 <li>Demonstrated ability to work independently, think critically, and maintain meticulous attention to detail.</li>
@@ -87,7 +87,7 @@ export default function Job() {
                                 <span className="text-gray-500 ps-2">per/annum</span>
                             </p>
 
-                            <h3 className="text-xl font-bold py-3">What's in it for you?</h3>
+                            <h3 className="text-xl font-bold py-3">{`What's in it for you?`}</h3>
                             <ul className="list-disc list-inside">
                                 {/* <li>
                   {mockJobs[0].jobBenefits.split('\n').map((line, index) => (
