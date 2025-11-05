@@ -4,6 +4,8 @@ import Link from "next/link";
 import NotificationBell from "./NotificationBell";
 import ProfileMenu from "./ProfileMenu";
 import type { BaseUser } from "@/types";
+import { usePathname } from 'next/navigation';
+import { useEffect, useState } from "react";
 
 type Props = {
     user: BaseUser | null;
@@ -12,6 +14,17 @@ type Props = {
 };
 
 export default function HeaderState({ user, actionLink, theme }: Props) {
+    const pathname = usePathname();
+
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => setMounted(true), []);
+
+    // On first client render, DON'T hide (match SSR). Hide only after mount.
+    const shouldHide = mounted && pathname?.startsWith("/auth");
+
+    if (shouldHide) return null;
+
     return (
         <>
             {/* Right section of first row */}

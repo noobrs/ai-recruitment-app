@@ -72,7 +72,7 @@ export async function updateSession(request: NextRequest) {
     // 3) TOP-LEVEL pending redirect: apply on ANY route except the onboarding (and auth verification pages if you have them)
     if (user && (userStatus === 'pending' || !userRole)) {
         const alreadyOnOnboarding = pathname === onboardingPath
-        const isVerificationFlow = pathname.startsWith('/auth/verify') || pathname.startsWith('/auth/verification')
+        const isVerificationFlow = pathname.startsWith('/auth/verify')
 
         if (!alreadyOnOnboarding && !isVerificationFlow) {
             const url = request.nextUrl.clone()

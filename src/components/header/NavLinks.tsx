@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 
 type Props = {
     navLinks: { href: string; label: string }[];
@@ -11,6 +12,14 @@ type Props = {
 
 export default function NavLinks({ navLinks, underlineClass, activeTextClass }: Props) {
     const pathname = usePathname();
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => setMounted(true), []);
+
+    // On first client render, DON'T hide (match SSR). Hide only after mount.
+    const shouldHide = mounted && pathname?.startsWith("/auth");
+
+    if (shouldHide) return null;
 
     return (
         <div className="border-t border-gray-100">
