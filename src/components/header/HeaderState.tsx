@@ -46,11 +46,11 @@ export default function HeaderState({ user, actionLink, theme }: Props) {
             ) : (
                 // not logged in: you can show login/register here if you like
                 <div className="flex items-center gap-2">
-                    <Link href="/auth/jobseeker/login" className="text-sm text-gray-700 hover:text-gray-900">
+                    <Link href="/auth/login" className="text-sm text-gray-700 hover:text-gray-900">
                         Log in
                     </Link>
                     <Link
-                        href="/auth/jobseeker/register"
+                        href="/auth/register"
                         className="text-sm px-3 py-1.5 rounded-lg bg-gray-900 text-white hover:opacity-90"
                     >
                         Get started

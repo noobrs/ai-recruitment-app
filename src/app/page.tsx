@@ -38,16 +38,16 @@ export default async function Home() {
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
             <a
-              href="/auth/jobseeker/login"
+              href="/auth/login"
               className="w-full sm:w-auto px-8 py-4 bg-indigo-600 text-white font-semibold rounded-lg shadow-lg hover:bg-indigo-700 transition-colors"
             >
-              I&apos;m Looking for a Job
+              Login
             </a>
             <a
-              href="/auth/recruiter/login"
+              href="/auth/register"
               className="w-full sm:w-auto px-8 py-4 bg-white text-indigo-600 font-semibold rounded-lg shadow-lg border-2 border-indigo-600 hover:bg-indigo-50 transition-colors"
             >
-              I&apos;m Hiring Talent
+              Register
             </a>
           </div>
 
