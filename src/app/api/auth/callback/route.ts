@@ -47,47 +47,47 @@ export async function GET(request: NextRequest) {
             }
         }
 
-        // Handle email verification links (OTP)
-        if (type === 'signup' && token_hash && email) {
-            const { error, data } = await supabase.auth.verifyOtp({
-                type: 'signup',
-                token_hash,
-                email,
-            });
+        // // Handle email verification links (OTP)
+        // if (type === 'signup' && token_hash && email) {
+        //     const { error, data } = await supabase.auth.verifyOtp({
+        //         type: 'signup',
+        //         token_hash,
+        //         email,
+        //     });
 
-            if (error) {
-                console.error('OTP verification error:', error);
+        //     if (error) {
+        //         console.error('OTP verification error:', error);
 
-                // Redirect to error page with proper context
-                const errorParams = new URLSearchParams({
-                    reason: error.message,
-                    ...(email && { email })
-                });
+        //         // Redirect to unified error page with proper context
+        //         const errorParams = new URLSearchParams({
+        //             reason: error.message,
+        //             ...(email && { email })
+        //         });
 
-                return NextResponse.redirect(
-                    new URL(`/auth/verify/error?${errorParams.toString()}`, origin)
-                );
-            }
+        //         return NextResponse.redirect(
+        //             new URL(`/auth/verify/error?${errorParams.toString()}`, origin)
+        //         );
+        //     }
 
-            // Verification successful - get user data
-            if (data.user) {
-                // Get user role from database
-                const dbUser = await getUserById(data.user.id);
+        //     // Verification successful - get user data
+        //     if (data.user) {
+        //         // Get user role from database
+        //         const dbUser = await getUserById(data.user.id);
 
-                // If user has no role or is pending, redirect to onboarding
-                if (!dbUser?.role || dbUser?.status === 'pending') {
-                    return NextResponse.redirect(new URL(next || '/auth/onboarding', origin));
-                }
+        //         // If user has no role or is pending, redirect to onboarding
+        //         if (!dbUser?.role || dbUser?.status === 'pending') {
+        //             return NextResponse.redirect(new URL(next || '/auth/onboarding', origin));
+        //         }
 
-                // If user has a role and is active, redirect to dashboard
-                if (dbUser.role && dbUser.status === 'active') {
-                    return NextResponse.redirect(new URL(next || `/${dbUser.role}/dashboard`, origin));
-                }
+        //         // If user has a role and is active, redirect to dashboard
+        //         if (dbUser.role && dbUser.status === 'active') {
+        //             return NextResponse.redirect(new URL(next || `/${dbUser.role}/dashboard`, origin));
+        //         }
 
-                // Default to onboarding
-                return NextResponse.redirect(new URL('/auth/onboarding', origin));
-            }
-        }
+        //         // Default to onboarding
+        //         return NextResponse.redirect(new URL('/auth/onboarding', origin));
+        //     }
+        // }
 
         // // Handle password reset or other callback types
         // if (type === 'recovery' && token_hash) {

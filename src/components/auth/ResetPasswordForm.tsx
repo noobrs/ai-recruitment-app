@@ -33,8 +33,12 @@ export default function ResetPasswordForm() {
             if (errorMessage) {
                 toast.error(errorMessage);
             } else {
-                toast.success("Password reset successful!");
-                router.push("/auth/login");
+                toast.success("Password reset successful! Redirecting...");
+                // Small delay to show success message
+                setTimeout(() => {
+                    router.push("/auth/login");
+                    router.refresh(); // Refresh to clear cookies
+                }, 1000);
             }
         });
     };

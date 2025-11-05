@@ -1,4 +1,3 @@
-import { getUserWithRoleStatus } from '@/services'
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import type { UserRole, UserStatus } from '@/types'
@@ -86,10 +85,10 @@ export async function updateSession(request: NextRequest) {
 
     // Auth area: if already active & has role, push to dashboard
     if (isAuthRoute) {
-        // Allow reset-password page even if user is authenticated
-        // (user is auto-signed in via recovery link but needs to set new password)
         const isResetPasswordPage = pathname === '/auth/reset-password'
 
+        // Allow reset-password page even if user is authenticated
+        // (user is auto-signed in via recovery link and needs to set new password)
         if (user && userStatus === 'active' && userRole && !isResetPasswordPage) {
             const url = request.nextUrl.clone()
             url.pathname = dashboardPath

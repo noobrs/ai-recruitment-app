@@ -1,19 +1,12 @@
 import Link from 'next/link';
 import { AlertCircle, RotateCcw, Mail } from 'lucide-react';
-import { isValidRole } from '@/utils/utils';
-import type { UserRole } from '@/types';
 
 export default async function VerificationErrorPage({
-    params,
     searchParams,
 }: {
-    params: Promise<{ role: string }>;
     searchParams: Promise<{ reason?: string; email?: string }>;
 }) {
-    const { role: rawRole } = await params;
     const { reason, email } = await searchParams;
-
-    const role: UserRole = isValidRole(rawRole) ? rawRole : 'jobseeker';
 
     const getErrorMessage = (errorReason?: string) => {
         if (!errorReason) return 'An unexpected error occurred during verification.';
@@ -60,7 +53,7 @@ export default async function VerificationErrorPage({
                     <div className="space-y-3 pt-4">
                         {email ? (
                             <Link
-                                href={`/auth/verify/${role}?email=${encodeURIComponent(email)}`}
+                                href={`/auth/verify?email=${encodeURIComponent(email)}`}
                                 className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-neutral-900 text-white rounded-lg hover:opacity-90 transition-opacity font-medium"
                             >
                                 <Mail className="h-4 w-4" />
@@ -68,7 +61,7 @@ export default async function VerificationErrorPage({
                             </Link>
                         ) : (
                             <Link
-                                href={`/auth/${role}/register`}
+                                href="/auth/register"
                                 className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-neutral-900 text-white rounded-lg hover:opacity-90 transition-opacity font-medium"
                             >
                                 <RotateCcw className="h-4 w-4" />
@@ -77,7 +70,7 @@ export default async function VerificationErrorPage({
                         )}
 
                         <Link
-                            href={`/auth/${role}/login`}
+                            href="/auth/login"
                             className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-white border-2 border-neutral-200 text-neutral-900 rounded-lg hover:bg-neutral-50 transition-colors font-medium"
                         >
                             Already verified? Login

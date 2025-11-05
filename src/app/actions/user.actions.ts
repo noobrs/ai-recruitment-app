@@ -61,11 +61,14 @@ export async function registerAction(formData: FormData) {
             email,
             password,
             options: {
-                emailRedirectTo: `${origin}/api/auth/callback?next=/auth/onboarding`,
-                data: {
-                    // User will select role during onboarding
-                },
-            },
+                emailRedirectTo: `${origin}/auth/onboarding`,
+            }
+            // options: {
+            //     emailRedirectTo: `${origin}/api/auth/callback?next=/auth/onboarding`,
+            //     data: {
+            //         // User will select role during onboarding
+            //     },
+            // },
         });
 
         if (authError) {
@@ -130,7 +133,6 @@ export async function loginAction(formData: FormData) {
 export async function forgotPasswordAction(formData: FormData) {
     const email = String(formData.get("email") ?? "");
     const origin = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
-    const base = process.env.NEXT_PUBLIC_SITE_URL;
 
     // Validation: Check if email is valid format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -142,7 +144,6 @@ export async function forgotPasswordAction(formData: FormData) {
 
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
         // redirectTo: `${origin}/auth/reset-password`,
-        redirectTo: `${base}/api/auth/confirm?token_hash={{ .TokenHash }}&type=recovery&next=/auth/reset-password`,
     });
 
     if (error) {
@@ -165,6 +166,7 @@ export async function resetPasswordAction(formData: FormData) {
 
     const supabase = await createClient();
 
+    // Update the user's password
     const { error } = await supabase.auth.updateUser({
         password: password,
     });
@@ -172,6 +174,10 @@ export async function resetPasswordAction(formData: FormData) {
     if (error) {
         return { errorMessage: error.message };
     }
+
+    // Sign out the user after password reset for security
+    // They must log in with their new password
+    await supabase.auth.signOut();
 
     return { errorMessage: null };
 }
