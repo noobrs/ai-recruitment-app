@@ -1,5 +1,6 @@
 "use server";
 
+import { createAdminClient } from "@/utils/supabase/admin";
 import { createClient, protectRoute } from "@/utils/supabase/server";
 import { getErrorMessage } from "@/utils/utils";
 import { redirect } from 'next/navigation';
@@ -53,11 +54,36 @@ export async function registerAction(formData: FormData) {
         return { errorMessage: "Please enter a valid email address" };
     }
 
-    // check exisiting user
-
     const supabase = await createClient();
 
     try {
+        const supabaseAdmin = createAdminClient();
+        const origin = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
+
+        const { data, error } = await supabaseAdmin.auth.admin.listUsers();
+        const existing = data.users.find(u => u.email?.toLowerCase() === email.toLowerCase());
+
+        if (existing) {
+            if (!existing.email_confirmed_at) {
+                // Resend verification link
+                const { error: resendError } = await supabase.auth.resend({
+                    type: 'signup',
+                    email,
+                    options: { emailRedirectTo: `${origin}/auth/onboarding` },
+                });
+
+                if (resendError) {
+                    return { errorMessage: 'Failed to resend verification link. Try again later.' };
+                }
+
+                // Tell user to check their email again
+                redirect(`/auth/verify?email=${encodeURIComponent(email)}`);
+            } else {
+                // Already verified
+                return { errorMessage: 'This email is already registered. Please login instead.' };
+            }
+        }
+
         // Register new user with Supabase Auth
         const { data: authData, error: authError } = await supabase.auth.signUp({
             email,
@@ -66,33 +92,6 @@ export async function registerAction(formData: FormData) {
                 emailRedirectTo: `${origin}/auth/onboarding`,
             }
         });
-
-
-        //// resend
-        // if (authError) {
-        //     console.log('Auth registration error:', authError);
-        //     // Handle specific error cases
-        //     if (authError.message.includes('already registered') || authError.message.includes('User already registered')) {
-        //         // User exists - check if they verified their email
-        //         // Try to resend verification in case they didn't verify
-        //         const { error: resendError } = await supabase.auth.resend({
-        //             type: 'signup',
-        //             email,
-        //             options: {
-        //                 emailRedirectTo: `${origin}/api/auth/callback?next=/auth/onboarding`,
-        //             },
-        //         });
-
-        //         if (!resendError) {
-        //             // Successfully resent - they probably didn't verify
-        //             redirect(`/auth/verify?email=${encodeURIComponent(email)}`);
-        //         }
-
-        //         // If resend failed, user is likely already verified
-        //         return { errorMessage: "This email is already registered. Please login instead." };
-        //     }
-        //     return { errorMessage: authError.message };
-        // }
 
         if (!authData.user) {
             return { errorMessage: "Registration failed. Please try again." };
