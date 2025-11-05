@@ -63,11 +63,6 @@ export async function updateSession(request: NextRequest) {
         userStatus = (info?.status as UserStatus) ?? null
     }
 
-    // Helper: infer intended role when unknown
-    const intendedRole: UserRole =
-        (user?.user_metadata?.role as UserRole) ??
-        (isRecruiterRoute ? 'recruiter' : isJobSeekerRoute ? 'jobseeker' : (userRole ?? 'jobseeker'))
-
     const onboardingPath = '/auth/onboarding'
 
     const dashboardPath =
@@ -91,7 +86,11 @@ export async function updateSession(request: NextRequest) {
 
     // Auth area: if already active & has role, push to dashboard
     if (isAuthRoute) {
-        if (user && userStatus === 'active' && userRole) {
+        // Allow reset-password page even if user is authenticated
+        // (user is auto-signed in via recovery link but needs to set new password)
+        const isResetPasswordPage = pathname === '/auth/reset-password'
+
+        if (user && userStatus === 'active' && userRole && !isResetPasswordPage) {
             const url = request.nextUrl.clone()
             url.pathname = dashboardPath
             return NextResponse.redirect(url)
@@ -103,19 +102,19 @@ export async function updateSession(request: NextRequest) {
     if (isJobSeekerRoute || isRecruiterRoute) {
         if (!user) {
             const url = request.nextUrl.clone()
-            url.pathname = isJobSeekerRoute ? '/auth/jobseeker/login' : '/auth/recruiter/login'
+            url.pathname = '/auth/login'
             return NextResponse.redirect(url)
         }
 
         // Wrong-role guard (user is active here because pending handled above)
         if (isJobSeekerRoute && userRole !== 'jobseeker') {
             const url = request.nextUrl.clone()
-            url.pathname = '/auth/jobseeker/login'
+            url.pathname = '/auth/login'
             return NextResponse.redirect(url)
         }
         if (isRecruiterRoute && userRole !== 'recruiter') {
             const url = request.nextUrl.clone()
-            url.pathname = '/auth/recruiter/login'
+            url.pathname = '/auth/login'
             return NextResponse.redirect(url)
         }
         return supabaseResponse

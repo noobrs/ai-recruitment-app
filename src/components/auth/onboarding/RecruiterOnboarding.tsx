@@ -41,13 +41,6 @@ export default function RecruiterOnboarding({
                 body: JSON.stringify(data),
             });
 
-            // Check if response is JSON
-            const contentType = response.headers.get('content-type');
-            if (!contentType || !contentType.includes('application/json')) {
-                console.error('Non-JSON response received:', await response.text());
-                throw new Error('Server error occurred. Please try again.');
-            }
-
             const result = await response.json();
 
             if (!response.ok) {
@@ -58,7 +51,6 @@ export default function RecruiterOnboarding({
             router.push('/recruiter/dashboard');
             router.refresh();
         } catch (error) {
-            console.error('Onboarding error:', error);
             toast.error(error instanceof Error ? error.message : 'An error occurred');
             setIsLoading(false);
         }
