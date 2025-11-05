@@ -20,7 +20,7 @@ export default function AuthListener() {
                 'SIGNED_IN',
                 'SIGNED_OUT',
                 'USER_UPDATED',
-                // 'PASSWORD_RECOVERY'
+                'PASSWORD_RECOVERY'
             ].includes(event);
 
             if (shouldRefresh && !isRefreshing.current) {

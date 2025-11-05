@@ -28,28 +28,43 @@ export async function updateSession(request: NextRequest) {
         }
     )
     const pathname = request.nextUrl.pathname
-    const isJobSeekerRoute = pathname.startsWith('/jobseeker')
-    const isRecruiterRoute = pathname.startsWith('/recruiter')
-    const isAuthRoute = pathname.startsWith('/auth')
-
-    const publicPaths = ['/', '/_next', '/api', '/contact-us', '/favicon.ico', '/robots.txt']
-    const isPublicRoute = publicPaths.some((p) => pathname.startsWith(p))
-
+    // --- Fast exits for assets & public infrastructure ---
     if (
-        pathname.startsWith('/api') ||
         pathname.startsWith('/_next') ||
+        pathname.startsWith('/api/') ||                    // keep API free (adjust if needed)
         pathname === '/favicon.ico' ||
-        pathname === '/robots.txt'
+        pathname === '/robots.txt' ||
+        pathname.endsWith('.png') ||
+        pathname.endsWith('.jpg') ||
+        pathname.endsWith('.svg') ||
+        pathname.endsWith('.css') ||
+        pathname.endsWith('.js')
     ) {
         return supabaseResponse
     }
 
-    // 1) Always fetch the signed-in user first
+    // Define "public" routes you want available to everyone
+    const PUBLIC_PATHS = new Set<string>([
+        '/', '/contact-us',
+        '/auth/login', '/auth/register', '/auth/forgot-password',
+        '/auth/verify',               // if you have verification routes under here
+        '/auth/reset-password'        // IMPORTANT: allow this explicitly
+    ])
+    const isPublicRoute =
+        PUBLIC_PATHS.has(pathname) || // exact matches
+        pathname.startsWith('/auth/verify') // e.g. /auth/verify/[role]?token=...
+
+    const isJobSeekerRoute = pathname.startsWith('/jobseeker')
+    const isRecruiterRoute = pathname.startsWith('/recruiter')
+    const isAuthRoute = pathname.startsWith('/auth')
+    const isResetPasswordPage = pathname === '/auth/reset-password'
+
+    // 1) Get user
     const {
         data: { user },
     } = await supabase.auth.getUser()
 
-    // 2) Edge-safe fetch of role & status using THIS supabase client
+    // 2) Get role/status (edge-safe, same client)
     let userRole: UserRole | null = null
     let userStatus: UserStatus | null = null
     if (user) {
@@ -62,34 +77,39 @@ export async function updateSession(request: NextRequest) {
         userStatus = (info?.status as UserStatus) ?? null
     }
 
+    // 3) RESET MODE: lock user to public + reset page only
+    const isReset = user?.user_metadata?.reset_password === true
+
+    if (user && isReset) {
+        // Allow only: public pages and the reset page
+        if (isResetPasswordPage) {
+            return supabaseResponse
+        }
+        // Everything else -> bounce to reset page
+        const url = request.nextUrl.clone()
+        url.pathname = '/auth/reset-password'
+        return NextResponse.redirect(url)
+    }
+
+    // 4) Pending users go to onboarding (unless on onboarding/verification)
     const onboardingPath = '/auth/onboarding'
-
-    const dashboardPath =
-        userRole === 'recruiter'
-            ? '/recruiter/dashboard'
-            : '/jobseeker/dashboard'
-
-    // 3) TOP-LEVEL pending redirect: apply on ANY route except the onboarding (and auth verification pages if you have them)
-    if (user && (userStatus === 'pending' || !userRole)) {
+    if (user && userStatus === 'pending') {
         const alreadyOnOnboarding = pathname === onboardingPath
         const isVerificationFlow = pathname.startsWith('/auth/verify')
-
         if (!alreadyOnOnboarding && !isVerificationFlow) {
             const url = request.nextUrl.clone()
             url.pathname = onboardingPath
             return NextResponse.redirect(url)
         }
-        // allow onboarding/verification to proceed
         return supabaseResponse
     }
 
-    // Auth area: if already active & has role, push to dashboard
-    if (isAuthRoute) {
-        const isResetPasswordPage = pathname === '/auth/reset-password'
+    // 5) Auth area: if fully active + has role, send to dashboard (but only if not reset mode; handled above)
+    const dashboardPath =
+        userRole === 'recruiter' ? '/recruiter/dashboard' : '/jobseeker/dashboard'
 
-        // Allow reset-password page even if user is authenticated
-        // (user is auto-signed in via recovery link and needs to set new password)
-        if (user && userStatus === 'active' && userRole && !isResetPasswordPage) {
+    if (isAuthRoute) {
+        if (user && userStatus === 'active' && userRole) {
             const url = request.nextUrl.clone()
             url.pathname = dashboardPath
             return NextResponse.redirect(url)
@@ -97,15 +117,13 @@ export async function updateSession(request: NextRequest) {
         return supabaseResponse
     }
 
-    // Protected areas: require auth
+    // 6) Protected areas: require auth and correct role
     if (isJobSeekerRoute || isRecruiterRoute) {
         if (!user) {
             const url = request.nextUrl.clone()
             url.pathname = '/auth/login'
             return NextResponse.redirect(url)
         }
-
-        // Wrong-role guard (user is active here because pending handled above)
         if (isJobSeekerRoute && userRole !== 'jobseeker') {
             const url = request.nextUrl.clone()
             url.pathname = '/auth/login'
@@ -119,6 +137,6 @@ export async function updateSession(request: NextRequest) {
         return supabaseResponse
     }
 
-    // Public routes
+    // 7) Public routes pass through
     return supabaseResponse
 }

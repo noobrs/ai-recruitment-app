@@ -10,6 +10,12 @@ export default async function ForgotPasswordPage({
     const params = await searchParams;
     const error = params.error;
 
+    const errorMessages: Record<string, string> = {
+        invalid_session: "Your reset session has expired. Please request a new password reset link.",
+        session_expired: "Your reset link has expired. Please request a new one.",
+        unauthorized: "Please use the reset link sent to your email to access the password reset page.",
+    };
+
     return (
         <AuthLayout>
             <LoginCard title="Reset Your Password">
@@ -18,7 +24,7 @@ export default async function ForgotPasswordPage({
                 </p>
                 {error && (
                     <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
-                        {error}
+                        {errorMessages[error] || error}
                     </div>
                 )}
                 <ForgotPasswordForm />

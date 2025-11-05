@@ -138,12 +138,14 @@ export async function forgotPasswordAction(formData: FormData) {
         return { errorMessage: "Please enter a valid email address" };
     }
 
+    // Database record validation needed
+
     const supabase = await createClient();
 
-    const { error } = await supabase.auth.resetPasswordForEmail(email);
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email);
 
-    if (error) {
-        return { errorMessage: error.message };
+    if (resetError) {
+        return { errorMessage: resetError.message };
     }
 
     return { errorMessage: null };
@@ -162,9 +164,19 @@ export async function resetPasswordAction(formData: FormData) {
 
     const supabase = await createClient();
 
+    // Get current user before update
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+        return { errorMessage: "No authenticated user found" };
+    }
+
     // Update the user's password
     const { error } = await supabase.auth.updateUser({
         password: password,
+        data: {
+            reset_password: false,
+        },
     });
 
     if (error) {
@@ -172,7 +184,6 @@ export async function resetPasswordAction(formData: FormData) {
     }
 
     // Sign out the user after password reset for security
-    // They must log in with their new password
     await supabase.auth.signOut();
 
     return { errorMessage: null };

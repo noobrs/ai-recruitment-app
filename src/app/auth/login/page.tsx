@@ -3,12 +3,23 @@ import LoginCard from "@/components/auth/LoginCard";
 import LoginForm from "@/components/auth/LoginForm";
 import OAuthButtons from "@/components/auth/OAuthButtons";
 
-export default async function LoginPage() {
+export default async function LoginPage({
+    searchParams,
+}: {
+    searchParams: Promise<{ message?: string }>;
+}) {
+    const params = await searchParams;
+    const message = params.message;
     const title = "Welcome Back";
 
     return (
         <AuthLayout>
             <LoginCard title={title}>
+                {message === 'password_reset_success' && (
+                    <div className="mb-4 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm">
+                        Password successfully reset! Please log in with your new password.
+                    </div>
+                )}
                 <div className="space-y-5">
                     <OAuthButtons />
                     <div className="relative">

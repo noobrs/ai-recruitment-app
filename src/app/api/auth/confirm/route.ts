@@ -20,6 +20,19 @@ export async function GET(request: NextRequest) {
             type,
             token_hash,
         })
+
+        if (type === 'recovery') {
+            const { error } = await supabase.auth.updateUser({
+                data: {
+                    reset_password: true,
+                },
+            });
+            if (error) {
+                redirectTo.pathname = `/auth/verify/error`
+                return NextResponse.redirect(redirectTo)
+            }
+        }
+
         if (!error) {
             return NextResponse.redirect(redirectTo)
         }
