@@ -53,6 +53,8 @@ export async function registerAction(formData: FormData) {
         return { errorMessage: "Please enter a valid email address" };
     }
 
+    // check exisiting user
+
     const supabase = await createClient();
 
     try {
@@ -63,38 +65,34 @@ export async function registerAction(formData: FormData) {
             options: {
                 emailRedirectTo: `${origin}/auth/onboarding`,
             }
-            // options: {
-            //     emailRedirectTo: `${origin}/api/auth/callback?next=/auth/onboarding`,
-            //     data: {
-            //         // User will select role during onboarding
-            //     },
-            // },
         });
 
-        if (authError) {
-            console.log('Auth registration error:', authError);
-            // Handle specific error cases
-            if (authError.message.includes('already registered') || authError.message.includes('User already registered')) {
-                // User exists - check if they verified their email
-                // Try to resend verification in case they didn't verify
-                const { error: resendError } = await supabase.auth.resend({
-                    type: 'signup',
-                    email,
-                    options: {
-                        emailRedirectTo: `${origin}/api/auth/callback?next=/auth/onboarding`,
-                    },
-                });
 
-                if (!resendError) {
-                    // Successfully resent - they probably didn't verify
-                    redirect(`/auth/verify?email=${encodeURIComponent(email)}`);
-                }
+        //// resend
+        // if (authError) {
+        //     console.log('Auth registration error:', authError);
+        //     // Handle specific error cases
+        //     if (authError.message.includes('already registered') || authError.message.includes('User already registered')) {
+        //         // User exists - check if they verified their email
+        //         // Try to resend verification in case they didn't verify
+        //         const { error: resendError } = await supabase.auth.resend({
+        //             type: 'signup',
+        //             email,
+        //             options: {
+        //                 emailRedirectTo: `${origin}/api/auth/callback?next=/auth/onboarding`,
+        //             },
+        //         });
 
-                // If resend failed, user is likely already verified
-                return { errorMessage: "This email is already registered. Please login instead." };
-            }
-            return { errorMessage: authError.message };
-        }
+        //         if (!resendError) {
+        //             // Successfully resent - they probably didn't verify
+        //             redirect(`/auth/verify?email=${encodeURIComponent(email)}`);
+        //         }
+
+        //         // If resend failed, user is likely already verified
+        //         return { errorMessage: "This email is already registered. Please login instead." };
+        //     }
+        //     return { errorMessage: authError.message };
+        // }
 
         if (!authData.user) {
             return { errorMessage: "Registration failed. Please try again." };
@@ -142,9 +140,7 @@ export async function forgotPasswordAction(formData: FormData) {
 
     const supabase = await createClient();
 
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        // redirectTo: `${origin}/auth/reset-password`,
-    });
+    const { error } = await supabase.auth.resetPasswordForEmail(email);
 
     if (error) {
         return { errorMessage: error.message };
