@@ -89,10 +89,10 @@ export async function GET(request: NextRequest) {
             }
         }
 
-        // Handle password reset or other callback types
-        if (type === 'recovery' && token_hash) {
-            return NextResponse.redirect(new URL('/auth/reset-password', origin));
-        }
+        // // Handle password reset or other callback types
+        // if (type === 'recovery' && token_hash) {
+        //     return NextResponse.redirect(new URL('/auth/reset-password', origin));
+        // }
 
         // If no valid params, redirect to home
         return NextResponse.redirect(new URL('/', origin));
