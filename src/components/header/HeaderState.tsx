@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import NotificationBell from "./NotificationBell";
+import NotificationBellClient from "./NotificationBellClient";
 import ProfileMenu from "./ProfileMenu";
-import type { BaseUser } from "@/types";
+import type { BaseUser, Notification } from "@/types";
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from "react";
 
@@ -11,9 +11,13 @@ type Props = {
     user: BaseUser | null;
     actionLink: { href: string; label: string } | null;
     theme: { text: string; bg: string; hoverChip: string; underline: string };
+    notificationData: {
+        unreadCount: number;
+        recentNotifications: Notification[];
+    } | null;
 };
 
-export default function HeaderState({ user, actionLink, theme }: Props) {
+export default function HeaderState({ user, actionLink, theme, notificationData }: Props) {
     const pathname = usePathname();
 
     const [mounted, setMounted] = useState(false);
@@ -30,7 +34,15 @@ export default function HeaderState({ user, actionLink, theme }: Props) {
             {/* Right section of first row */}
             {user ? (
                 <div className="flex items-center gap-4">
-                    <NotificationBell hoverClass={theme.hoverChip} iconClass={theme.text} />
+                    {notificationData && (
+                        <NotificationBellClient
+                            userId={user.id}
+                            initialUnreadCount={notificationData.unreadCount}
+                            initialNotifications={notificationData.recentNotifications}
+                            hoverClass={theme.hoverChip}
+                            iconClass={theme.text}
+                        />
+                    )}
 
                     <ProfileMenu user={user} theme={theme} />
 

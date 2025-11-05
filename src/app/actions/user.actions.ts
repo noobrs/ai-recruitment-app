@@ -77,7 +77,7 @@ export async function registerAction(formData: FormData) {
                 }
 
                 // Tell user to check their email again
-                redirect(`/auth/verify?email=${encodeURIComponent(email)}`);
+                return { redirectTo: (`/auth/verify?email=${encodeURIComponent(email)}`) };
             } else {
                 // Already verified
                 return { errorMessage: 'This email is already registered. Please login instead.' };
@@ -103,7 +103,7 @@ export async function registerAction(formData: FormData) {
     }
 
     // Redirect to verification page via page route (displays UI)
-    redirect(`/auth/verify?email=${encodeURIComponent(email)}`);
+    return { redirectTo: (`/auth/verify?email=${encodeURIComponent(email)}`) };
 }
 
 /*
