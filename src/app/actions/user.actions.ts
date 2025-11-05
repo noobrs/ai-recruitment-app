@@ -189,6 +189,66 @@ export async function resetPasswordAction(formData: FormData) {
 }
 
 /*
+* Change Password Action (for authenticated users)
+*/
+export async function changePasswordAction(formData: FormData) {
+    const currentPassword = String(formData.get("currentPassword") ?? "");
+    const newPassword = String(formData.get("newPassword") ?? "");
+
+    // Validation: Check if current password is provided
+    if (!currentPassword) {
+        return { errorMessage: "Current password is required" };
+    }
+
+    // Validation: Check password strength (minimum 8 characters)
+    if (newPassword.length < 8) {
+        return { errorMessage: "New password must be at least 8 characters long" };
+    }
+
+    // Validation: Check if new password is different from current
+    if (currentPassword === newPassword) {
+        return { errorMessage: "New password must be different from current password" };
+    }
+
+    const supabase = await createClient();
+
+    // Get current user
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user || !user.email) {
+        return { errorMessage: "No authenticated user found" };
+    }
+
+    // Verify current password by attempting to sign in
+    try {
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+            email: user.email,
+            password: currentPassword,
+        });
+
+        if (signInError) {
+            return { errorMessage: "Current password is incorrect" };
+        }
+    } catch {
+        return { errorMessage: "Failed to verify current password" };
+    }
+
+    // Update the user's password
+    const { error } = await supabase.auth.updateUser({
+        password: newPassword,
+    });
+
+    if (error) {
+        return { errorMessage: error.message };
+    }
+
+    // Sign out the user after password change for security
+    await supabase.auth.signOut();
+
+    return { errorMessage: null };
+}
+
+/*
 * Sign Out Action
 */
 export const signOutAction = async () => {
