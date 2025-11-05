@@ -1,23 +1,20 @@
 "use server";
 
 import { createClient, protectRoute } from "@/utils/supabase/server";
-import type { UserRole } from "@/types";
 import { getErrorMessage } from "@/utils/utils";
-import { updateUserRole } from "@/services/user.service";
 import { redirect } from 'next/navigation';
-import { createAdminClient } from "@/utils/supabase/admin";
 
 /*
 * Google SSO Action
 */
-export const googleSignInAction = async (role: UserRole, flow: "register" | "login") => {
+export const googleSignInAction = async (flow: "register" | "login") => {
     const supabase = await createClient();
     const base = process.env.NEXT_PUBLIC_SITE_URL;
 
     const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-            redirectTo: `${base}/api/auth/callback?flow=${flow}&role=${role}`,
+            redirectTo: `${base}/api/auth/callback?flow=${flow}`,
             queryParams: {
                 access_type: "offline",
                 prompt: "consent",
@@ -37,7 +34,6 @@ export async function registerAction(formData: FormData) {
     const email = String(formData.get("email") ?? "");
     const password = String(formData.get("password") ?? "");
     const confirmPassword = String(formData.get("confirmPassword") ?? "");
-    const role = String(formData.get("role") ?? "jobseeker") as UserRole;
 
     const origin = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
 
@@ -58,21 +54,16 @@ export async function registerAction(formData: FormData) {
     }
 
     const supabase = await createClient();
-    const supabaseAdmin = await createAdminClient();
 
     try {
-        // Check if user already exists with this email via auth.users
-        // We'll attempt to sign up and handle the error if user exists
-
         // Register new user with Supabase Auth
         const { data: authData, error: authError } = await supabase.auth.signUp({
             email,
             password,
             options: {
-                emailRedirectTo: `${origin}/api/auth/callback?role=${role}&next=/${role}/dashboard`,
+                emailRedirectTo: `${origin}/api/auth/callback?next=/auth/onboarding`,
                 data: {
-                    role,
-                    // email_confirm: false // User must verify email
+                    // User will select role during onboarding
                 },
             },
         });
@@ -87,13 +78,13 @@ export async function registerAction(formData: FormData) {
                     type: 'signup',
                     email,
                     options: {
-                        emailRedirectTo: `${origin}/api/auth/callback?role=${role}&next=/${role}/dashboard`,
+                        emailRedirectTo: `${origin}/api/auth/callback?next=/auth/onboarding`,
                     },
                 });
 
                 if (!resendError) {
                     // Successfully resent - they probably didn't verify
-                    redirect(`/auth/verify/${role}?email=${encodeURIComponent(email)}`);
+                    redirect(`/auth/verify?email=${encodeURIComponent(email)}`);
                 }
 
                 // If resend failed, user is likely already verified
@@ -106,24 +97,13 @@ export async function registerAction(formData: FormData) {
             return { errorMessage: "Registration failed. Please try again." };
         }
 
-        // Set role in public.users table
-        const { error: roleError } = await supabaseAdmin
-            .from('users')
-            .update({ role })
-            .eq('id', authData.user.id);
-
-        if (roleError) {
-            console.error('Error setting user role:', roleError);
-            return { errorMessage: "Failed to set user role. Please try again." };
-        }
-
     } catch (error) {
         console.error('Registration error:', error);
         return { errorMessage: "An unexpected error occurred. Please try again." };
     }
 
     // Redirect to verification page via page route (displays UI)
-    redirect(`/auth/verify/${role}?email=${encodeURIComponent(email)}`);
+    redirect(`/auth/verify?email=${encodeURIComponent(email)}`);
 }
 
 /*
@@ -132,7 +112,6 @@ export async function registerAction(formData: FormData) {
 export async function loginAction(formData: FormData) {
     const email = String(formData.get("email") ?? "");
     const password = String(formData.get("password") ?? "");
-    const role = String(formData.get("role") ?? "jobseeker") as UserRole;
 
     const supabase = await createClient();
 
@@ -142,7 +121,56 @@ export async function loginAction(formData: FormData) {
         return { errorMessage: error.message };
     }
 
-    // Optional: role-aware post-login routing can be done on client or here by returning a URL
+    return { errorMessage: null };
+}
+
+/*
+* Forgot Password Action
+*/
+export async function forgotPasswordAction(formData: FormData) {
+    const email = String(formData.get("email") ?? "");
+    const origin = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
+
+    // Validation: Check if email is valid format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+        return { errorMessage: "Please enter a valid email address" };
+    }
+
+    const supabase = await createClient();
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${origin}/auth/reset-password`,
+    });
+
+    if (error) {
+        return { errorMessage: error.message };
+    }
+
+    return { errorMessage: null };
+}
+
+/*
+* Reset Password Action
+*/
+export async function resetPasswordAction(formData: FormData) {
+    const password = String(formData.get("password") ?? "");
+
+    // Validation: Check password strength (minimum 8 characters)
+    if (password.length < 8) {
+        return { errorMessage: "Password must be at least 8 characters long" };
+    }
+
+    const supabase = await createClient();
+
+    const { error } = await supabase.auth.updateUser({
+        password: password,
+    });
+
+    if (error) {
+        return { errorMessage: error.message };
+    }
+
     return { errorMessage: null };
 }
 

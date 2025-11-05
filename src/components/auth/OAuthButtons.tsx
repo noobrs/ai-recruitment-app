@@ -3,17 +3,16 @@
 import { useTransition } from "react";
 import { usePathname } from "next/navigation";
 import { FcGoogle } from "react-icons/fc";
-import type { UserRole } from "@/types";
 import { googleSignInAction } from "@/app/actions/user.actions";
 
-export default function OAuthButtons({ role }: { role: UserRole }) {
+export default function OAuthButtons() {
     const [isPending, startTransition] = useTransition();
     const pathname = usePathname();
     const flow: "register" | "login" = pathname?.includes("/register") ? "register" : "login";
 
     const signInGoogle = () => {
         startTransition(async () => {
-            const result = await googleSignInAction(role, flow);
+            const result = await googleSignInAction(flow);
             if (result?.url) window.location.href = result.url;
             else if (result?.error) console.error("Google sign-in error:", result.error);
         });

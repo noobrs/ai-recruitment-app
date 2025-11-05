@@ -12,17 +12,14 @@ export async function POST(req: Request) {
     try {
         const contentType = req.headers.get('content-type');
         let email: string;
-        let role: string;
 
         // Support both JSON and FormData
         if (contentType?.includes('application/json')) {
             const body = await req.json();
             email = String(body.email ?? '');
-            role = String(body.role ?? '');
         } else {
             const form = await req.formData();
             email = String(form.get('email') ?? '');
-            role = String(form.get('role') ?? '');
         }
 
         // Validate inputs
@@ -40,7 +37,7 @@ export async function POST(req: Request) {
             type: 'signup',
             email,
             options: {
-                emailRedirectTo: `${origin}/api/auth/callback?role=${role}&next=/${role}/dashboard`,
+                emailRedirectTo: `${origin}/api/auth/callback?next=/auth/onboarding`,
             },
         });
 

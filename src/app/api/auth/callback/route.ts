@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { getUserById } from '@/services/user.service';
-import { UserRole } from '@/types';
-import { isValidRole } from '@/utils/utils';
 import { createAdminClient } from '@/utils/supabase/admin';
 
 export async function GET(request: NextRequest) {
@@ -11,9 +9,6 @@ export async function GET(request: NextRequest) {
     const type = searchParams.get('type');
     const email = searchParams.get('email');
     const next = searchParams.get('next');
-    // const flow = searchParams.get("flow"); // "register" | "login" | null
-    const role = searchParams.get('role');
-    const desiredRole = isValidRole(role ?? "") ? (role as UserRole) : "jobseeker";
     const code = searchParams.get('code');
 
     const supabase = await createClient();
@@ -26,7 +21,7 @@ export async function GET(request: NextRequest) {
             const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
             if (exchangeError) {
                 console.error("Code exchange error:", exchangeError);
-                return NextResponse.redirect(new URL(`/auth/${desiredRole}/login?error=oauth_failed`, origin));
+                return NextResponse.redirect(new URL(`/auth/login?error=oauth_failed`, origin));
             }
 
             const { data: { user } } = await supabase.auth.getUser();
@@ -37,15 +32,18 @@ export async function GET(request: NextRequest) {
                     .eq("id", user.id)
                     .maybeSingle();
 
-                if (existedUser && existedUser.status === "pending") {
-                    await supabaseAdmin
-                        .from("users")
-                        .update({ role: desiredRole })
-                        .eq("id", existedUser.id);
-                    return NextResponse.redirect(new URL(`/auth/${desiredRole}/onboarding`, origin));
+                // If user exists and has no role or status is pending, send to onboarding
+                if (existedUser && (!existedUser.role || existedUser.status === "pending")) {
+                    return NextResponse.redirect(new URL('/auth/onboarding', origin));
                 }
 
-                return NextResponse.redirect(new URL(next || `/${desiredRole}/dashboard`, origin));
+                // If user has a role, redirect to their dashboard
+                if (existedUser?.role) {
+                    return NextResponse.redirect(new URL(next || `/${existedUser.role}/dashboard`, origin));
+                }
+
+                // Default to onboarding for new users
+                return NextResponse.redirect(new URL('/auth/onboarding', origin));
             }
         }
 
@@ -67,7 +65,7 @@ export async function GET(request: NextRequest) {
                 });
 
                 return NextResponse.redirect(
-                    new URL(`/auth/verify/${role || 'jobseeker'}/error?${errorParams.toString()}`, origin)
+                    new URL(`/auth/verify/error?${errorParams.toString()}`, origin)
                 );
             }
 
@@ -75,18 +73,19 @@ export async function GET(request: NextRequest) {
             if (data.user) {
                 // Get user role from database
                 const dbUser = await getUserById(data.user.id);
-                const userRole = dbUser?.role || role || 'jobseeker';
 
-                // Update user status to active if still pending
-                if (dbUser?.status === 'pending') {
-                    await supabase
-                        .from('users')
-                        .update({ status: 'active', updated_at: new Date().toISOString() })
-                        .eq('id', data.user.id);
+                // If user has no role or is pending, redirect to onboarding
+                if (!dbUser?.role || dbUser?.status === 'pending') {
+                    return NextResponse.redirect(new URL(next || '/auth/onboarding', origin));
                 }
 
-                // Redirect to next page or dashboard
-                return NextResponse.redirect(new URL(next || `/${userRole}/dashboard`, origin));
+                // If user has a role and is active, redirect to dashboard
+                if (dbUser.role && dbUser.status === 'active') {
+                    return NextResponse.redirect(new URL(next || `/${dbUser.role}/dashboard`, origin));
+                }
+
+                // Default to onboarding
+                return NextResponse.redirect(new URL('/auth/onboarding', origin));
             }
         }
 
@@ -101,7 +100,7 @@ export async function GET(request: NextRequest) {
     } catch (error) {
         console.error('Callback error:', error);
         return NextResponse.redirect(
-            new URL('/auth/jobseeker/login?error=callback_failed', origin)
+            new URL('/auth/login?error=callback_failed', origin)
         );
     }
 }

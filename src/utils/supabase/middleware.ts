@@ -59,10 +59,7 @@ export async function updateSession(request: NextRequest) {
         (user?.user_metadata?.role as UserRole) ??
         (isRecruiterRoute ? 'recruiter' : isJobSeekerRoute ? 'jobseeker' : (userRole ?? 'jobseeker'))
 
-    const onboardingPath =
-        intendedRole === 'recruiter'
-            ? '/auth/recruiter/onboarding'
-            : '/auth/jobseeker/onboarding'
+    const onboardingPath = '/auth/onboarding'
 
     const dashboardPath =
         userRole === 'recruiter'

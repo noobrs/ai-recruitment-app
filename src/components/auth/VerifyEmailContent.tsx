@@ -3,14 +3,12 @@
 import { useEffect, useState, useCallback } from "react";
 import { Mail, Loader2, CheckCircle2, AlertCircle, RefreshCw } from "lucide-react";
 import Link from "next/link";
-import type { UserRole } from "@/types";
 
 interface VerifyEmailContentProps {
     email: string;
-    role: UserRole;
 }
 
-export default function VerifyEmailContent({ email, role }: VerifyEmailContentProps) {
+export default function VerifyEmailContent({ email }: VerifyEmailContentProps) {
     const [isResending, setIsResending] = useState(false);
     const [resendStatus, setResendStatus] = useState<{
         type: "success" | "error" | null;
@@ -31,7 +29,7 @@ export default function VerifyEmailContent({ email, role }: VerifyEmailContentPr
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ email, role }),
+                body: JSON.stringify({ email }),
             });
 
             const data = await response.json();
@@ -57,7 +55,7 @@ export default function VerifyEmailContent({ email, role }: VerifyEmailContentPr
         } finally {
             setIsResending(false);
         }
-    }, [email, role, countdown, isResending]);
+    }, [email, countdown, isResending]);
 
     // Countdown timer for resend button
     useEffect(() => {
@@ -144,7 +142,7 @@ export default function VerifyEmailContent({ email, role }: VerifyEmailContentPr
                 <div className="text-center text-sm space-y-2">
                     <p className="text-neutral-600">Wrong email address?</p>
                     <Link
-                        href={`/auth/${role}/register`}
+                        href="/auth/register"
                         className="text-neutral-900 hover:underline font-medium"
                     >
                         Go back to registration
