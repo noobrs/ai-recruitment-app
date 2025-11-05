@@ -7,14 +7,14 @@ import { redirect } from 'next/navigation';
 /*
 * Google SSO Action
 */
-export const googleSignInAction = async (flow: "register" | "login") => {
+export const googleSignInAction = async () => {
     const supabase = await createClient();
     const base = process.env.NEXT_PUBLIC_SITE_URL;
 
     const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-            redirectTo: `${base}/api/auth/callback?flow=${flow}`,
+            redirectTo: `${base}/api/auth/callback`,
             queryParams: {
                 access_type: "offline",
                 prompt: "consent",
@@ -130,6 +130,7 @@ export async function loginAction(formData: FormData) {
 export async function forgotPasswordAction(formData: FormData) {
     const email = String(formData.get("email") ?? "");
     const origin = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
+    const base = process.env.NEXT_PUBLIC_SITE_URL;
 
     // Validation: Check if email is valid format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -140,7 +141,8 @@ export async function forgotPasswordAction(formData: FormData) {
     const supabase = await createClient();
 
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${origin}/auth/reset-password`,
+        // redirectTo: `${origin}/auth/reset-password`,
+        redirectTo: `${base}/api/auth/confirm?token_hash={{ .TokenHash }}&type=recovery&next=/auth/reset-password`,
     });
 
     if (error) {
