@@ -1,6 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
+import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { Loader2, Mail, Lock } from "lucide-react";
 import Link from "next/link";
@@ -8,12 +9,16 @@ import { registerAction } from "@/app/actions/user.actions";
 
 export default function RegisterForm() {
     const [isPending, startTransition] = useTransition();
+    const router = useRouter();
 
     const onSubmit = (formData: FormData) => {
         startTransition(async () => {
-            const { errorMessage } = await registerAction(formData);
-            if (errorMessage) {
-                toast.error(errorMessage);
+            const response = await registerAction(formData);
+
+            if (response?.redirectTo) router.push(response.redirectTo);
+
+            if (response.errorMessage) {
+                toast.error(response.errorMessage);
             }
             // Note: registerAction will redirect to verification page on success
             // No need to show success toast or manual redirect here

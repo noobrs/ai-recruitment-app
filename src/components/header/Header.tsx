@@ -1,11 +1,23 @@
 import Link from "next/link";
 import { getCurrentUser } from "@/services";
+import { getUnreadNotifications, getNotificationsByUserId } from "@/services/notification.service";
 import HeaderState from "./HeaderState";
 import NavLinks from "./NavLinks";
 
 export default async function Header() {
   const user = await getCurrentUser(); // server side
   const role = user?.role;
+
+  // Fetch notification data server-side
+  let notificationData = null;
+  if (user) {
+    const unreadNotifications = await getUnreadNotifications(user.id);
+    const allNotifications = await getNotificationsByUserId(user.id);
+    notificationData = {
+      unreadCount: unreadNotifications.length,
+      recentNotifications: allNotifications.slice(0, 5),
+    };
+  }
 
   const isRecruiter = role === "recruiter";
   const text = isRecruiter ? "text-secondary" : "text-primary";
@@ -57,6 +69,7 @@ export default async function Header() {
             theme={
               { text, bg, hoverChip, underline }
             }
+            notificationData={notificationData}
           />
         </div>
       </div>
