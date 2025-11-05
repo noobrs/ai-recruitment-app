@@ -14,9 +14,10 @@ export default async function ResetPasswordPage({
 
     // Check if user is authenticated (after token verification or returning to page)
     const { data: { user } } = await supabase.auth.getUser();
+    const isReset = user?.user_metadata?.reset_password;
 
-    if (!user) {
-        redirect('/auth/forgot-password?error=invalid_session');
+    if (!user && !isReset) {
+        redirect('/auth/login');
     }
 
     const error = params.error;
