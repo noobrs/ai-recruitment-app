@@ -3,7 +3,7 @@
 import { createAdminClient } from "@/utils/supabase/admin";
 import { createClient, protectRoute } from "@/utils/supabase/server";
 import { getErrorMessage } from "@/utils/utils";
-import { redirect } from 'next/navigation';
+import { User } from "@supabase/supabase-js";
 
 /*
 * Google SSO Action
@@ -57,15 +57,18 @@ export async function registerAction(formData: FormData) {
     const supabase = await createClient();
 
     try {
-        const supabaseAdmin = createAdminClient();
-        const origin = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
+        // const supabaseAdmin = createAdminClient();
+        // const origin = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
 
-        const { data, error } = await supabaseAdmin.auth.admin.listUsers();
-        const existing = data.users.find(u => u.email?.toLowerCase() === email.toLowerCase());
+        // const { data } = await supabaseAdmin.auth.admin.listUsers();
+        // const existing = data.users.find(u => u.email?.toLowerCase() === email.toLowerCase());
 
+        const existing = await checkEmailExistence(email);
+
+        // Check if user already exists
         if (existing) {
+            // If email not confirmed, resend verification link
             if (!existing.email_confirmed_at) {
-                // Resend verification link
                 const { error: resendError } = await supabase.auth.resend({
                     type: 'signup',
                     email,
@@ -85,7 +88,7 @@ export async function registerAction(formData: FormData) {
         }
 
         // Register new user with Supabase Auth
-        const { data: authData, error: authError } = await supabase.auth.signUp({
+        const { data: authData } = await supabase.auth.signUp({
             email,
             password,
             options: {
@@ -138,6 +141,10 @@ export async function forgotPasswordAction(formData: FormData) {
     }
 
     // Database record validation needed
+    const existingUser = await checkEmailExistence(email);
+    if (!existingUser) {
+        return { errorMessage: "Failed to send password reset link with this email" };
+    }
 
     const supabase = await createClient();
 
@@ -266,3 +273,13 @@ export const signOutAction = async () => {
         return { errorMessage: getErrorMessage(error) };
     }
 };
+
+/*
+* Check Email Existence Helper Function
+*/
+async function checkEmailExistence(email: string): Promise<User | null> {
+    const supabaseAdmin = createAdminClient();
+    const { data } = await supabaseAdmin.auth.admin.listUsers();
+    const existing = data.users.find(u => u.email?.toLowerCase() === email.toLowerCase());
+    return existing || null;
+}
