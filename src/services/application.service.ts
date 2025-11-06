@@ -19,6 +19,53 @@ export async function getApplicationById(applicationId: number): Promise<Applica
     return data;
 }
 
+export async function getAppliedJobs(jobSeekerId: number) {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from('application')
+    .select(`
+      job_id,
+      status,
+      created_at,
+      job:job_id (
+        job_id,
+        job_title,
+        job_location,
+        job_type,
+        created_at,
+        recruiter (
+          recruiter_id,
+          company:company_id (
+            comp_name
+          )
+        )
+      )
+    `)
+    .eq('job_seeker_id', jobSeekerId)
+    .neq('status', 'withdrawn')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching applied jobs:', error);
+    return [];
+  }
+
+  return (
+    data?.map((a: any) => ({
+      jobId: a.job?.job_id,
+      compLogo: a.job?.recruiter?.company?.comp_logo || '/default-company.png',
+      compName: a.job?.recruiter?.company?.comp_name || 'Unknown Company',
+      jobTitle: a.job?.job_title,
+      jobLocation: a.job?.job_location,
+      jobType: a.job?.job_type,
+      createdAt: new Date(a.job?.created_at).toLocaleDateString(),
+      bookmark: a.is_bookmark ?? false,
+      status: a.status,
+    })) || []
+  );
+}
+
 /**
  * Get applications by job seeker ID
  */
@@ -72,6 +119,52 @@ export async function getBookmarkedApplications(jobSeekerId: number): Promise<Ap
         return [];
     }
     return data || [];
+}
+
+export async function getBookmarkedJobs(jobSeekerId: number) {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from('application')
+    .select(`
+      job_id,
+      is_bookmark,
+      created_at,
+      job:job_id (
+        job_id,
+        job_title,
+        job_location,
+        job_type,
+        created_at,
+        recruiter (
+          recruiter_id,
+          company:company_id (
+            comp_name
+          )
+        )
+      )
+    `)
+    .eq('job_seeker_id', jobSeekerId)
+    .eq('is_bookmark', true)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching bookmarked jobs:', error);
+    return [];
+  }
+
+  return (
+    data?.map((a: any) => ({
+      jobId: a.job?.job_id,
+      compLogo: a.job?.recruiter?.company?.comp_logo || '/default-company.png',
+      compName: a.job?.recruiter?.company?.comp_name || 'Unknown Company',
+      jobTitle: a.job?.job_title,
+      jobLocation: a.job?.job_location,
+      jobType: a.job?.job_type,
+      createdAt: new Date(a.job?.created_at).toLocaleDateString(),
+      bookmark: true,
+    })) || []
+  );
 }
 
 /**

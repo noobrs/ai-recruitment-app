@@ -1,24 +1,57 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import JobCard, { JobCardProps } from '@/components/jobseeker/jobs/JobCard';
 
 interface MyActivitiesProps {
   bookmarkedJobs: JobCardProps[];
   appliedJobs: JobCardProps[];
+  loading?: boolean;
+  onToggleBookmark?: (jobId: number) => void;
 }
 
-export default function MyActivities({ bookmarkedJobs, appliedJobs }: MyActivitiesProps) {
+export default function MyActivities({
+  bookmarkedJobs,
+  appliedJobs,
+  loading = false,
+  onToggleBookmark,
+}: MyActivitiesProps) {
+  const router = useRouter();
+
+  if (loading) {
+    return (
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6 animate-pulse">
+        <h2 className="text-2xl font-semibold mb-4">My Activities</h2>
+        <div className="h-6 w-1/3 bg-gray-200 rounded mb-4"></div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {[...Array(4)].map((_, i) => (
+            <div
+              key={i}
+              className="h-32 bg-gray-100 border border-gray-200 rounded-lg"
+            ></div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
       <h2 className="text-2xl font-semibold mb-4">My Activities</h2>
 
-      {/* Bookmarked Jobs */}
+      {/* === Bookmarked Jobs === */}
       <div className="mb-6">
         <h3 className="text-lg font-medium mb-3 text-gray-700">Bookmarked Jobs</h3>
         {bookmarkedJobs.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {bookmarkedJobs.map((job) => (
-              <JobCard key={`bookmark-${job.jobId}`} {...job} bookmark />
+              <div
+                key={`bookmark-${job.jobId}`}
+                onClick={() => router.push(`/jobseeker/job/view/${job.jobId}`)}
+                className="cursor-pointer transition-transform hover:scale-[1.02]"
+              >
+                <JobCard {...job} bookmark onToggleBookmark={onToggleBookmark} />
+              </div>
             ))}
           </div>
         ) : (
@@ -26,13 +59,19 @@ export default function MyActivities({ bookmarkedJobs, appliedJobs }: MyActiviti
         )}
       </div>
 
-      {/* Applied Jobs */}
+      {/* === Applied Jobs === */}
       <div>
         <h3 className="text-lg font-medium mb-3 text-gray-700">Applied Jobs</h3>
         {appliedJobs.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {appliedJobs.map((job) => (
-              <JobCard key={`applied-${job.jobId}`} {...job} />
+              <div
+                key={`applied-${job.jobId}`}
+                onClick={() => router.push(`/jobseeker/job/view/${job.jobId}`)}
+                className="cursor-pointer transition-transform hover:scale-[1.02]"
+              >
+                <JobCard {...job} />
+              </div>
             ))}
           </div>
         ) : (

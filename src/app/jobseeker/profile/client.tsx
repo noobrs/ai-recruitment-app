@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Resume, UserWithJobSeeker } from '@/types';
 import { updateJobSeekerProfile, updateUserProfile, setProfileResume } from './actions';
@@ -18,27 +18,15 @@ interface ProfileClientProps {
     allResumes: Resume[];
 }
 
-/**
- * ProfileClient Component (Refactored)
- * 
- * Main orchestrator component for the profile page.
- * Single Responsibility: Coordinate profile state management and delegate 
- * rendering to specialized child components.
- * 
- * Follows Single Responsibility Principle:
- * - State management (editing, saving, form data)
- * - Coordinate API calls for updates
- * - Delegate UI rendering to child components
- */
-
 export default function ProfileClient({ user, profileResume, allResumes }: ProfileClientProps) {
-    // Hooks
     const router = useRouter();
 
-    // State Management
     const [isEditing, setIsEditing] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [settingProfile, setSettingProfile] = useState<number | null>(null);
+    const [activitiesLoading, setActivitiesLoading] = useState(true);
+    const [bookmarkedJobs, setBookmarkedJobs] = useState<any[]>([]);
+    const [appliedJobs, setAppliedJobs] = useState<any[]>([]);
     const [formData, setFormData] = useState({
         first_name: user.first_name || '',
         last_name: user.last_name || '',
@@ -46,45 +34,42 @@ export default function ProfileClient({ user, profileResume, allResumes }: Profi
         about_me: user.job_seeker.about_me || '',
     });
 
-    // Handlers
+    // 🧠 Load dynamic activities (bookmarks & applications)
+    useEffect(() => {
+        async function fetchActivities() {
+            try {
+                const res = await fetch('/api/auth/jobseeker/profile/activities');
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+                setBookmarkedJobs(data.bookmarkedJobs || []);
+                setAppliedJobs(data.appliedJobs || []);
+            } catch (error) {
+                console.error('Error loading activities:', error);
+            } finally {
+                setActivitiesLoading(false);
+            }
+        }
+        fetchActivities();
+    }, []);
+
     const handleFormChange = (field: string, value: string) => {
         setFormData(prev => ({ ...prev, [field]: value }));
     };
 
-    const handleEdit = () => {
-        setIsEditing(true);
-    };
-
-    const handleCancel = () => {
-        setFormData({
-            first_name: user.first_name || '',
-            last_name: user.last_name || '',
-            location: user.job_seeker.location || '',
-            about_me: user.job_seeker.about_me || '',
-        });
-        setIsEditing(false);
-    };
-
     const handleSave = async () => {
         setIsSaving(true);
-
         try {
-            // Update user table (first_name, last_name)
             await updateUserProfile(user.id, {
                 first_name: formData.first_name,
                 last_name: formData.last_name,
             });
-
-            // Update job_seeker table (location, about_me)
             await updateJobSeekerProfile(user.job_seeker.job_seeker_id, {
                 location: formData.location,
                 about_me: formData.about_me,
             });
-
             setIsEditing(false);
-            router.refresh(); // Refresh to show updated data
+            router.refresh();
         } catch (error) {
-            console.error('Error updating profile:', error);
             alert('Failed to update profile. Please try again.');
         } finally {
             setIsSaving(false);
@@ -95,19 +80,17 @@ export default function ProfileClient({ user, profileResume, allResumes }: Profi
         setSettingProfile(resumeId);
         try {
             await setProfileResume(user.job_seeker.job_seeker_id, resumeId);
-            router.refresh(); // Refresh to show updated profile resume
+            router.refresh();
         } catch (error) {
-            console.error('Error setting profile resume:', error);
-            alert('Failed to set profile resume. Please try again.');
+            alert('Failed to set profile resume.');
         } finally {
             setSettingProfile(null);
         }
     };
 
-    // Render: Delegate to specialized components
     return (
         <div className="max-w-5xl mx-auto px-4 py-8">
-            {/* Profile Header Card */}
+            {/* Header */}
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
                 <ProfileHeader
                     user={user}
@@ -115,70 +98,34 @@ export default function ProfileClient({ user, profileResume, allResumes }: Profi
                     isSaving={isSaving}
                     formData={formData}
                     onFormChange={handleFormChange}
-                    onEdit={handleEdit}
-                    onCancel={handleCancel}
+                    onEdit={() => setIsEditing(true)}
+                    onCancel={() => setIsEditing(false)}
                     onSave={handleSave}
                 />
-
                 <ProfileAboutSection
-                    aboutMe={user.job_seeker.about_me || undefined}
+                    aboutMe={formData.about_me}
                     isEditing={isEditing}
                     value={formData.about_me}
-                    onChange={(value) => handleFormChange('about_me', value)}
+                    onChange={v => handleFormChange('about_me', v)}
                 />
             </div>
 
-            {/* Profile Resume Card */}
+            {/* Resume Info */}
             {profileResume && <ProfileResumeCard resume={profileResume} />}
 
-            {/* All Resumes List */}
+            {/* All Resumes */}
             <ResumesList
                 resumes={allResumes}
                 settingProfileId={settingProfile}
                 onSetAsProfile={handleSetAsProfile}
             />
 
-            {/* My Activities Card */}
-            {/* <MyActivities
-                bookmarkedJobs={bookmarkedJobsData}
-                appliedJobs={appliedJobsData}
-            /> */}
-
-            {/* My Activities Section Mock */}
+            {/* Dynamic My Activities */}
             <MyActivities
-                bookmarkedJobs={[
-                    {
-                        jobId: 1,
-                        compLogo: '/default-company.png',
-                        compName: 'Google',
-                        jobTitle: 'Frontend Developer',
-                        jobLocation: 'Kuala Lumpur',
-                        jobType: 'Full-time',
-                        createdAt: '2 days ago',
-                        bookmark: true,
-                    },
-                ]}
-                appliedJobs={[
-                    {
-                        jobId: 2,
-                        compLogo: '/default-company.png',
-                        compName: 'Amazon',
-                        jobTitle: 'Backend Engineer',
-                        jobLocation: 'Singapore',
-                        jobType: 'Contract',
-                        createdAt: '1 week ago',
-                    },
-                     {
-                        jobId: 1,
-                        compLogo: '/default-company.png',
-                        compName: 'Google',
-                        jobTitle: 'Frontend Developer',
-                        jobLocation: 'Kuala Lumpur',
-                        jobType: 'Full-time',
-                        createdAt: '2 days ago',
-                        bookmark: true,
-                    },
-                ]}
+                loading={activitiesLoading}
+                bookmarkedJobs={bookmarkedJobs}
+                appliedJobs={appliedJobs}
+                onToggleBookmark={(jobId) => console.log("Bookmark toggled:", jobId)}
             />
 
         </div>
