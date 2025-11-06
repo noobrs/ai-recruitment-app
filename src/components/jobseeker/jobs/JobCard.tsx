@@ -19,7 +19,7 @@ export default function JobCard(props: JobCardProps) {
     props.readMoreUrl || `/jobseeker/job/view/${props.jobId ?? ""}`;
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-4 text-black">
+    <div className="bg-white rounded-lg shadow-md p-4 text-black border border-gray-200">
       <div className="flex flex-row items-center">
         <img src={props.compLogo} alt="" className="w-8 h-8 mr-2" />
         <p className="text-lg text-gray-600 grow-1">{props.compName}</p>

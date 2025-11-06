@@ -2,7 +2,7 @@ import { Suspense } from 'react';
 import { redirect } from 'next/navigation';
 import { getCurrentJobSeeker } from '@/services/auth.service';
 import { getProfileResume, getResumesByJobSeekerId } from '@/services/resume.service';
-import ProfileClient from './ProfileClient';
+import ProfileClient from './client';
 import ProfileLoading from './loading';
 import { UserWithJobSeeker } from '@/types';
 

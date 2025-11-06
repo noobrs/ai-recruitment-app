@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 import { getCurrentJobSeeker } from '@/services';
 import UploadResumeAction from '@/components/resume/UploadResumeAction';
-import BrowseJobsAction from '@/components/jobseeker/job/JobsBrowseAction';
+import BrowseJobsAction from '@/components/jobseeker/jobs/JobsBrowseAction';
 
 export default async function JobSeekerDashboard() {
     // Get current job seeker (includes authentication and role check)
