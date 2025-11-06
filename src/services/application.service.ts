@@ -44,7 +44,7 @@ export async function getAppliedJobs(jobSeekerId: number) {
       )
     `)
     .eq('job_seeker_id', jobSeekerId)
-    .neq('status', 'withdrawn')
+    .neq('status', null)
     .order('created_at', { ascending: false });
 
   if (error) {
