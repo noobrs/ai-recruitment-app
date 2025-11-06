@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Notification } from '@/types';
 import { createClient } from '@/utils/supabase/client';
@@ -26,39 +26,20 @@ export default function NotificationBellClient({
     const [notifications, setNotifications] = useState<Notification[]>(initialNotifications);
     const [showPreview, setShowPreview] = useState(false);
     const router = useRouter();
-    const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-    const hideTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const ref = useRef<HTMLDivElement>(null);
 
-    // Handle mouse enter with delay
-    const handleMouseEnter = useCallback(() => {
-        // Clear any pending hide timeout
-        if (hideTimeoutRef.current) {
-            clearTimeout(hideTimeoutRef.current);
-            hideTimeoutRef.current = null;
+    // Handle outside clicks to close the modal
+    useEffect(() => {
+        function onDocClick(e: MouseEvent) {
+            if (ref.current && !ref.current.contains(e.target as Node)) {
+                setShowPreview(false);
+            }
         }
-
-        // Show preview after short delay
-        if (timeoutRef.current) {
-            clearTimeout(timeoutRef.current);
+        if (showPreview) {
+            document.addEventListener('mousedown', onDocClick);
         }
-        timeoutRef.current = setTimeout(() => {
-            setShowPreview(true);
-        }, 200); // 200ms delay before showing preview
-    }, []);
-
-    // Handle mouse leave
-    const handleMouseLeave = useCallback(() => {
-        // Clear show timeout if still pending
-        if (timeoutRef.current) {
-            clearTimeout(timeoutRef.current);
-            timeoutRef.current = null;
-        }
-
-        // Hide preview after short delay to allow moving to modal
-        hideTimeoutRef.current = setTimeout(() => {
-            setShowPreview(false);
-        }, 150);
-    }, []);
+        return () => document.removeEventListener('mousedown', onDocClick);
+    }, [showPreview]);
 
     // Set up real-time subscription
     useEffect(() => {
@@ -152,12 +133,6 @@ export default function NotificationBellClient({
         return () => {
             console.log('[NotificationBell] Cleaning up subscription');
             supabaseRealtime.removeChannel(channel);
-            if (timeoutRef.current) {
-                clearTimeout(timeoutRef.current);
-            }
-            if (hideTimeoutRef.current) {
-                clearTimeout(hideTimeoutRef.current);
-            }
         };
     }, [userId]);
 
@@ -177,16 +152,14 @@ export default function NotificationBellClient({
     };
 
     return (
-        <div
-            className="relative"
-            onMouseEnter={handleMouseEnter}
-            onMouseLeave={handleMouseLeave}
-        >
+        <div className="relative" ref={ref}>
             <button
                 type="button"
                 aria-label="Notifications"
                 className={`relative p-2 rounded-full transition-colors ${hoverClass}`}
-                onClick={() => router.push('/notifications')}
+                onClick={() => setShowPreview((v) => !v)}
+                aria-haspopup="menu"
+                aria-expanded={showPreview}
             >
                 <svg
                     className={`w-6 h-6 ${iconClass}`}
@@ -211,9 +184,8 @@ export default function NotificationBellClient({
             {/* Notification Preview Modal */}
             {showPreview && (
                 <div
+                    role="menu"
                     className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-xl border border-gray-200 z-50"
-                    onMouseEnter={handleMouseEnter}
-                    onMouseLeave={handleMouseLeave}
                 >
                     {/* Header */}
                     <div className="p-4 border-b border-gray-200">
