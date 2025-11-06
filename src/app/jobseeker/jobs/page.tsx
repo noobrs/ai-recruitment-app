@@ -264,7 +264,7 @@ export default function JobPage() {
               <ButtonFilledPrimary
                 text="Apply Now"
                 onClick={() =>
-                  router.push(`/jobseeker/job/apply/${selectedJob.job_id}`)
+                  router.push(`/jobseeker/jobs/apply/${selectedJob.job_id}`)
                 }
                 className="mt-4 sm:mt-0 w-36 h-10 bg-primary"
               />
