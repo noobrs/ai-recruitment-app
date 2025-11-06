@@ -21,7 +21,7 @@ export default function ResumesList({
     onSetAsProfile,
 }: ResumesListProps) {
     return (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
             <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-semibold text-gray-900">My Resumes</h2>
                 <span className="text-sm text-gray-500">{resumes.length} resume(s)</span>

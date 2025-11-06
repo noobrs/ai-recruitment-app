@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import JobCard from "@/components/jobseeker/job/JobCard";
+import JobCard from "@/components/jobseeker/jobs/JobCard";
 import ButtonFilledPrimary from "@/components/shared/buttons/ButtonFilledPrimary";
 
 export default function Job() {

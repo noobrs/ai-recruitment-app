@@ -107,3 +107,35 @@ export async function deleteJobSeeker(jobSeekerId: number): Promise<boolean> {
     }
     return true;
 }
+
+/**
+ * Get full job seeker details joined with user table
+ */
+export async function getFullJobSeekerByUserId(userId: string): Promise<any | null> {
+  const supabase = await createClient();
+
+  // We assume: job_seeker.user_id → users.id
+  const { data, error } = await supabase
+    .from("job_seeker")
+    .select(`
+      *,
+      user:user_id (
+        id,
+        first_name,
+        last_name,
+        status,
+        role,
+        created_at,
+        updated_at
+      )
+    `)
+    .eq("user_id", userId)
+    .single();
+
+  if (error) {
+    console.error("Error fetching full job seeker profile:", error);
+    return null;
+  }
+
+  return data;
+}

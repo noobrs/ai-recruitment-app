@@ -9,6 +9,7 @@ import {
     ProfileAboutSection,
     ProfileResumeCard,
     ResumesList,
+    MyActivities,
 } from '@/components/jobseeker/profile';
 
 interface ProfileClientProps {
@@ -136,6 +137,50 @@ export default function ProfileClient({ user, profileResume, allResumes }: Profi
                 settingProfileId={settingProfile}
                 onSetAsProfile={handleSetAsProfile}
             />
+
+            {/* My Activities Card */}
+            {/* <MyActivities
+                bookmarkedJobs={bookmarkedJobsData}
+                appliedJobs={appliedJobsData}
+            /> */}
+
+            {/* My Activities Section Mock */}
+            <MyActivities
+                bookmarkedJobs={[
+                    {
+                        jobId: 1,
+                        compLogo: '/default-company.png',
+                        compName: 'Google',
+                        jobTitle: 'Frontend Developer',
+                        jobLocation: 'Kuala Lumpur',
+                        jobType: 'Full-time',
+                        createdAt: '2 days ago',
+                        bookmark: true,
+                    },
+                ]}
+                appliedJobs={[
+                    {
+                        jobId: 2,
+                        compLogo: '/default-company.png',
+                        compName: 'Amazon',
+                        jobTitle: 'Backend Engineer',
+                        jobLocation: 'Singapore',
+                        jobType: 'Contract',
+                        createdAt: '1 week ago',
+                    },
+                     {
+                        jobId: 1,
+                        compLogo: '/default-company.png',
+                        compName: 'Google',
+                        jobTitle: 'Frontend Developer',
+                        jobLocation: 'Kuala Lumpur',
+                        jobType: 'Full-time',
+                        createdAt: '2 days ago',
+                        bookmark: true,
+                    },
+                ]}
+            />
+
         </div>
     );
 }
