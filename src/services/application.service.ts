@@ -26,6 +26,7 @@ export async function getAppliedJobs(jobSeekerId: number) {
     .from('application')
     .select(`
       job_id,
+      is_bookmark,
       status,
       created_at,
       job:job_id (
