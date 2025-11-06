@@ -146,3 +146,80 @@ export async function deleteApplication(applicationId: number): Promise<boolean>
     }
     return true;
 }
+
+/**
+ * Get a single application by job seeker + job
+ */
+export async function getApplicationByJobAndSeeker(
+  jobSeekerId: number,
+  jobId: number
+): Promise<Application | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("application")
+    .select("*")
+    .eq("job_seeker_id", jobSeekerId)
+    .eq("job_id", jobId)
+    .maybeSingle();
+
+  if (error) {
+    console.error("Error fetching application by job & seeker:", error);
+    return null;
+  }
+  return data;
+}
+
+/**
+ * Create a bookmark-only application record
+ */
+export async function createBookmarkApplication(
+  jobSeekerId: number,
+  jobId: number
+): Promise<Application | null> {
+  const supabase = await createClient();
+
+  try {
+    // 1️⃣ Try to find profile resume
+    const { data: resume, error: resumeError } = await supabase
+      .from("resume")
+      .select("resume_id")
+      .eq("job_seeker_id", jobSeekerId)
+      .eq("is_profile", true)
+      .maybeSingle();
+
+    if (resumeError) {
+      console.error("Error fetching resume:", resumeError);
+      return null;
+    }
+
+    // 2️⃣ Build insert payload
+    const payload: any = {
+      job_seeker_id: jobSeekerId,
+      job_id: jobId,
+      is_bookmark: true,
+      status: "received",
+    };
+
+    // Only include resume_id if found
+    if (resume?.resume_id) {
+      payload.resume_id = resume.resume_id;
+    }
+
+    // 3️⃣ Insert new record
+    const { data, error } = await supabase
+      .from("application")
+      .insert([payload])
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error creating bookmark application:", error);
+      return null;
+    }
+
+    return data;
+  } catch (err) {
+    console.error("Unexpected error in createBookmarkApplication:", err);
+    return null;
+  }
+}
