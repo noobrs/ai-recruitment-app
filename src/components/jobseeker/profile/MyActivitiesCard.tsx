@@ -6,7 +6,8 @@ import JobCard, { JobCardProps } from '@/components/jobseeker/jobs/JobCard';
 interface MyActivitiesProps {
   bookmarkedJobs: JobCardProps[];
   appliedJobs: JobCardProps[];
-  loading?: boolean;
+  loading?: boolean; // overall profile activities loading
+  bookmarkLoadingId?: number | null; // 👈 NEW: which job’s bookmark is toggling
   onToggleBookmark?: (jobId: number) => void;
 }
 
@@ -14,10 +15,12 @@ export default function MyActivities({
   bookmarkedJobs,
   appliedJobs,
   loading = false,
+  bookmarkLoadingId = null,
   onToggleBookmark,
 }: MyActivitiesProps) {
   const router = useRouter();
 
+  // 🩶 Overall Skeleton Loader
   if (loading) {
     return (
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6 animate-pulse">
@@ -35,13 +38,16 @@ export default function MyActivities({
     );
   }
 
+  // ✅ Actual content
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
       <h2 className="text-2xl font-semibold mb-4">My Activities</h2>
 
       {/* === Bookmarked Jobs === */}
       <div className="mb-6">
-        <h3 className="text-lg font-medium mb-3 text-gray-700">Bookmarked Jobs</h3>
+        <h3 className="text-lg font-medium mb-3 text-gray-700">
+          Bookmarked Jobs
+        </h3>
         {bookmarkedJobs.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {bookmarkedJobs.map((job) => (
@@ -50,18 +56,27 @@ export default function MyActivities({
                 onClick={() => router.push(`/jobseeker/job/view/${job.jobId}`)}
                 className="cursor-pointer transition-transform hover:scale-[1.02]"
               >
-                <JobCard {...job} bookmark onToggleBookmark={onToggleBookmark} />
+                <JobCard
+                  {...job}
+                  bookmark={job.bookmark}
+                  loading={bookmarkLoadingId === job.jobId} // ✅ spinner only for active one
+                  onToggleBookmark={onToggleBookmark}
+                />
               </div>
             ))}
           </div>
         ) : (
-          <p className="text-gray-500 text-sm italic">No bookmarked jobs yet.</p>
+          <p className="text-gray-500 text-sm italic">
+            No bookmarked jobs yet.
+          </p>
         )}
       </div>
 
       {/* === Applied Jobs === */}
       <div>
-        <h3 className="text-lg font-medium mb-3 text-gray-700">Applied Jobs</h3>
+        <h3 className="text-lg font-medium mb-3 text-gray-700">
+          Applied Jobs
+        </h3>
         {appliedJobs.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {appliedJobs.map((job) => (
@@ -70,12 +85,19 @@ export default function MyActivities({
                 onClick={() => router.push(`/jobseeker/job/view/${job.jobId}`)}
                 className="cursor-pointer transition-transform hover:scale-[1.02]"
               >
-                <JobCard {...job} />
+                <JobCard
+                  {...job}
+                  bookmark={job.bookmark}
+                  loading={bookmarkLoadingId === job.jobId}
+                  onToggleBookmark={onToggleBookmark}
+                />
               </div>
             ))}
           </div>
         ) : (
-          <p className="text-gray-500 text-sm italic">No job applications yet.</p>
+          <p className="text-gray-500 text-sm italic">
+            No job applications yet.
+          </p>
         )}
       </div>
     </div>

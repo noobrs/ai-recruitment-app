@@ -9,7 +9,7 @@ export type JobCardProps = {
   bookmark?: boolean;
   readMoreUrl?: string;
   onToggleBookmark?: (jobId: number) => void;
-  loading?: boolean; // ⬅️ NEW: whether this job’s bookmark is being updated
+  loading?: boolean;
 };
 
 export default function JobCard(props: JobCardProps) {

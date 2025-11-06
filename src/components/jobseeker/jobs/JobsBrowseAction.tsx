@@ -6,7 +6,7 @@ export default function BrowseJobsAction() {
     const router = useRouter();
 
     const handleBrowse = () => {
-        router.push('/jobseeker/job'); // or your actual browse jobs route
+        router.push('/jobseeker/jobs'); // or your actual browse jobs route
     };
 
     return (
