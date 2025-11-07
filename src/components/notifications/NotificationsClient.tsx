@@ -18,16 +18,24 @@ export default function NotificationsClient({ userId, initialNotifications }: Pr
     const searchParams = useSearchParams();
     const notificationIdFromUrl = searchParams.get('id');
 
-    // Find notification from URL or use first one
-    const initialSelected = notificationIdFromUrl
-        ? initialNotifications.find(n => n.notification_id === parseInt(notificationIdFromUrl))
-        : initialNotifications[0];
-
     const [notifications, setNotifications] = useState<Notification[]>(initialNotifications);
-    const [selectedNotification, setSelectedNotification] = useState<Notification | null>(
-        initialSelected || null
-    );
+    const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
     const [isLoading, setIsLoading] = useState(false);
+
+    // Handle URL parameter changes - select notification when ID is in URL
+    useEffect(() => {
+        if (notificationIdFromUrl) {
+            const targetId = parseInt(notificationIdFromUrl);
+            const targetNotification = notifications.find(n => n.notification_id === targetId);
+
+            if (targetNotification && targetNotification.notification_id !== selectedNotification?.notification_id) {
+                setSelectedNotification(targetNotification);
+            }
+        } else if (!selectedNotification && notifications.length > 0) {
+            // If no URL param and nothing selected, select first notification
+            setSelectedNotification(notifications[0]);
+        }
+    }, [notificationIdFromUrl, notifications, selectedNotification]);
 
     // Mark notification as read
     const markAsRead = useCallback(async (notificationId: number) => {
@@ -93,20 +101,8 @@ export default function NotificationsClient({ userId, initialNotifications }: Pr
                     // Add to the beginning of the list
                     setNotifications((prev) => [newNotification, ...prev]);
 
-                    // Show toast notification
-                    toast.success(
-                        <div className="cursor-pointer" onClick={() => {
-                            handleNotificationClick(newNotification);
-                            window.location.href = '/notifications';
-                        }}>
-                            <p className="font-semibold">New Notification</p>
-                            <p className="text-sm truncate">{newNotification.message}</p>
-                        </div>,
-                        {
-                            duration: 5000,
-                            position: 'bottom-right',
-                        }
-                    );
+                    // If URL has this notification ID, it will be auto-selected by the URL effect
+                    // The URL parameter effect will handle selecting it
                 }
             )
             .on(
