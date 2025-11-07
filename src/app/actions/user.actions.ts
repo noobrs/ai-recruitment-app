@@ -57,12 +57,6 @@ export async function registerAction(formData: FormData) {
     const supabase = await createClient();
 
     try {
-        // const supabaseAdmin = createAdminClient();
-        // const origin = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
-
-        // const { data } = await supabaseAdmin.auth.admin.listUsers();
-        // const existing = data.users.find(u => u.email?.toLowerCase() === email.toLowerCase());
-
         const existing = await checkEmailExistence(email);
 
         // Check if user already exists
@@ -132,7 +126,6 @@ export async function loginAction(formData: FormData) {
 */
 export async function forgotPasswordAction(formData: FormData) {
     const email = String(formData.get("email") ?? "");
-    const origin = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
 
     // Validation: Check if email is valid format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

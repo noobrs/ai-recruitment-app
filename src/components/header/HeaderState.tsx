@@ -38,7 +38,6 @@ export default function HeaderState({ user, actionLink, theme, notificationData 
                         <NotificationBellClient
                             userId={user.id}
                             initialUnreadCount={notificationData.unreadCount}
-                            initialNotifications={notificationData.recentNotifications}
                             hoverClass={theme.hoverChip}
                             iconClass={theme.text}
                         />
