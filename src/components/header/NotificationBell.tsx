@@ -26,14 +26,11 @@ export default function NotificationBell({
         const supabaseRealtime = createRealtimeClient();
 
         // Use a unique channel name for this user to avoid conflicts
-        const channelName = `notification-bell-${userId}`;
-
-        console.log('[NotificationBell] Setting up realtime subscription for user:', userId);
-
+        const channelName = `notifications-bell-${userId}`;
         const channel = supabaseRealtime
             .channel(channelName, {
                 config: {
-                    broadcast: { self: true },
+                    broadcast: { self: false },
                 },
             })
             .on(
@@ -44,8 +41,7 @@ export default function NotificationBell({
                     table: 'notification',
                     filter: `user_id=eq.${userId}`,
                 },
-                (payload) => {
-                    console.log('[NotificationBell] New notification received:', payload);
+                () => {
                     setUnreadCount((prev) => prev + 1);
                 }
             )
@@ -58,7 +54,6 @@ export default function NotificationBell({
                     filter: `user_id=eq.${userId}`,
                 },
                 (payload) => {
-                    console.log('[NotificationBell] Notification updated:', payload);
                     const updatedNotification = payload.new as Notification;
                     const oldNotification = payload.old as Notification;
 
@@ -68,21 +63,9 @@ export default function NotificationBell({
                     }
                 }
             )
-            .subscribe((status, err) => {
-                console.log('[NotificationBell] Subscription status:', status, err);
-                if (status === 'SUBSCRIBED') {
-                    console.log('[NotificationBell] ✅ Successfully subscribed to notifications');
-                } else if (status === 'CHANNEL_ERROR') {
-                    console.error('[NotificationBell] ❌ Channel error:', err);
-                } else if (status === 'TIMED_OUT') {
-                    console.error('[NotificationBell] ❌ Subscription timed out');
-                } else if (status === 'CLOSED') {
-                    console.log('[NotificationBell] ⚠️ Channel closed');
-                }
-            });
+            .subscribe();
 
         return () => {
-            console.log('[NotificationBell] Cleaning up subscription');
             supabaseRealtime.removeChannel(channel);
         };
     }, [userId]);

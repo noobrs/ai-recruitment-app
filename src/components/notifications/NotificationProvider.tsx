@@ -19,8 +19,13 @@ export default function NotificationProvider({ userId }: Props) {
         const supabaseRealtime = createRealtimeClient();
 
         // Subscribe to new notifications for toast display
+        const channelName = `notifications-toast-${userId}`;
         const channel = supabaseRealtime
-            .channel('global-notifications')
+            .channel(channelName, {
+                config: {
+                    broadcast: { self: false },
+                },
+            })
             .on(
                 'postgres_changes',
                 {
@@ -92,7 +97,7 @@ export default function NotificationProvider({ userId }: Props) {
             .subscribe();
 
         return () => {
-            supabase.removeChannel(channel);
+            supabaseRealtime.removeChannel(channel);
         };
     }, [userId, router]);
 
