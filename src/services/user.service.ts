@@ -25,17 +25,17 @@ export async function getUserById(userId: string): Promise<User | null> {
  */
 export async function getUserByEmail(email: string): Promise<User | null> {
     const supabase = await createClient();
-    
+
     // First get the user from auth.users by email
     const { data: { users }, error: authError } = await supabase.auth.admin.listUsers();
-    
+
     if (authError) {
         console.error('Error fetching auth users:', authError);
         return null;
     }
 
     const authUser = users?.find(u => u.email === email);
-    
+
     if (!authUser) {
         return null;
     }
@@ -158,5 +158,25 @@ export async function getUserProfile(userId: string): Promise<{ role: string | n
     }
     return data;
 }
+
+/**
+ * Get user status for verification check
+ */
+export async function getUserStatus(userId: string): Promise<{ id: string; status: UserStatus } | null> {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+        .from('users')
+        .select('id, status')
+        .eq('id', userId)
+        .maybeSingle();
+
+    if (error) {
+        console.error('Error fetching user status:', error);
+        return null;
+    }
+    return data;
+}
+
+
 
 

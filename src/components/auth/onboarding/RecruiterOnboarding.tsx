@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { Loader2, Mail, User, Building2, Globe } from 'lucide-react';
+import { completeOnboarding } from '@/app/auth/onboarding/actions';
 
 interface RecruiterOnboardingProps {
     userId: string;
@@ -26,24 +27,18 @@ export default function RecruiterOnboarding({
 
         const formData = new FormData(e.currentTarget);
         const data = {
-            role: 'recruiter',
+            role: 'recruiter' as const,
             firstName: formData.get('firstName') as string,
             lastName: formData.get('lastName') as string,
             companyName: formData.get('companyName') as string,
-            companyWebsite: formData.get('companyWebsite') as string || null,
-            companyIndustry: formData.get('companyIndustry') as string || null,
+            companyWebsite: (formData.get('companyWebsite') as string) || undefined,
+            companyIndustry: (formData.get('companyIndustry') as string) || undefined,
         };
 
         try {
-            const response = await fetch('/api/onboarding', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data),
-            });
+            const result = await completeOnboarding(data);
 
-            const result = await response.json();
-
-            if (!response.ok) {
+            if (!result.success) {
                 throw new Error(result.error || 'Failed to complete onboarding');
             }
 

@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/utils/supabase/server";
+import { getUserStatus } from "@/services/user.service";
 import type { UserRole } from "@/types";
 
 /**
@@ -87,14 +88,8 @@ export async function resendVerificationAction(email: string, role: UserRole) {
  */
 export async function checkVerificationStatusAction(userId: string) {
     try {
-        const supabase = await createClient();
-
-        // Check user status in public.users database
-        const { data: userData } = await supabase
-            .from('users')
-            .select('id, status')
-            .eq('id', userId)
-            .maybeSingle();
+        // Check user status in public.users database using service
+        const userData = await getUserStatus(userId);
 
         if (!userData) {
             return {
