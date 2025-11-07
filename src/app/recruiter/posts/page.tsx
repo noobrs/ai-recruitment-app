@@ -2,9 +2,11 @@
 
 import { useState } from "react";
 import { MoreVertical, Search, Filter, ChevronDown, Star } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 export default function RecruiterPostsPage() {
   const [selectedTab, setSelectedTab] = useState("Marked");
+  const router = useRouter();
 
   const posts = [
     {
@@ -73,13 +75,14 @@ export default function RecruiterPostsPage() {
   ];
 
   return (
-    <div className="max-w-8/10 p-10 justify-center mx-auto my-10">
+    <div className="max-w-8/10 p-10 justify-center mx-auto my-5">
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Posts</h1>
 
         {/* Applicants Dropdown */}
-        <button className="flex items-center px-4 py-2 border rounded-full font-medium hover:bg-gray-50">
+        <button className="flex items-center px-4 py-2 border rounded-full font-medium hover:bg-gray-50" 
+            onClick={() => router.push('/recruiter/applicants')}>
           Applicants <ChevronDown className="ml-2 w-4 h-4" />
         </button>
       </div>
@@ -126,14 +129,14 @@ export default function RecruiterPostsPage() {
         <table className="min-w-full text-sm text-gray-700">
           <thead className="bg-gray-50 text-purple-600 text-left">
             <tr>
-              <th className="px-6 py-3 font-semibold">Job Title</th>
-              <th className="px-6 py-3 font-semibold">Type</th>
-              <th className="px-6 py-3 font-semibold">Location</th>
-              <th className="px-6 py-3 font-semibold">Applicants</th>
-              <th className="px-6 py-3 font-semibold">Views</th>
-              <th className="px-6 py-3 font-semibold">Date Posted</th>
-              <th className="px-6 py-3 font-semibold">Status</th>
-              <th className="px-6 py-3"></th>
+              <th className="px-6 py-5 font-semibold">Job Title</th>
+              <th className="px-6 py-5 font-semibold">Type</th>
+              <th className="px-6 py-5 font-semibold">Location</th>
+              <th className="px-6 py-5 font-semibold">Applicants</th>
+              <th className="px-6 py-5 font-semibold">Views</th>
+              <th className="px-6 py-5 font-semibold">Date Posted</th>
+              <th className="px-6 py-5 font-semibold">Status</th>
+              <th className="px-6 py-5"></th>
             </tr>
           </thead>
           <tbody>
@@ -144,7 +147,7 @@ export default function RecruiterPostsPage() {
                   i % 2 === 0 ? "bg-white" : "bg-gray-50"
                 } hover:bg-gray-100 transition`}
               >
-                <td className="px-6 py-4 flex items-center gap-2 font-semibold">
+                <td className="px-6 py-5 flex items-center gap-2 font-semibold">
                   <Star className="w-4 h-4 text-purple-600 fill-purple-600" />
                   {post.title}
                 </td>
