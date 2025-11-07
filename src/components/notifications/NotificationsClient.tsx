@@ -85,8 +85,13 @@ export default function NotificationsClient({ userId, initialNotifications }: Pr
         const supabaseRealtime = createRealtimeClient();
 
         // Subscribe to new notifications
+        const channelName = `notifications-list-${userId}`;
         const channel = supabaseRealtime
-            .channel('notifications')
+            .channel(channelName, {
+                config: {
+                    broadcast: { self: false },
+                },
+            })
             .on(
                 'postgres_changes',
                 {
