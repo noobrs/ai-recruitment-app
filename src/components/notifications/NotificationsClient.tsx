@@ -3,11 +3,11 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Notification } from '@/types';
-import { createClient } from '@/utils/supabase/client';
 import NotificationList from './NotificationList';
 import NotificationDetail from './NotificationDetail';
 import toast from 'react-hot-toast';
 import { createRealtimeClient } from '@/utils/supabase/realtime';
+import { markAsRead as markAsReadAction, markAllAsRead as markAllAsReadAction } from '@/app/notifications/actions';
 
 type Props = {
     userId: string;
@@ -32,24 +32,22 @@ export default function NotificationsClient({ userId, initialNotifications }: Pr
     // Mark notification as read
     const markAsRead = useCallback(async (notificationId: number) => {
         try {
-            const supabase = createClient();
-            const { data, error } = await supabase
-                .from('notification')
-                .update({ opened_at: new Date().toISOString() })
-                .eq('notification_id', notificationId)
-                .select()
-                .single();
+            const result = await markAsReadAction(notificationId);
 
-            if (error) throw error;
+            if (!result.success) {
+                throw new Error(result.error);
+            }
 
             // Update local state
-            setNotifications((prev) =>
-                prev.map((n) => (n.notification_id === notificationId ? data : n))
-            );
+            if (result.data) {
+                setNotifications((prev) =>
+                    prev.map((n) => (n.notification_id === notificationId ? result.data! : n))
+                );
 
-            // Update selected notification if it's the one being marked
-            if (selectedNotification?.notification_id === notificationId) {
-                setSelectedNotification(data);
+                // Update selected notification if it's the one being marked
+                if (selectedNotification?.notification_id === notificationId) {
+                    setSelectedNotification(result.data);
+                }
             }
         } catch (error) {
             console.error('Error marking notification as read:', error);
@@ -170,14 +168,11 @@ export default function NotificationsClient({ userId, initialNotifications }: Pr
     const handleMarkAllAsRead = async () => {
         setIsLoading(true);
         try {
-            const supabase = createClient();
-            const { error } = await supabase
-                .from('notification')
-                .update({ opened_at: new Date().toISOString() })
-                .eq('user_id', userId)
-                .is('opened_at', null);
+            const result = await markAllAsReadAction(userId);
 
-            if (error) throw error;
+            if (!result.success) {
+                throw new Error(result.error);
+            }
 
             // Update local state
             const now = new Date().toISOString();

@@ -3,12 +3,14 @@
 import { useEffect, useState, useCallback } from "react";
 import { Mail, Loader2, CheckCircle2, AlertCircle, RefreshCw } from "lucide-react";
 import Link from "next/link";
+import { resendVerificationAction } from "@/app/actions/verification.actions";
 
 interface VerifyEmailContentProps {
     email: string;
+    role?: 'jobseeker' | 'recruiter';
 }
 
-export default function VerifyEmailContent({ email }: VerifyEmailContentProps) {
+export default function VerifyEmailContent({ email, role = 'jobseeker' }: VerifyEmailContentProps) {
     const [isResending, setIsResending] = useState(false);
     const [resendStatus, setResendStatus] = useState<{
         type: "success" | "error" | null;
@@ -16,7 +18,7 @@ export default function VerifyEmailContent({ email }: VerifyEmailContentProps) {
     }>({ type: null, message: "" });
     const [countdown, setCountdown] = useState(0);
 
-    // Handle resend verification email via API
+    // Handle resend verification email via server action
     const handleResend = useCallback(async () => {
         if (countdown > 0 || isResending) return;
 
@@ -24,25 +26,17 @@ export default function VerifyEmailContent({ email }: VerifyEmailContentProps) {
         setResendStatus({ type: null, message: "" });
 
         try {
-            const response = await fetch('/api/auth/verify/resend', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ email }),
-            });
+            const result = await resendVerificationAction(email, role);
 
-            const data = await response.json();
-
-            if (!response.ok || !data.ok) {
+            if (!result.success) {
                 setResendStatus({
                     type: "error",
-                    message: data.message || "Failed to resend verification email",
+                    message: result.error || "Failed to resend verification email",
                 });
             } else {
                 setResendStatus({
                     type: "success",
-                    message: data.message || "Verification email sent! Please check your inbox.",
+                    message: "Verification email sent! Please check your inbox.",
                 });
                 setCountdown(60); // 60 second cooldown
             }
@@ -55,7 +49,7 @@ export default function VerifyEmailContent({ email }: VerifyEmailContentProps) {
         } finally {
             setIsResending(false);
         }
-    }, [email, countdown, isResending]);
+    }, [email, role, countdown, isResending]);
 
     // Countdown timer for resend button
     useEffect(() => {
