@@ -12,7 +12,7 @@ type Props = {
     iconClass: string;
 };
 
-export default function NotificationBellClient({
+export default function NotificationBell({
     userId,
     initialUnreadCount,
     hoverClass,
