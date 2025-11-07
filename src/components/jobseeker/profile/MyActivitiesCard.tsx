@@ -53,7 +53,6 @@ export default function MyActivities({
             {bookmarkedJobs.map((job) => (
               <div
                 key={`bookmark-${job.jobId}`}
-                onClick={() => router.push(`/jobseeker/job/view/${job.jobId}`)}
                 className="cursor-pointer transition-transform hover:scale-[1.02]"
               >
                 <JobCard
@@ -61,6 +60,7 @@ export default function MyActivities({
                   bookmark={job.bookmark}
                   loading={bookmarkLoadingId === job.jobId} // ✅ spinner only for active one
                   onToggleBookmark={onToggleBookmark}
+                  navigateOnClick={true}
                 />
               </div>
             ))}
@@ -82,7 +82,6 @@ export default function MyActivities({
             {appliedJobs.map((job) => (
               <div
                 key={`applied-${job.jobId}`}
-                onClick={() => router.push(`/jobseeker/job/view/${job.jobId}`)}
                 className="cursor-pointer transition-transform hover:scale-[1.02]"
               >
                 <JobCard
@@ -90,6 +89,7 @@ export default function MyActivities({
                   bookmark={job.bookmark}
                   loading={bookmarkLoadingId === job.jobId}
                   onToggleBookmark={onToggleBookmark}
+                  navigateOnClick={true}
                 />
               </div>
             ))}

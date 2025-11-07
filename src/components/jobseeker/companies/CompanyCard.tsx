@@ -5,7 +5,7 @@ export type CompanyCardProps = {
   industry: string;
   location: string;
   employeeSize: string;
-  rating?: number;
+  rating: number;
   totalJobs?: number;
   benefitsTag?: string;
   onClick?: (compId?: number) => void;
@@ -31,12 +31,10 @@ export default function CompanyCard(props: CompanyCardProps) {
         </h3>
 
         {/* Rating */}
-        {props.rating && (
-          <div className="flex items-center justify-center mt-1">
-            <img src="/star.svg" alt="Rating" className="w-4 h-4 mr-1" />
-            <span className="text-sm text-gray-600">{props.rating.toFixed(1)}</span>
-          </div>
-        )}
+        <div className="flex items-center justify-center mt-1">
+          <img src="/star.png" alt="Rating" className="w-4 h-4 mr-1" />
+          <span className="text-sm text-gray-600">{props.rating.toFixed(1)}</span> {/* one decimal place */}
+        </div>
       </div>
 
       {/* Company Info */}
