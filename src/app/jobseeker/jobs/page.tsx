@@ -125,7 +125,7 @@ export default function JobPage() {
   // =============================
   return (
     <div
-      className={`flex max-w-7xl mx-auto my-8 px-4 transition-all duration-500 ease-in-out ${
+      className={`flex max-w-8/10 mx-auto my-8 transition-all duration-500 ease-in-out ${
         isExpanded ? "flex-col" : "flex-row"
       }`}
     >
@@ -249,22 +249,22 @@ export default function JobPage() {
             </div>
 
             {/* Job Title & Meta */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-gray-200 pb-3 mb-4">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-gray-200 pb-3 mb-4 mt-1">
               <div>
-                <h2 className="text-3xl font-bold text-gray-700 mb-2">
+                <h2 className="text-3xl font-bold text-gray-700 mb-4">
                   {selectedJob.job_title}
                 </h2>
                 <p className="text-gray-600">
                   {selectedJob.job_location} ({selectedJob.job_type})
                 </p>
-                <p className="text-gray-500 text-sm mt-1">
+                <p className="text-gray-500 text-sm mt-2">
                   Posted on {new Date(selectedJob.created_at).toLocaleDateString()}
                 </p>
               </div>
               <ButtonFilledPrimary
                 text="Apply Now"
                 onClick={() =>
-                  router.push(`/jobseeker/job/apply/${selectedJob.job_id}`)
+                  router.push(`/jobseeker/jobs/apply/${selectedJob.job_id}`)
                 }
                 className="mt-4 sm:mt-0 w-36 h-10 bg-primary"
               />

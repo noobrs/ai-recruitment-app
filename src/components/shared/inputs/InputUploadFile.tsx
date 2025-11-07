@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import React, { useState } from "react";
 import InputLabel from "./InputLabel";
@@ -28,7 +28,7 @@ export default function InputUploadFile({
     if (file) {
       if (file.size > maxSizeMB * 1024 * 1024) {
         alert(`File exceeds ${maxSizeMB} MB limit.`);
-        e.target.value = ""; // reset file input
+        e.target.value = "";
         return;
       }
       setFileName(file.name);
@@ -42,19 +42,25 @@ export default function InputUploadFile({
   return (
     <div className="flex flex-col gap-2 w-full">
       {label && <InputLabel label={label} nullable={nullable} />}
-      <input
-        type="file"
-        accept={accept}
-        onChange={handleFileChange}
-        className={`p-2 border border-gray-300 rounded-md bg-white cursor-pointer ${className}`}
-      />
-      <p className="text-gray-500 text-sm text-start">
-        Max file size: {maxSizeMB}MB
-      </p>
 
-      {fileName && (
-        <p className="text-gray-600 text-sm truncate">📄 {fileName}</p>
-      )}
+      <label className="block border border-gray-300 rounded-md px-4 py-3 text-gray-600 cursor-pointer hover:border-primary transition text-center">
+        <input
+          type="file"
+          accept={accept}
+          onChange={handleFileChange}
+          className="hidden"
+        />
+        {fileName ? (
+          <div className="flex items-center gap-2 text-gray-800 justify-center">
+            <img src="/file-icon.svg" alt="file" className="w-5 h-5" />
+            <span className="truncate">{fileName}</span>
+          </div>
+        ) : (
+          <span className="text-gray-400">Choose a file</span>
+        )}
+      </label>
+
+      <p className="text-gray-500 text-sm">Max file size: {maxSizeMB}MB</p>
     </div>
   );
 }
