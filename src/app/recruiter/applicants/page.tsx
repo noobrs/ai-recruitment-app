@@ -129,9 +129,11 @@ export default function RecruiterApplicantsPage() {
                 </td>
                 <td className="px-6 py-4">{a.jobTitle}</td>
                 <td className="px-6 py-4">{a.date}</td>
-                <td className="px-6 py-4 flex items-center gap-1 font-medium text-gray-700">
-                  {a.status}
-                  <ChevronDown className="w-4 h-4 text-gray-400" />
+                <td className="px-6 py-4 gap-1 font-medium text-gray-700">
+                  <div className="flex flex-row">
+                    {a.status}
+                    <ChevronDown className="w-4 h-4 text-gray-400" />
+                  </div>
                 </td>
                 <td className="px-6 py-4 text-purple-600 font-medium cursor-pointer hover:underline">
                   View Details
