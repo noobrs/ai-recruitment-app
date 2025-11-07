@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import NotificationBellClient from "./NotificationBellClient";
+import NotificationBell from "./NotificationBell";
 import ProfileMenu from "./ProfileMenu";
 import type { BaseUser, Notification } from "@/types";
 import { usePathname } from 'next/navigation';
@@ -35,7 +35,7 @@ export default function HeaderState({ user, actionLink, theme, notificationData 
             {user ? (
                 <div className="flex items-center gap-4">
                     {notificationData && (
-                        <NotificationBellClient
+                        <NotificationBell
                             userId={user.id}
                             initialUnreadCount={notificationData.unreadCount}
                             hoverClass={theme.hoverChip}
