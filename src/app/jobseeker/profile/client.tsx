@@ -11,7 +11,7 @@ import {
     ResumesList,
     MyActivities,
 } from '@/components/jobseeker/profile';
-import { toggleBookmark } from '../jobs/actions';
+import { useBookmark } from "@/hooks/useBookmark";
 
 interface ProfileClientProps {
     user: UserWithJobSeeker;
@@ -34,7 +34,7 @@ export default function ProfileClient({ user, profileResume, allResumes }: Profi
         location: user.job_seeker.location || '',
         about_me: user.job_seeker.about_me || '',
     });
-    const [bookmarkLoadingId, setBookmarkLoadingId] = useState<number | null>(null);
+    const { toggle, loadingId } = useBookmark();
 
     useEffect(() => {
         async function fetchActivities() {
@@ -90,36 +90,15 @@ export default function ProfileClient({ user, profileResume, allResumes }: Profi
     };
 
     const handleToggleBookmark = async (jobId: number) => {
-        try {
-            setBookmarkLoadingId(jobId);
-            setBookmarkedJobs(prev => {
-                const exists = prev.some(job => job.jobId === jobId);
-                if (exists) {
-                    return prev.filter(job => job.jobId !== jobId);
-                } else {
-                    const jobToAdd = appliedJobs.find(job => job.jobId === jobId);
-                    return jobToAdd ? [...prev, { ...jobToAdd, bookmark: true }] : prev;
-                }
-            });
-
-            setAppliedJobs(prev =>
-                prev.map(job =>
-                    job.jobId === jobId ? { ...job, bookmark: !job.bookmark } : job
+        const result = await toggle(user.job_seeker.job_seeker_id, jobId);
+        if (result.success) {
+            setBookmarkedJobs((prev) =>
+                prev.map((job) =>
+                    job.jobId === jobId
+                        ? { ...job, bookmark: result.is_bookmark }
+                        : job
                 )
             );
-
-            const result = await toggleBookmark(user.job_seeker.job_seeker_id, jobId);
-
-            if (!result.success) {
-                alert('Failed to update bookmark.');
-                router.refresh();
-            }
-        } catch (err) {
-            console.error('Error toggling bookmark:', err);
-            alert('Error updating bookmark.');
-            router.refresh();
-        } finally {
-            setBookmarkLoadingId(null);
         }
     };
 
@@ -160,7 +139,7 @@ export default function ProfileClient({ user, profileResume, allResumes }: Profi
                 bookmarkedJobs={bookmarkedJobs}
                 appliedJobs={appliedJobs}
                 loading={activitiesLoading}
-                bookmarkLoadingId={bookmarkLoadingId}
+                bookmarkLoadingId={loadingId}
                 onToggleBookmark={handleToggleBookmark}
             />
 

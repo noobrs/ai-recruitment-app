@@ -2,20 +2,22 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { toggleBookmark } from "./actions";
+import { useBookmark } from "@/hooks/useBookmark";
+
 
 import JobCard from "@/components/jobseeker/jobs/JobCard";
 import ButtonFilledPrimary from "@/components/shared/buttons/ButtonFilledPrimary";
 
 export default function JobPage() {
   const router = useRouter();
+
   const [jobs, setJobs] = useState<any[]>([]);
   const [jobSeekerId, setJobSeekerId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedJobId, setSelectedJobId] = useState<number | null>(null);
   const [isExpanded, setIsExpanded] = useState(false);
-  const [bookmarkLoading, setBookmarkLoading] = useState<number | null>(null);
+  const { toggle, loadingId } = useBookmark();
   const [currentPage, setCurrentPage] = useState(1);
   const jobsPerPage = 5;
 
@@ -57,29 +59,22 @@ export default function JobPage() {
   // Bookmark toggle handler
   // =============================
   const handleToggleBookmark = async (jobId: number) => {
-    if (!jobSeekerId) return;
+  if (!jobSeekerId) return;
 
-    setBookmarkLoading(jobId); // show loading state on clicked icon
+  const result = await toggle(jobSeekerId, jobId);
 
-    try {
-      const result = await toggleBookmark(jobSeekerId, jobId);
-      if (result.success) {
-        setJobs((prev) =>
-          prev.map((job) =>
-            job.job_id === jobId
-              ? { ...job, is_bookmark: result.is_bookmark }
-              : job
-          )
-        );
-      } else {
-        alert("Failed to update bookmark.");
-      }
-    } catch (err) {
-      console.error("Error toggling bookmark:", err);
-    } finally {
-      setBookmarkLoading(null);
-    }
-  };
+  if (result.success) {
+    setJobs((prev) =>
+      prev.map((job) =>
+        job.job_id === jobId
+          ? { ...job, is_bookmark: result.is_bookmark }
+          : job
+      )
+    );
+  } else {
+    alert("Failed to update bookmark.");
+  }
+};
 
   // =============================
   // Pagination logic
@@ -152,7 +147,7 @@ export default function JobPage() {
                 createdAt={new Date(job.created_at).toLocaleDateString()}
                 bookmark={job.is_bookmark}
                 onToggleBookmark={handleToggleBookmark}
-                loading={bookmarkLoading === job.job_id}
+                loading={loadingId === job.job_id}
               />
             </div>
           ))}
@@ -231,7 +226,7 @@ export default function JobPage() {
                   }
                   alt="Bookmark"
                   className={`w-7 h-7 cursor-pointer hover:scale-110 transition-transform ${
-                    bookmarkLoading === selectedJob.job_id ? "opacity-50" : ""
+                    loadingId === selectedJob.job_id ? "opacity-50" : ""
                   }`}
                   onClick={() => handleToggleBookmark(selectedJob.job_id)}
                 />
