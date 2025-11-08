@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { getCurrentRecruiter } from '@/services';
+import ViewApplicantsAction from '@/components/recruiter/applicants/ApplicantsBrowseActions';
 
 export default async function RecruiterDashboard() {
     // Get current recruiter (includes authentication and role check)
@@ -57,9 +58,7 @@ export default async function RecruiterDashboard() {
                         <button className="flex items-center justify-center px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-700 hover:border-indigo-500 hover:text-indigo-600 transition-colors">
                             <span className="text-sm font-medium">Post New Job</span>
                         </button>
-                        <button className="flex items-center justify-center px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-700 hover:border-indigo-500 hover:text-indigo-600 transition-colors">
-                            <span className="text-sm font-medium">View Applications</span>
-                        </button>
+                        <ViewApplicantsAction />
                         <button className="flex items-center justify-center px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-700 hover:border-indigo-500 hover:text-indigo-600 transition-colors">
                             <span className="text-sm font-medium">Manage Jobs</span>
                         </button>
