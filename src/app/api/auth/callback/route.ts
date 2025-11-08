@@ -7,7 +7,6 @@ import { createAdminClient } from '@/utils/supabase/admin';
  */
 export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
-    const next = searchParams.get('next');
     const code = searchParams.get('code');
 
     const supabase = await createClient();
@@ -28,7 +27,7 @@ export async function GET(request: NextRequest) {
             if (user) {
                 const { data: existedUser } = await supabaseAdmin
                     .from("users")
-                    .select("id, status")
+                    .select("id, status, role")
                     .eq("id", user.id)
                     .maybeSingle();
 
@@ -36,19 +35,16 @@ export async function GET(request: NextRequest) {
                 if (existedUser && existedUser.status === "pending") {
                     return NextResponse.redirect(new URL('/auth/onboarding', origin));
                 }
+
+                // If user is active, redirect to their dashboard based on role
+                if (existedUser && existedUser.status === "active") {
+                    if (existedUser.role === 'jobseeker') {
+                        return NextResponse.redirect(new URL('/jobseeker/dashboard', origin));
+                    } else if (existedUser.role === 'recruiter') {
+                        return NextResponse.redirect(new URL('/recruiter/dashboard', origin));
+                    }
+                }
             }
-
-            // const forwardedHost = request.headers.get('x-forwarded-host');
-            // const isLocalEnv = process.env.NODE_ENV === 'development';
-
-            // if (isLocalEnv) {
-            //     // we can be sure that there is no load balancer in between, so no need to watch for X-Forwarded-Host
-            //     return NextResponse.redirect(`${origin}${next}`)
-            // } else if (forwardedHost) {
-            //     return NextResponse.redirect(`https://${forwardedHost}${next}`)
-            // } else {
-            //     return NextResponse.redirect(`${origin}${next}`)
-            // }
         }
 
         // If no valid params, redirect to home

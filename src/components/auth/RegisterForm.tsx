@@ -1,17 +1,43 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import { Loader2, Mail, Lock } from "lucide-react";
+import { Loader2, Mail } from "lucide-react";
 import Link from "next/link";
 import { registerAction } from "@/app/actions/user.actions";
+import PasswordInput from "@/components/shared/PasswordInput";
+import PasswordRequirements, { validatePasswordStrength, isPasswordStrong } from "@/components/shared/PasswordRequirements";
 
 export default function RegisterForm() {
     const [isPending, startTransition] = useTransition();
     const router = useRouter();
+    const [password, setPassword] = useState("");
+    const [confirmPassword, setConfirmPassword] = useState("");
 
-    const onSubmit = (formData: FormData) => {
+    const passwordChecks = validatePasswordStrength(password);
+    const passwordStrong = isPasswordStrong(passwordChecks);
+
+    const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+
+        if (password !== confirmPassword) {
+            toast.error("Passwords do not match");
+            return;
+        }
+
+        if (!passwordChecks.length) {
+            toast.error("Password must be at least 8 characters long");
+            return;
+        }
+
+        if (!passwordStrong) {
+            toast.error("Password must meet at least 4 of the security requirements");
+            return;
+        }
+
+        const formData = new FormData(e.currentTarget);
+
         startTransition(async () => {
             const response = await registerAction(formData);
 
@@ -20,13 +46,11 @@ export default function RegisterForm() {
             if (response.errorMessage) {
                 toast.error(response.errorMessage);
             }
-            // Note: registerAction will redirect to verification page on success
-            // No need to show success toast or manual redirect here
         });
     };
 
     return (
-        <form action={onSubmit} className="space-y-4">
+        <form onSubmit={onSubmit} className="space-y-4">
             <label className="block">
                 <span className="mb-1 block text-sm text-neutral-700">Email</span>
                 <div className="relative">
@@ -42,39 +66,35 @@ export default function RegisterForm() {
                 </div>
             </label>
 
-            <label className="block">
-                <span className="mb-1 block text-sm text-neutral-700">Password</span>
-                <div className="relative">
-                    <Lock className="absolute left-3 top-2.5 h-4 w-4 text-neutral-400" />
-                    <input
-                        type="password"
-                        name="password"
-                        required
-                        placeholder="••••••••"
-                        disabled={isPending}
-                        className="w-full rounded-lg border border-neutral-200 bg-white/70 pl-10 pr-3 py-2 outline-none focus:ring-2 focus:ring-neutral-900"
-                    />
-                </div>
-            </label>
+            <div>
+                <PasswordInput
+                    label="Password"
+                    name="password"
+                    required
+                    placeholder="••••••••"
+                    disabled={isPending}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                />
+                <PasswordRequirements password={password} checks={passwordChecks} />
+            </div>
 
-            <label className="block">
-                <span className="mb-1 block text-sm text-neutral-700">Confirm Password</span>
-                <div className="relative">
-                    <Lock className="absolute left-3 top-2.5 h-4 w-4 text-neutral-400" />
-                    <input
-                        type="password"
-                        name="confirmPassword"
-                        required
-                        placeholder="••••••••"
-                        disabled={isPending}
-                        className="w-full rounded-lg border border-neutral-200 bg-white/70 pl-10 pr-3 py-2 outline-none focus:ring-2 focus:ring-neutral-900"
-                    />
-                </div>
-            </label>
+            <PasswordInput
+                label="Confirm Password"
+                name="confirmPassword"
+                required
+                placeholder="••••••••"
+                disabled={isPending}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                error={confirmPassword && password !== confirmPassword ? "Passwords do not match" : undefined}
+                success={confirmPassword && password === confirmPassword ? "Passwords match" : undefined}
+            />
 
             <button
-                disabled={isPending}
-                className="w-full rounded-lg bg-neutral-900 text-white py-2.5 font-medium flex items-center justify-center gap-2 hover:opacity-95 disabled:opacity-70"
+                type="submit"
+                disabled={isPending || !passwordStrong || password !== confirmPassword || !password}
+                className="w-full rounded-lg bg-neutral-900 text-white py-2.5 font-medium flex items-center justify-center gap-2 hover:opacity-95 disabled:opacity-70 disabled:cursor-not-allowed"
             >
                 {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Create Account"}
             </button>

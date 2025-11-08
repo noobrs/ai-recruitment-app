@@ -57,15 +57,6 @@ export async function isRecruiter(): Promise<boolean> {
  * Always fetches from database with current session cookies.
  * 
  * @returns User with job_seeker profile or null if not authenticated/not a job seeker
- * @example
- * ```tsx
- * // In a Server Component
- * export default async function JobSeekerProfilePage() {
- *   const jobSeeker = await getCurrentJobSeeker();
- *   if (!jobSeeker) redirect('/auth/jobseeker/login');
- *   return <ProfileContent user={jobSeeker} />;
- * }
- * ```
  */
 export async function getCurrentJobSeeker() {
     const user = await getCurrentUser();
@@ -92,14 +83,6 @@ export async function getCurrentJobSeeker() {
  * 
  * @returns User with recruiter profile or null if not authenticated/not a recruiter
  * @example
- * ```tsx
- * // In a Server Component
- * export default async function RecruiterDashboardPage() {
- *   const recruiter = await getCurrentRecruiter();
- *   if (!recruiter) redirect('/auth/recruiter/login');
- *   return <DashboardContent user={recruiter} />;
- * }
- * ```
  */
 export async function getCurrentRecruiter() {
     const user = await getCurrentUser();

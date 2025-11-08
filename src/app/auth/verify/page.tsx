@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import VerifyEmailContent from '@/components/auth/VerifyEmailContent';
-import { createClient } from '@/utils/supabase/server';
+import { getUser } from '@/utils/supabase/server';
 
 export default async function VerifyPage({
     searchParams
@@ -15,10 +15,7 @@ export default async function VerifyPage({
         redirect('/auth/register');
     }
 
-    const supabase = await createClient();
-    const {
-        data: { user },
-    } = await supabase.auth.getUser();
+    const user = await getUser();
 
     // If user is signed in and email is already confirmed, redirect to onboarding
     if (user?.confirmed_at) {

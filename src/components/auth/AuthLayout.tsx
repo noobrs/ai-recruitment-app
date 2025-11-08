@@ -27,14 +27,6 @@ export default function AuthLayout({
                         </span>
                     </div>
                 )}
-                {!role && (
-                    <div className="flex items-center justify-center gap-2 mb-6">
-                        <Icon className={`h-7 w-7 ${accentText}`} aria-hidden />
-                        <span className={`text-lg font-bold ${accentText}`}>
-                            AI Recruitment
-                        </span>
-                    </div>
-                )}
                 {children}
                 <p className="text-center text-xs text-neutral-500 mt-6">
                     By continuing you agree to our Terms & Privacy.

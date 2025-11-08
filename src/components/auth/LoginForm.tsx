@@ -3,9 +3,10 @@
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import { Loader2, Mail, Lock } from "lucide-react";
+import { Loader2, Mail } from "lucide-react";
 import Link from "next/link";
 import { loginAction } from "@/app/actions/user.actions";
+import PasswordInput from "@/components/shared/PasswordInput";
 
 export default function LoginForm() {
     const router = useRouter();
@@ -13,12 +14,22 @@ export default function LoginForm() {
 
     const onSubmit = (formData: FormData) => {
         startTransition(async () => {
-            const { errorMessage } = await loginAction(formData);
+            const { errorMessage, role, status } = await loginAction(formData);
             if (errorMessage) {
                 toast.error(errorMessage);
             } else {
                 toast.success("Successfully logged in");
-                router.push("/");
+
+                // Redirect based on user role and status
+                if (status === 'pending') {
+                    router.push("/auth/onboarding");
+                } else if (role === 'jobseeker') {
+                    router.push("/jobseeker/dashboard");
+                } else if (role === 'recruiter') {
+                    router.push("/recruiter/dashboard");
+                } else {
+                    router.push("/");
+                }
                 router.refresh();
             }
         });
@@ -41,20 +52,13 @@ export default function LoginForm() {
                 </div>
             </label>
 
-            <label className="block">
-                <span className="mb-1 block text-sm text-neutral-700">Password</span>
-                <div className="relative">
-                    <Lock className="absolute left-3 top-2.5 h-4 w-4 text-neutral-400" />
-                    <input
-                        type="password"
-                        name="password"
-                        required
-                        placeholder="••••••••"
-                        disabled={isPending}
-                        className="w-full rounded-lg border border-neutral-200 bg-white/70 pl-10 pr-3 py-2 outline-none focus:ring-2 focus:ring-neutral-900"
-                    />
-                </div>
-            </label>
+            <PasswordInput
+                label="Password"
+                name="password"
+                required
+                placeholder="••••••••"
+                disabled={isPending}
+            />
 
             <div className="flex items-center justify-end">
                 <Link

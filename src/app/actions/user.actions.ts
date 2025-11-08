@@ -1,5 +1,6 @@
 "use server";
 
+import { getUserWithRoleStatus } from "@/services/user.service";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { createClient, protectRoute } from "@/utils/supabase/server";
 import { getErrorMessage } from "@/utils/utils";
@@ -112,13 +113,24 @@ export async function loginAction(formData: FormData) {
 
     const supabase = await createClient();
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { error, data } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error) {
-        return { errorMessage: error.message };
+        return { errorMessage: error.message, role: null, status: null };
     }
 
-    return { errorMessage: null };
+    // Get user role and status from database
+    if (data.user) {
+        const { role, status } = await getUserWithRoleStatus(data.user.id) ?? { role: null, status: null };
+
+        return {
+            errorMessage: null,
+            role: role || null,
+            status: status || null
+        };
+    }
+
+    return { errorMessage: null, role: null, status: null };
 }
 
 /*

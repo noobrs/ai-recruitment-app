@@ -10,7 +10,7 @@ import {
     FILE_SIZE_LIMIT_TEXT,
     ALLOWED_FORMATS_TEXT
 } from '@/constants/profile-picture.constants';
-import ProfilePictureUpload from '@/components/shared/ProfilePictureUpload';
+import ProfilePictureUpload from '@/components/shared/profile/ProfilePictureUpload';
 
 interface RecruiterOnboardingProps {
     userId: string;

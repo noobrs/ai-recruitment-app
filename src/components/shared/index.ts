@@ -1,5 +1,5 @@
 // Export shared components
-export { default as ProfilePicture } from './ProfilePicture';
-export { default as ProfilePictureUpload } from './ProfilePictureUpload';
-export { default as ProfileEditActions } from './ProfileEditActions';
-export { default as ImageCropper } from './ImageCropper';
+export { default as ProfilePicture } from './profile/ProfilePicture';
+export { default as ProfilePictureUpload } from './profile/ProfilePictureUpload';
+export { default as ProfileEditActions } from './profile/ProfileEditActions';
+export { default as ImageCropper } from './profile/ImageCropper';

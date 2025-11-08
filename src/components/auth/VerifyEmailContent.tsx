@@ -4,10 +4,11 @@ import { useEffect, useState, useCallback } from "react";
 import { Mail, Loader2, CheckCircle2, AlertCircle, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import { resendVerificationAction } from "@/app/actions/verification.actions";
+import { UserRole } from "@/types";
 
 interface VerifyEmailContentProps {
     email: string;
-    role?: 'jobseeker' | 'recruiter';
+    role?: UserRole;
 }
 
 export default function VerifyEmailContent({ email, role = 'jobseeker' }: VerifyEmailContentProps) {

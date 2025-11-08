@@ -1,8 +1,8 @@
 'use client';
 
 import { UserWithJobSeeker } from '@/types';
-import ProfilePicture from '@/components/shared/ProfilePicture';
-import ProfileEditActions from '@/components/shared/ProfileEditActions';
+import ProfilePicture from '@/components/shared/profile/ProfilePicture';
+import ProfileEditActions from '@/components/shared/profile/ProfileEditActions';
 import ProfileBasicInfo from './ProfileBasicInfo';
 
 interface ProfileHeaderProps {
