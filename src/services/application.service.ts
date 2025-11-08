@@ -268,7 +268,8 @@ export async function getApplicationByJobAndSeeker(
  */
 export async function createBookmarkApplication(
   jobSeekerId: number,
-  jobId: number
+  jobId: number,
+  status?: ApplicationStatus
 ): Promise<Application | null> {
   const supabase = await createClient();
 
@@ -291,7 +292,7 @@ export async function createBookmarkApplication(
       job_seeker_id: jobSeekerId,
       job_id: jobId,
       is_bookmark: true,
-      status: "received",
+      status: status || 'unknown',
     };
 
     // Only include resume_id if found

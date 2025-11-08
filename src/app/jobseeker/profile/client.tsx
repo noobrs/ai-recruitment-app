@@ -91,16 +91,24 @@ export default function ProfileClient({ user, profileResume, allResumes }: Profi
 
     const handleToggleBookmark = async (jobId: number) => {
         const result = await toggle(user.job_seeker.job_seeker_id, jobId);
+
         if (result.success) {
             setBookmarkedJobs((prev) =>
-                prev.map((job) =>
-                    job.jobId === jobId
-                        ? { ...job, bookmark: result.is_bookmark }
-                        : job
-                )
+                result.is_bookmark
+                    ? prev
+                    : prev.filter((job) => job.jobId !== jobId)
             );
+
+            setTimeout(async () => {
+                const res = await fetch('/api/auth/jobseeker/profile/activities');
+                if (res.ok) {
+                    const data = await res.json();
+                    setBookmarkedJobs(data.bookmarkedJobs || []);
+                }
+            }, 300);
         }
     };
+
 
     return (
         <div className="max-w-5xl mx-auto px-4 py-8">
