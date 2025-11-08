@@ -16,10 +16,10 @@ interface JobPost {
 }
 
 export default function RecruiterPostsPage() {
-  const [selectedTab, setSelectedTab] = useState("Marked");
   const [posts, setPosts] = useState<JobPost[]>([]);
   const [visibleCount, setVisibleCount] = useState(10);
   const [loading, setLoading] = useState(true);
+  const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
   const router = useRouter();
 
   // Fetch recruiter jobs
@@ -39,12 +39,25 @@ export default function RecruiterPostsPage() {
     fetchRecruiterJobs();
   }, []);
 
-  // Show more handler
-  const handleSeeMore = () => {
-    setVisibleCount((prev) => prev + 10);
+  // See more handler
+  const handleSeeMore = () => setVisibleCount((prev) => prev + 10);
+
+  // Handle status toggle
+  const handleStatusToggle = (status: string) => {
+    setSelectedStatuses((prev) =>
+      prev.includes(status)
+        ? prev.filter((s) => s !== status)
+        : [...prev, status]
+    );
   };
 
-  const displayedPosts = posts.slice(0, visibleCount);
+  // Filter posts by selected statuses
+  const filteredPosts =
+    selectedStatuses.length > 0
+      ? posts.filter((p) => selectedStatuses.includes(p.status.toLowerCase()))
+      : posts;
+
+  const displayedPosts = filteredPosts.slice(0, visibleCount);
 
   return (
     <div className="max-w-8/10 p-10 justify-center mx-auto my-5">
@@ -73,28 +86,27 @@ export default function RecruiterPostsPage() {
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-3 mb-6">
-        <button
-          onClick={() => setSelectedTab("Marked")}
-          className={`px-4 py-2 rounded-full font-medium ${
-            selectedTab === "Marked"
-              ? "bg-purple-600 text-white"
-              : "bg-white border text-gray-700"
-          }`}
-        >
-          Marked
-        </button>
-        <button
-          onClick={() => setSelectedTab("Open And Paused")}
-          className={`px-4 py-2 rounded-full font-medium ${
-            selectedTab === "Open And Paused"
-              ? "bg-purple-600 text-white"
-              : "bg-white border text-gray-700"
-          }`}
-        >
-          Open And Paused
-        </button>
+      {/* Tabs (multi-select filter) */}
+      <div className="flex gap-3 mb-6 flex-wrap">
+        {["draft", "open", "closed", "deleted"].map((status) => {
+          const isSelected = selectedStatuses.includes(status);
+          const label =
+            status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
+
+          return (
+            <button
+              key={status}
+              onClick={() => handleStatusToggle(status)}
+              className={`px-4 py-2 rounded-full font-medium border transition ${
+                isSelected
+                  ? "bg-purple-600 text-white border-purple-600"
+                  : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+              }`}
+            >
+              {label}
+            </button>
+          );
+        })}
       </div>
 
       {/* Table */}
@@ -140,14 +152,17 @@ export default function RecruiterPostsPage() {
                   <td className="px-6 py-4">{post.views || 0}</td>
                   <td className="px-6 py-4">{post.date}</td>
                   <td className="px-6 py-4 font-medium">
-                    {post.status === "Open" && (
+                    {post.status === "draft" && (
+                      <span className="text-gray-600">Draft</span>
+                    )}
+                    {post.status === "open" && (
                       <span className="text-green-600">Open</span>
                     )}
-                    {post.status === "Closed" && (
-                      <span className="text-gray-500">Closed</span>
+                    {post.status === "closed" && (
+                      <span className="text-yellow-500">Closed</span>
                     )}
-                    {post.status === "Paused" && (
-                      <span className="text-yellow-500">Paused</span>
+                    {post.status === "deleted" && (
+                      <span className="text-red-500">Deleted</span>
                     )}
                   </td>
                   <td className="px-6 py-4">
@@ -161,7 +176,7 @@ export default function RecruiterPostsPage() {
       </div>
 
       {/* Footer - See More */}
-      {!loading && posts.length > visibleCount && (
+      {!loading && filteredPosts.length > visibleCount && (
         <div
           className="text-center mt-6 text-sm text-purple-600 font-medium cursor-pointer hover:underline"
           onClick={handleSeeMore}
