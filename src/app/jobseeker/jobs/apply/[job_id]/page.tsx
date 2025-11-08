@@ -17,7 +17,7 @@ export default function ApplyJobPage() {
   useEffect(() => {
     async function fetchJobDetails() {
       try {
-        const res = await fetch("/api/auth/jobseeker/jobs");
+        const res = await fetch("/api/jobseeker/jobs");
         if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
 
         const data = await res.json();

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 
 /**
- * GET /api/auth/jobseeker/companies
+ * GET /api/jobseeker/companies
  * - Returns all companies
  * - OR a single company with its jobs (if ?company_id provided)
  */
@@ -154,7 +154,7 @@ export async function GET(req: Request) {
       );
     }
   } catch (err: any) {
-    console.error("Error in /api/auth/jobseeker/companies:", err.message);
+    console.error("Error in /api/jobseeker/companies:", err.message);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

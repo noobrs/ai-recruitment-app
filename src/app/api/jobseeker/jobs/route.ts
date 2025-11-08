@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 
 /**
- * GET /api/auth/jobseeker/jobs
+ * GET /api/jobseeker/jobs
  * Returns all job listings with recruiter and company info.
  * Accessible only to authenticated jobseekers.
  */
@@ -97,7 +97,7 @@ export async function GET() {
       { status: 200 }
     );
   } catch (err: any) {
-    console.error("Error in /api/auth/jobseeker/jobs:", err.message);
+    console.error("Error in /api/jobseeker/jobs:", err.message);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

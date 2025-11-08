@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 
 /**
- * GET /api/auth/jobseeker/jobs/[job_id]
+ * GET /api/jobseeker/jobs/[job_id]
  * Returns full job detail with recruiter, company, and requirement info.
  */
 export async function GET(
@@ -117,7 +117,7 @@ export async function GET(
       { status: 200 }
     );
   } catch (err: any) {
-    console.error("Error in /api/auth/jobseeker/jobs/[job_id]:", err.message);
+    console.error("Error in /api/jobseeker/jobs/[job_id]:", err.message);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

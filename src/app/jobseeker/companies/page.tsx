@@ -25,7 +25,7 @@ export default function CompaniesPage() {
   useEffect(() => {
     async function fetchCompanies() {
       try {
-        const res = await fetch("/api/auth/jobseeker/companies");
+        const res = await fetch("/api/jobseeker/companies");
         if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
 
         const data = await res.json();
@@ -60,7 +60,7 @@ export default function CompaniesPage() {
     setSelectedCompanyId(id);
     setLoading(true);
     try {
-      const res = await fetch(`/api/auth/jobseeker/companies?company_id=${id}`);
+      const res = await fetch(`/api/jobseeker/companies?company_id=${id}`);
       const data = await res.json();
       if (data.company) {
         setCompanies((prev) =>

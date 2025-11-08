@@ -39,7 +39,7 @@ export default function ProfileClient({ user, profileResume, allResumes }: Profi
     useEffect(() => {
         async function fetchActivities() {
             try {
-                const res = await fetch('/api/auth/jobseeker/profile/activities');
+                const res = await fetch('/api/jobseeker/profile/activities');
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 const data = await res.json();
                 setBookmarkedJobs(data.bookmarkedJobs || []);
@@ -100,7 +100,7 @@ export default function ProfileClient({ user, profileResume, allResumes }: Profi
             );
 
             setTimeout(async () => {
-                const res = await fetch('/api/auth/jobseeker/profile/activities');
+                const res = await fetch('/api/jobseeker/profile/activities');
                 if (res.ok) {
                     const data = await res.json();
                     setBookmarkedJobs(data.bookmarkedJobs || []);
