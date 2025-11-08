@@ -1,78 +1,50 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { MoreVertical, Search, Filter, ChevronDown, Star } from "lucide-react";
 import { useRouter } from "next/navigation";
 
+interface JobPost {
+  job_id: string;
+  title: string;
+  type: string;
+  location: string;
+  applicants: number;
+  views: number;
+  date: string;
+  status: string;
+}
+
 export default function RecruiterPostsPage() {
   const [selectedTab, setSelectedTab] = useState("Marked");
+  const [posts, setPosts] = useState<JobPost[]>([]);
+  const [visibleCount, setVisibleCount] = useState(10);
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
 
-  const posts = [
-    {
-      title: "UX/UI Designer",
-      type: "Remote",
-      location: "Karlsruhe, Germany",
-      applicants: 17,
-      views: 901,
-      date: "06/Jul/2024",
-      status: "Closed",
-    },
-    {
-      title: "Producer Designer",
-      type: "Hybrid",
-      location: "Torino, Italy",
-      applicants: 26,
-      views: 901,
-      date: "06/Jul/2024",
-      status: "Closed",
-    },
-    {
-      title: "Product Designer",
-      type: "On Site",
-      location: "Delft, Netherloands",
-      applicants: 10,
-      views: 203,
-      date: "09/Jul/2024",
-      status: "Open",
-    },
-    {
-      title: "UX/UI Designer",
-      type: "Hybrid",
-      location: "Berlin, Germany",
-      applicants: 15,
-      views: 901,
-      date: "06/Jul/2024",
-      status: "Paused",
-    },
-    {
-      title: "Developer",
-      type: "Hybrid",
-      location: "Bonn, Germany",
-      applicants: 25,
-      views: 856,
-      date: "05/Jul/2024",
-      status: "Closed",
-    },
-    {
-      title: "UX/UI Designer",
-      type: "Remote",
-      location: "Porto, Portugal",
-      applicants: 23,
-      views: 368,
-      date: "06/Jul/2024",
-      status: "Closed",
-    },
-    {
-      title: "Developer",
-      type: "Hybrid",
-      location: "Bonn, Germany",
-      applicants: 25,
-      views: 856,
-      date: "05/Jul/2024",
-      status: "Closed",
-    },
-  ];
+  // Fetch recruiter jobs
+  useEffect(() => {
+    async function fetchRecruiterJobs() {
+      try {
+        const res = await fetch("/api/recruiter/posts");
+        const data = await res.json();
+        if (res.ok) setPosts(data.jobs || []);
+        else console.error("Error fetching recruiter posts:", data.error);
+      } catch (err) {
+        console.error("Fetch recruiter jobs error:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchRecruiterJobs();
+  }, []);
+
+  // Show more handler
+  const handleSeeMore = () => {
+    setVisibleCount((prev) => prev + 10);
+  };
+
+  const displayedPosts = posts.slice(0, visibleCount);
 
   return (
     <div className="max-w-8/10 p-10 justify-center mx-auto my-5">
@@ -80,9 +52,10 @@ export default function RecruiterPostsPage() {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Posts</h1>
 
-        {/* Applicants Dropdown */}
-        <button className="flex items-center px-4 py-2 border rounded-full font-medium hover:bg-gray-50" 
-            onClick={() => router.push('/recruiter/applicants')}>
+        <button
+          className="flex items-center px-4 py-2 border rounded-full font-medium hover:bg-gray-50"
+          onClick={() => router.push("/recruiter/applicants")}
+        >
           Applicants <ChevronDown className="ml-2 w-4 h-4" />
         </button>
       </div>
@@ -126,65 +99,76 @@ export default function RecruiterPostsPage() {
 
       {/* Table */}
       <div className="overflow-x-auto bg-white rounded-xl shadow-sm">
-        <table className="min-w-full text-sm text-gray-700">
-          <thead className="bg-gray-50 text-purple-600 text-left">
-            <tr>
-              <th className="px-6 py-5 font-semibold">Job Title</th>
-              <th className="px-6 py-5 font-semibold">Type</th>
-              <th className="px-6 py-5 font-semibold">Location</th>
-              <th className="px-6 py-5 font-semibold">Applicants</th>
-              <th className="px-6 py-5 font-semibold">Views</th>
-              <th className="px-6 py-5 font-semibold">Date Posted</th>
-              <th className="px-6 py-5 font-semibold">Status</th>
-              <th className="px-6 py-5"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {posts.map((post, i) => (
-              <tr
-                key={i}
-                className={` ${
-                  i % 2 === 0 ? "bg-white" : "bg-gray-50"
-                } hover:bg-gray-100 transition`}
-              >
-                <td className="px-6 py-5 flex items-center gap-2 font-semibold">
-                  <Star className="w-4 h-4 text-purple-600 fill-purple-600" />
-                  {post.title}
-                </td>
-                <td className="px-6 py-4">{post.type}</td>
-                <td className="px-6 py-4">{post.location}</td>
-                <td className="px-6 py-4 flex items-center gap-2">
-                  {post.applicants}
-                  <button className="px-3 py-1 border rounded-full text-xs font-medium hover:bg-gray-100">
-                    View
-                  </button>
-                </td>
-                <td className="px-6 py-4">{post.views}</td>
-                <td className="px-6 py-4">{post.date}</td>
-                <td className="px-6 py-4 font-medium">
-                  {post.status === "Open" && (
-                    <span className="text-green-600">Open</span>
-                  )}
-                  {post.status === "Closed" && (
-                    <span className="text-gray-500">Closed</span>
-                  )}
-                  {post.status === "Paused" && (
-                    <span className="text-yellow-500">Paused</span>
-                  )}
-                </td>
-                <td className="px-6 py-4">
-                  <MoreVertical className="w-5 h-5 text-gray-400 cursor-pointer hover:text-gray-600" />
-                </td>
+        {loading ? (
+          <p className="text-center py-6 text-gray-500">Loading jobs...</p>
+        ) : displayedPosts.length === 0 ? (
+          <p className="text-center py-6 text-gray-500">No job posts found.</p>
+        ) : (
+          <table className="min-w-full text-sm text-gray-700">
+            <thead className="bg-gray-50 text-purple-600 text-left">
+              <tr>
+                <th className="px-6 py-5 font-semibold">Job Title</th>
+                <th className="px-6 py-5 font-semibold">Type</th>
+                <th className="px-6 py-5 font-semibold">Location</th>
+                <th className="px-6 py-5 font-semibold">Applicants</th>
+                <th className="px-6 py-5 font-semibold">Views</th>
+                <th className="px-6 py-5 font-semibold">Date Posted</th>
+                <th className="px-6 py-5 font-semibold">Status</th>
+                <th className="px-6 py-5"></th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {displayedPosts.map((post, i) => (
+                <tr
+                  key={post.job_id}
+                  className={`${
+                    i % 2 === 0 ? "bg-white" : "bg-gray-50"
+                  } hover:bg-gray-100 transition`}
+                >
+                  <td className="px-6 py-5 flex items-center gap-2 font-semibold">
+                    <Star className="w-4 h-4 text-purple-600 fill-purple-600" />
+                    {post.title}
+                  </td>
+                  <td className="px-6 py-4">{post.type}</td>
+                  <td className="px-6 py-4">{post.location}</td>
+                  <td className="px-6 py-4 flex items-center gap-2">
+                    {post.applicants}
+                    <button className="px-3 py-1 border rounded-full text-xs font-medium hover:bg-gray-100">
+                      View
+                    </button>
+                  </td>
+                  <td className="px-6 py-4">{post.views || 0}</td>
+                  <td className="px-6 py-4">{post.date}</td>
+                  <td className="px-6 py-4 font-medium">
+                    {post.status === "Open" && (
+                      <span className="text-green-600">Open</span>
+                    )}
+                    {post.status === "Closed" && (
+                      <span className="text-gray-500">Closed</span>
+                    )}
+                    {post.status === "Paused" && (
+                      <span className="text-yellow-500">Paused</span>
+                    )}
+                  </td>
+                  <td className="px-6 py-4">
+                    <MoreVertical className="w-5 h-5 text-gray-400 cursor-pointer hover:text-gray-600" />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
 
-      {/* Footer */}
-      <div className="text-center mt-6 text-sm text-purple-600 font-medium cursor-pointer hover:underline">
-        See More ↓
-      </div>
+      {/* Footer - See More */}
+      {!loading && posts.length > visibleCount && (
+        <div
+          className="text-center mt-6 text-sm text-purple-600 font-medium cursor-pointer hover:underline"
+          onClick={handleSeeMore}
+        >
+          See More ↓
+        </div>
+      )}
     </div>
   );
 }
