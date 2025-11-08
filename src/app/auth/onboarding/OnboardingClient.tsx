@@ -42,7 +42,7 @@ export default function OnboardingClient({
     };
 
     return (
-        <div className="min-h-screen auth-gradient flex items-center justify-center px-4 py-8">
+        <div className="min-h-screen flex items-center justify-center px-4 py-8">
             <div className="w-full max-w-3xl">
                 <div className="mb-8">
                     <h1 className="text-3xl font-bold text-center text-neutral-900 mb-2">
