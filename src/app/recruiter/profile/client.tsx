@@ -10,6 +10,8 @@ import {
     CompanyInfoCard,
     MyJobsCard,
 } from '@/components/recruiter/profile';
+import { uploadProfilePictureAction } from '@/app/actions/profile-picture.actions';
+import toast from 'react-hot-toast';
 
 interface ProfileClientProps {
     user: UserWithRecruiter;
@@ -22,6 +24,8 @@ export default function ProfileClient({ user }: ProfileClientProps) {
     const [isSaving, setIsSaving] = useState(false);
     const [jobsLoading, setJobsLoading] = useState(true);
     const [postedJobs, setPostedJobs] = useState<Job[]>([]);
+    const [profilePicture, setProfilePicture] = useState<File | null>(null);
+    const [profilePicturePreview, setProfilePicturePreview] = useState<string | null>(null);
     const [formData, setFormData] = useState({
         first_name: user.first_name || '',
         last_name: user.last_name || '',
@@ -49,9 +53,28 @@ export default function ProfileClient({ user }: ProfileClientProps) {
         setFormData(prev => ({ ...prev, [field]: value }));
     };
 
+    const handleProfilePictureChange = (file: File | null, previewUrl: string | null) => {
+        setProfilePicture(file);
+        setProfilePicturePreview(previewUrl);
+    };
+
     const handleSave = async () => {
         setIsSaving(true);
         try {
+            // Upload profile picture if changed
+            if (profilePicture) {
+                const picFormData = new FormData();
+                picFormData.append('file', profilePicture);
+
+                const uploadResult = await uploadProfilePictureAction(picFormData);
+
+                if (uploadResult.error) {
+                    throw new Error(uploadResult.error);
+                }
+
+                toast.success('Profile picture updated!');
+            }
+
             await updateUserProfile(user.id, {
                 first_name: formData.first_name,
                 last_name: formData.last_name,
@@ -59,11 +82,14 @@ export default function ProfileClient({ user }: ProfileClientProps) {
             await updateRecruiterProfile(user.recruiter.recruiter_id, {
                 position: formData.position,
             });
+
             setIsEditing(false);
+            setProfilePicture(null);
+            setProfilePicturePreview(null);
             router.refresh();
         } catch (err) {
             console.error('Error updating profile:', err);
-            alert('Failed to update profile. Please try again.');
+            toast.error('Failed to update profile. Please try again.');
         } finally {
             setIsSaving(false);
         }
@@ -78,10 +104,14 @@ export default function ProfileClient({ user }: ProfileClientProps) {
                     isEditing={isEditing}
                     isSaving={isSaving}
                     formData={formData}
+                    profilePicturePreview={profilePicturePreview}
                     onFormChange={handleFormChange}
+                    onProfilePictureChange={handleProfilePictureChange}
                     onEdit={() => setIsEditing(true)}
                     onCancel={() => {
                         setIsEditing(false);
+                        setProfilePicture(null);
+                        setProfilePicturePreview(null);
                         setFormData({
                             first_name: user.first_name || '',
                             last_name: user.last_name || '',

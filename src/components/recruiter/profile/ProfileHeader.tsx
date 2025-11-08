@@ -1,9 +1,9 @@
 'use client';
 
 import { UserWithRecruiter } from '@/types';
-import ProfilePicture from './ProfilePicture';
+import ProfilePicture from '@/components/shared/ProfilePicture';
+import ProfileEditActions from '@/components/shared/ProfileEditActions';
 import ProfileBasicInfo from './ProfileBasicInfo';
-import ProfileEditActions from './ProfileEditActions';
 
 interface ProfileHeaderProps {
     user: UserWithRecruiter;
@@ -14,7 +14,9 @@ interface ProfileHeaderProps {
         last_name: string;
         position: string;
     };
+    profilePicturePreview: string | null;
     onFormChange: (field: string, value: string) => void;
+    onProfilePictureChange: (file: File | null, previewUrl: string | null) => void;
     onEdit: () => void;
     onCancel: () => void;
     onSave: () => void;
@@ -31,7 +33,9 @@ export default function ProfileHeader({
     isEditing,
     isSaving,
     formData,
+    profilePicturePreview,
     onFormChange,
+    onProfilePictureChange,
     onEdit,
     onCancel,
     onSave,
@@ -53,6 +57,9 @@ export default function ProfileHeader({
                 <ProfilePicture
                     profilePicturePath={user.profile_picture_path || undefined}
                     initials={getInitials()}
+                    isEditing={isEditing}
+                    previewUrl={profilePicturePreview}
+                    onFileChange={onProfilePictureChange}
                 />
 
                 <ProfileBasicInfo

@@ -177,6 +177,13 @@ export async function getUserStatus(userId: string): Promise<{ id: string; statu
     return data;
 }
 
+/**
+ * Update user profile picture
+ */
+export async function updateProfilePicture(userId: string, profilePicturePath: string | null): Promise<User | null> {
+    return updateUser(userId, { profile_picture_path: profilePicturePath });
+}
+
 
 
 

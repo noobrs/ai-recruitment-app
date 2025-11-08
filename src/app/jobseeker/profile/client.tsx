@@ -12,6 +12,8 @@ import {
     MyActivities,
 } from '@/components/jobseeker/profile';
 import { toggleBookmark } from '../jobs/actions';
+import { uploadProfilePictureAction } from '@/app/actions/profile-picture.actions';
+import toast from 'react-hot-toast';
 
 interface ProfileClientProps {
     user: UserWithJobSeeker;
@@ -28,6 +30,8 @@ export default function ProfileClient({ user, profileResume, allResumes }: Profi
     const [activitiesLoading, setActivitiesLoading] = useState(true);
     const [bookmarkedJobs, setBookmarkedJobs] = useState<any[]>([]);
     const [appliedJobs, setAppliedJobs] = useState<any[]>([]);
+    const [profilePicture, setProfilePicture] = useState<File | null>(null);
+    const [profilePicturePreview, setProfilePicturePreview] = useState<string | null>(null);
     const [formData, setFormData] = useState({
         first_name: user.first_name || '',
         last_name: user.last_name || '',
@@ -57,9 +61,28 @@ export default function ProfileClient({ user, profileResume, allResumes }: Profi
         setFormData(prev => ({ ...prev, [field]: value }));
     };
 
+    const handleProfilePictureChange = (file: File | null, previewUrl: string | null) => {
+        setProfilePicture(file);
+        setProfilePicturePreview(previewUrl);
+    };
+
     const handleSave = async () => {
         setIsSaving(true);
         try {
+            // Upload profile picture if changed
+            if (profilePicture) {
+                const picFormData = new FormData();
+                picFormData.append('file', profilePicture);
+
+                const uploadResult = await uploadProfilePictureAction(picFormData);
+
+                if (uploadResult.error) {
+                    throw new Error(uploadResult.error);
+                }
+
+                toast.success('Profile picture updated!');
+            }
+
             await updateUserProfile(user.id, {
                 first_name: formData.first_name,
                 last_name: formData.last_name,
@@ -68,10 +91,14 @@ export default function ProfileClient({ user, profileResume, allResumes }: Profi
                 location: formData.location,
                 about_me: formData.about_me,
             });
+
             setIsEditing(false);
+            setProfilePicture(null);
+            setProfilePicturePreview(null);
             router.refresh();
         } catch (error) {
-            alert('Failed to update profile. Please try again.');
+            console.error('Failed to update profile:', error);
+            toast.error('Failed to update profile. Please try again.');
         } finally {
             setIsSaving(false);
         }
@@ -132,9 +159,15 @@ export default function ProfileClient({ user, profileResume, allResumes }: Profi
                     isEditing={isEditing}
                     isSaving={isSaving}
                     formData={formData}
+                    profilePicturePreview={profilePicturePreview}
                     onFormChange={handleFormChange}
+                    onProfilePictureChange={handleProfilePictureChange}
                     onEdit={() => setIsEditing(true)}
-                    onCancel={() => setIsEditing(false)}
+                    onCancel={() => {
+                        setIsEditing(false);
+                        setProfilePicture(null);
+                        setProfilePicturePreview(null);
+                    }}
                     onSave={handleSave}
                 />
                 <ProfileAboutSection

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import type { BaseUser } from "@/types";
 import SignOutButton from "@/components/header/SignOutButton";
@@ -33,12 +34,22 @@ export default function ProfileMenu({ user, theme }: Props) {
             <button
                 type="button"
                 onClick={() => setOpen((v) => !v)}
-                className={`flex items-center justify-center w-10 h-10 rounded-full text-white font-semibold text-sm hover:opacity-90 transition-opacity ${theme.bg}`}
+                className={`flex items-center justify-center w-10 h-10 rounded-full text-white font-semibold text-sm hover:opacity-90 transition-opacity overflow-hidden ${!user.profile_picture_path ? theme.bg : 'border-2 border-white'}`}
                 aria-haspopup="menu"
                 aria-expanded={open}
                 aria-label="Profile menu"
             >
-                {initials}
+                {user.profile_picture_path ? (
+                    <Image
+                        src={user.profile_picture_path}
+                        alt="Profile"
+                        width={40}
+                        height={40}
+                        className="w-full h-full object-cover"
+                    />
+                ) : (
+                    initials
+                )}
             </button>
 
             {open && (

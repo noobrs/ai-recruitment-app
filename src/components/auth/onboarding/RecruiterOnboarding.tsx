@@ -5,6 +5,12 @@ import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { Loader2, Mail, User, Building2, Globe } from 'lucide-react';
 import { completeOnboarding } from '@/app/auth/onboarding/actions';
+import { uploadProfilePictureAction } from '@/app/actions/profile-picture.actions';
+import {
+    FILE_SIZE_LIMIT_TEXT,
+    ALLOWED_FORMATS_TEXT
+} from '@/constants/profile-picture.constants';
+import ProfilePictureUpload from '@/components/shared/ProfilePictureUpload';
 
 interface RecruiterOnboardingProps {
     userId: string;
@@ -20,6 +26,16 @@ export default function RecruiterOnboarding({
 }: RecruiterOnboardingProps) {
     const router = useRouter();
     const [isLoading, setIsLoading] = useState(false);
+    const [profilePicture, setProfilePicture] = useState<File | null>(null);
+    const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+    const handleProfilePictureChange = (file: File | null, preview: string | null) => {
+        setProfilePicture(file);
+        setPreviewUrl(preview);
+    };
+
+    // Get initials from default names
+    const initials = `${defaultFirstName.charAt(0)}${defaultLastName.charAt(0)}`.toUpperCase();
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -36,6 +52,20 @@ export default function RecruiterOnboarding({
         };
 
         try {
+            // First, upload profile picture if provided
+            if (profilePicture) {
+                const picFormData = new FormData();
+                picFormData.append('file', profilePicture);
+
+                // Use server action instead of API route
+                const uploadResult = await uploadProfilePictureAction(picFormData);
+
+                if (uploadResult.error) {
+                    throw new Error(uploadResult.error);
+                }
+            }
+
+            // Complete onboarding
             const result = await completeOnboarding(data);
 
             if (!result.success) {
@@ -64,6 +94,21 @@ export default function RecruiterOnboarding({
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-5">
+                {/* Profile Picture Upload */}
+                <div className="flex flex-col items-center mb-6">
+                    <ProfilePictureUpload
+                        previewUrl={previewUrl}
+                        initials={initials}
+                        isEditing={true}
+                        onFileChange={handleProfilePictureChange}
+                    />
+                    <p className="mt-2 text-xs text-neutral-500 text-center">
+                        Optional: Add a profile picture
+                        <br />
+                        ({FILE_SIZE_LIMIT_TEXT}, {ALLOWED_FORMATS_TEXT})
+                    </p>
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <label className="block">
                         <span className="mb-1 block text-sm font-medium text-neutral-700">

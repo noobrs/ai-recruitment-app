@@ -2,6 +2,20 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   /* config options here */
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "aonvheabwhbqguoiuowb.supabase.co",
+        pathname: "/storage/v1/object/public/**", // public buckets
+      },
+    ],
+  },
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "5mb", // custom body size limit for server actions
+    },
+  },
   rewrites: async () => {
     return [
       {
