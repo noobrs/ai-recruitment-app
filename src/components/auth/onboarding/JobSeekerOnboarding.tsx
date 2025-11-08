@@ -81,7 +81,7 @@ export default function JobSeekerOnboarding({
     };
 
     return (
-        <div>
+        <div data-role="jobseeker">
             <div className="text-center mb-6">
                 <h2 className="text-2xl font-semibold text-neutral-900 mb-2">
                     Complete Your Job Seeker Profile

@@ -17,7 +17,7 @@ export default function AuthLayout({
     const accentText = role === "jobseeker" ? "text-primary" : role === "recruiter" ? "text-secondary" : "text-neutral-900";
 
     return (
-        <div data-role={role || "auth"} className="min-h-screen auth-gradient flex items-center justify-center px-4">
+        <div data-role={role || "auth"} className="min-h-screen flex items-center justify-center px-4">
             <div className="w-full max-w-md">
                 {role && (
                     <div className="flex items-center justify-center gap-2 mb-6">

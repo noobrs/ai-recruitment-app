@@ -138,7 +138,7 @@ export default function ImageCropperModal({
 
     const content = (
         <div
-            className="fixed inset-0 z-[9999] flex items-center justify-center"
+            className="fixed inset-0 z-9999 flex items-center justify-center"
             aria-modal="true"
             role="dialog"
             aria-labelledby="cropper-title"
@@ -195,7 +195,7 @@ export default function ImageCropperModal({
                             step={0.1}
                             value={zoom}
                             onChange={(e) => setZoom(Number(e.target.value))}
-                            className="flex-1 h-2 bg-neutral-700 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+                            className="flex-1 h-2 bg-neutral-700 rounded-lg appearance-none cursor-pointer accent-primary"
                             disabled={isProcessing}
                             aria-label="Zoom"
                         />
@@ -219,7 +219,7 @@ export default function ImageCropperModal({
                         <button
                             onClick={handleSave}
                             disabled={isProcessing || !croppedAreaPixels}
-                            className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-md transition-colors disabled:opacity-50"
+                            className="px-6 py-2 bg-primary hover:bg-primary/80 rounded-md transition-colors disabled:opacity-50"
                         >
                             {isProcessing ? 'Processing...' : 'Save & Apply'}
                         </button>

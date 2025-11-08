@@ -9,6 +9,7 @@
 }
 
 @theme inline {
+  --color-accent: hsl(var(--accent));
   --color-primary: hsl(var(--primary));
   --color-secondary: hsl(var(--secondary));
   --color-primary-soft: hsl(var(--primary) / 0.10);
@@ -42,14 +43,6 @@ body {
 
 [data-role="recruiter"] {
   --accent: var(--secondary);
-}
-
-/* Fancy background + glass card (keeps your palette) */
-.auth-gradient {
-  background:
-    radial-gradient(1200px 600px at 10% -10%, hsl(var(--accent) / 0.20), transparent 60%),
-    radial-gradient(800px 400px at 110% 10%, hsl(var(--accent) / 0.15), transparent 60%),
-    linear-gradient(180deg, #fff 0%, #fafafa 100%);
 }
 
 .glass {
