@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { MoreHorizontal } from "lucide-react";
 
 import CompanyCard from "@/components/jobseeker/companies/CompanyCard";
 import ButtonFilledPrimary from "@/components/shared/buttons/ButtonFilledPrimary";
@@ -196,12 +197,12 @@ export default function CompaniesPage() {
                     title="More Options"
                     className="p-2 border border-gray-300 rounded-full hover:bg-gray-100 transition-all duration-150"
                   >
-                    <img src="/more.svg" alt="More" className="w-4 h-4 opacity-70" />
+                    <MoreHorizontal className="w-4 h-4 text-gray-800 cursor-pointer hover:text-gray-600" />
                   </button>
 
                   <button
                     title="Expand"
-                    className="p-2 border border-gray-300 rounded-full hover:bg-gray-100 transition-all duration-150"
+                    className="p-2 border border-gray-300 rounded-full hover:bg-gray-100 transition-all duration-150 cursor-pointer"
                   >
                     <img src="/expand.svg" alt="Expand" className="w-4 h-4 opacity-70" />
                   </button>
