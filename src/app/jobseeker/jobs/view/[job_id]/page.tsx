@@ -20,7 +20,7 @@ export default function JobViewPage() {
   useEffect(() => {
     async function fetchJobDetails() {
       try {
-        const res = await fetch(`/api/auth/jobseeker/jobs/${job_id}`);
+        const res = await fetch(`/api/jobseeker/jobs/${job_id}`);
         if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
 
         const data = await res.json();

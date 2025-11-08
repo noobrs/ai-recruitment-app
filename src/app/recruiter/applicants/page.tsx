@@ -7,56 +7,21 @@ export default function RecruiterApplicantsPage() {
   const [selectedTab, setSelectedTab] = useState("Waiting");
 
   const applicants = [
-    {
-      name: "Jane Smith",
-      jobTitle: "Product Designer",
-      date: "06/Dec/2024",
-      status: "In Review",
-      image: "https://randomuser.me/api/portraits/women/1.jpg",
-    },
-    {
-      name: "Smith Joe",
-      jobTitle: "Ux Researcher",
-      date: "07/Jun/2024",
-      status: "In Review",
-      image: "https://randomuser.me/api/portraits/men/2.jpg",
-    },
-    {
-      name: "Jay Ruhe",
-      jobTitle: "Product Designer",
-      date: "06/Dec/2023",
-      status: "In Review",
-      image: "https://randomuser.me/api/portraits/women/3.jpg",
-    },
-    {
-      name: "Benjamin Kalt",
-      jobTitle: "UI/UX Designer",
-      date: "08/Mar/2024",
-      status: "In Review",
-      image: "https://randomuser.me/api/portraits/men/4.jpg",
-    },
-    {
-      name: "Elena Streep",
-      jobTitle: "Product Designer",
-      date: "08/Apr/2024",
-      status: "In Review",
-      image: "https://randomuser.me/api/portraits/women/5.jpg",
-    },
-    {
-      name: "Julian Mark",
-      jobTitle: "Product Designer",
-      date: "06/Mar/2024",
-      status: "In Review",
-      image: "https://randomuser.me/api/portraits/men/6.jpg",
-    },
-    {
-      name: "Nicole Kidman",
-      jobTitle: "Product Designer",
-      date: "05/Jul/2024",
-      status: "In Review",
-      image: "https://randomuser.me/api/portraits/women/7.jpg",
-    },
+    { score: 99, jobTitle: "Product Designer", date: "06/Dec/2024", status: "In Review" },
+    { score: 90, jobTitle: "UX Researcher", date: "07/Jun/2024", status: "In Review" },
+    { score: 88, jobTitle: "Product Designer", date: "06/Dec/2023", status: "In Review" },
+    { score: 60, jobTitle: "UI/UX Designer", date: "08/Mar/2024", status: "In Review" },
+    { score: 40, jobTitle: "Product Designer", date: "08/Apr/2024", status: "In Review" },
+    { score: 20, jobTitle: "Product Designer", date: "05/Jul/2024", status: "In Review" },
+    { score: 20, jobTitle: "Product Designer", date: "06/Mar/2024", status: "In Review" },
   ];
+
+  const getColor = (score: number) => {
+    if (score >= 85) return "border-green-500 text-green-500";
+    if (score >= 60) return "border-yellow-400 text-yellow-500";
+    if (score >= 40) return "border-orange-400 text-orange-500";
+    return "border-red-500 text-red-500";
+  };
 
   return (
     <div className="max-w-8/10 p-10 justify-center mx-auto my-5">
@@ -104,11 +69,11 @@ export default function RecruiterApplicantsPage() {
         <table className="min-w-full text-sm text-gray-700">
           <thead className="bg-gray-50 text-purple-600 text-left">
             <tr>
-              <th className="px-6 py-5 font-semibold">Applicant Name</th>
-              <th className="px-6 py-5 font-semibold">Job Title</th>
-              <th className="px-6 py-5 font-semibold">Application Date</th>
-              <th className="px-6 py-5 font-semibold">Status</th>
-              <th className="px-6 py-5"></th>
+              <th className="px-6 py-3 font-semibold">Applicant</th>
+              <th className="px-6 py-3 font-semibold">Job Title</th>
+              <th className="px-6 py-3 font-semibold">Application Date</th>
+              <th className="px-6 py-3 font-semibold">Status</th>
+              <th className="px-6 py-3"></th>
             </tr>
           </thead>
           <tbody>
@@ -119,21 +84,21 @@ export default function RecruiterApplicantsPage() {
                   i % 2 === 0 ? "bg-white" : "bg-gray-50"
                 } hover:bg-gray-100 transition`}
               >
-                <td className="px-6 py-4 flex items-center gap-3 font-semibold capitalize">
-                  <img
-                    src={a.image}
-                    alt={a.name}
-                    className="w-10 h-10 rounded-full object-cover border"
-                  />
-                  {a.name}
+                <td className="px-6 py-4 flex items-center gap-4 font-semibold capitalize">
+                  <div
+                    className={`w-10 h-10 flex items-center justify-center border-2 rounded-full font-semibold text-xs ${getColor(
+                      a.score
+                    )}`}
+                  >
+                    {a.score}%
+                  </div>
+                  Applicant {i + 1}
                 </td>
                 <td className="px-6 py-4">{a.jobTitle}</td>
                 <td className="px-6 py-4">{a.date}</td>
-                <td className="px-6 py-4 gap-1 font-medium text-gray-700">
-                  <div className="flex flex-row">
-                    {a.status}
-                    <ChevronDown className="w-4 h-4 text-gray-400" />
-                  </div>
+                <td className="px-6 py-4 flex items-center gap-1 font-medium text-gray-700">
+                  {a.status}
+                  <ChevronDown className="w-4 h-4 text-gray-400" />
                 </td>
                 <td className="px-6 py-4 text-purple-600 font-medium cursor-pointer hover:underline">
                   View Details

@@ -11,9 +11,9 @@ import {
     ResumesList,
     MyActivities,
 } from '@/components/jobseeker/profile';
-import { toggleBookmark } from '../jobs/actions';
 import { uploadProfilePictureAction } from '@/app/actions/profile-picture.actions';
 import toast from 'react-hot-toast';
+import { useBookmark } from "@/hooks/useBookmark";
 
 interface ProfileClientProps {
     user: UserWithJobSeeker;
@@ -38,12 +38,12 @@ export default function ProfileClient({ user, profileResume, allResumes }: Profi
         location: user.job_seeker.location || '',
         about_me: user.job_seeker.about_me || '',
     });
-    const [bookmarkLoadingId, setBookmarkLoadingId] = useState<number | null>(null);
+    const { toggle, loadingId } = useBookmark();
 
     useEffect(() => {
         async function fetchActivities() {
             try {
-                const res = await fetch('/api/auth/jobseeker/profile/activities');
+                const res = await fetch('/api/jobseeker/profile/activities');
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 const data = await res.json();
                 setBookmarkedJobs(data.bookmarkedJobs || []);
@@ -117,38 +117,25 @@ export default function ProfileClient({ user, profileResume, allResumes }: Profi
     };
 
     const handleToggleBookmark = async (jobId: number) => {
-        try {
-            setBookmarkLoadingId(jobId);
-            setBookmarkedJobs(prev => {
-                const exists = prev.some(job => job.jobId === jobId);
-                if (exists) {
-                    return prev.filter(job => job.jobId !== jobId);
-                } else {
-                    const jobToAdd = appliedJobs.find(job => job.jobId === jobId);
-                    return jobToAdd ? [...prev, { ...jobToAdd, bookmark: true }] : prev;
-                }
-            });
+        const result = await toggle(user.job_seeker.job_seeker_id, jobId);
 
-            setAppliedJobs(prev =>
-                prev.map(job =>
-                    job.jobId === jobId ? { ...job, bookmark: !job.bookmark } : job
-                )
+        if (result.success) {
+            setBookmarkedJobs((prev) =>
+                result.is_bookmark
+                    ? prev
+                    : prev.filter((job) => job.jobId !== jobId)
             );
 
-            const result = await toggleBookmark(user.job_seeker.job_seeker_id, jobId);
-
-            if (!result.success) {
-                alert('Failed to update bookmark.');
-                router.refresh();
-            }
-        } catch (err) {
-            console.error('Error toggling bookmark:', err);
-            alert('Error updating bookmark.');
-            router.refresh();
-        } finally {
-            setBookmarkLoadingId(null);
+            setTimeout(async () => {
+                const res = await fetch('/api/jobseeker/profile/activities');
+                if (res.ok) {
+                    const data = await res.json();
+                    setBookmarkedJobs(data.bookmarkedJobs || []);
+                }
+            }, 300);
         }
     };
+
 
     return (
         <div className="max-w-5xl mx-auto px-4 py-8">
@@ -193,7 +180,7 @@ export default function ProfileClient({ user, profileResume, allResumes }: Profi
                 bookmarkedJobs={bookmarkedJobs}
                 appliedJobs={appliedJobs}
                 loading={activitiesLoading}
-                bookmarkLoadingId={bookmarkLoadingId}
+                bookmarkLoadingId={loadingId}
                 onToggleBookmark={handleToggleBookmark}
             />
 
