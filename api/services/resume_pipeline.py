@@ -8,9 +8,6 @@ from PIL import Image
 from ..app.schemas import ProcessResumeRequest, ProcessedResumeWebhook, ResumeProcessingResult
 from ..app.security import generate_signature
 from ..config import settings
-from ..pdf.layout import LayoutService
-from ..pdf.nlp import NLPService
-from ..pdf.redactor import RedactionService
 from ..supabase_client import supabase
 
 # ✅ import your image pipeline
@@ -24,9 +21,6 @@ SENSITIVE_KEYWORDS = ["male", "female", "gender", "race", "ethnicity", "religion
 
 class ResumePipelineService:
     def __init__(self) -> None:
-        self._layout = LayoutService()
-        self._nlp = NLPService()
-        self._redactor = RedactionService()
         self._http = httpx.AsyncClient(timeout=httpx.Timeout(60.0))
 
     async def aclose(self):

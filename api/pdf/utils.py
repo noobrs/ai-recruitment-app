@@ -1,26 +1,27 @@
-import io
-from typing import Tuple
-from fastapi import UploadFile, HTTPException
-from PIL import Image
-import fitz  # PyMuPDF
+from __future__ import annotations
+import os, re
+from typing import Dict, Optional
+from rapidfuzz import fuzz
 
-MAX_BYTES = 20 * 1024 * 1024  # 20MB
+def norm(s: str) -> str:
+    return " ".join((s or "").strip().split()).lower()
 
-async def file_to_bytesio(file: UploadFile) -> bytes:
-    b = await file.read()
-    if len(b) > MAX_BYTES:
-        raise HTTPException(413, "File too large (max 20MB).")
-    return b
+def is_valid_item(text: str) -> bool:
+    if not text: return False
+    t = text.strip()
+    if len(t) < 3 or len(t) > 60: return False
+    if t.isupper() and len(t.split()) == 1: return False
+    return True
 
-async def ensure_pdf_like(file: UploadFile) -> bytes:
-    data = await file_to_bytesio(file)
-    if file.content_type == "application/pdf":
-        return data
-    # Convert single image to 1-page PDF
-    try:
-        img = Image.open(io.BytesIO(data)).convert("RGB")
-    except Exception:
-        raise HTTPException(400, "Invalid image format.")
-    out = io.BytesIO()
-    img.save(out, format="PDF")
-    return out.getvalue()
+def update_best(best: Dict[str, float], text: str, score: float) -> None:
+    if not is_valid_item(text): return
+    key = norm(text)
+    if key not in best or score > best[key]:
+        best[key] = float(score)
+
+def similar(a: str, b: str, thresh: int = 92) -> bool:
+    return fuzz.token_sort_ratio(a, b) >= thresh
+
+def normalize_heading(text: Optional[str]) -> str:
+    if not text: return "NO_HEADING"
+    return " ".join(text.strip().split())
