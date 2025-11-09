@@ -1,11 +1,11 @@
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, UploadFile, File
 from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
 import logging
 from .supabase_client import supabase
 from .app.schemas import ProcessResumeRequest
 from .app.security import verify_signature
-from .services.resume_pipeline import resume_pipeline
+from .services.resume_pipeline import resume_pipeline, process_pdf_resume, process_image_resume_pipeline
 
 # Configure logging
 logging.basicConfig(
@@ -89,3 +89,9 @@ async def process_resume(request: Request, payload: ProcessResumeRequest):
         "job_seeker_id": result.job_seeker_id,
         "redacted_file_path": result.redacted_file_path,
     }
+    
+@app.post("/api/py/extract/image")
+async def extract_image(file: UploadFile = File(...)):
+    contents = await file.read()
+    result = process_image_resume_pipeline(contents)
+    return result

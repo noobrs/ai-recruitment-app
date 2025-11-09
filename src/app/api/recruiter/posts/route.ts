@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { getJobsByRecruiterId } from "@/services/job.service";
+import { countApplicationsByJobId } from "@/services/application.service";
 
 /**
  * GET /api/recruiter/posts
- * Returns all job postings created by the authenticated recruiter.
+ * Returns all job postings created by the authenticated recruiter with real applicant counts.
  */
 export async function GET() {
   try {
@@ -20,7 +21,7 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // 2️⃣ Find recruiter profile and company info
+    // 2️⃣ Fetch recruiter profile and company info
     const { data: recruiter, error: recruiterError } = await supabase
       .from("recruiter")
       .select(
@@ -36,28 +37,39 @@ export async function GET() {
       );
     }
 
-    // 3️⃣ Fetch recruiter’s job posts
+    // 3️⃣ Fetch recruiter's job posts
     const jobs = await getJobsByRecruiterId(recruiter.recruiter_id);
 
-    // 4️⃣ Format data for front-end
-    const formatted = jobs.map((job: any) => ({
-      job_id: job.job_id,
-      title: job.job_title,
-      type: job.job_type || job.job_mode,
-      location: job.job_location,
-      applicants: 0, // can be updated later with real applicant count
-      views: 0, // placeholder, since not tracked yet
-      date: new Date(job.created_at).toLocaleDateString("en-GB", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      }),
-      status: job.job_status || "Open",
-      company: recruiter.company,
-    }));
+    if (!jobs || jobs.length === 0) {
+      return NextResponse.json({ jobs: [] }, { status: 200 });
+    }
 
+    // 4️⃣ For each job, count valid applications in real-time
+    const jobsWithCounts = await Promise.all(
+      jobs.map(async (job: any) => {
+        const applicantsCount = await countApplicationsByJobId(job.job_id);
+
+        return {
+          job_id: job.job_id,
+          title: job.job_title,
+          type: job.job_type || job.job_mode,
+          location: job.job_location,
+          applicants: applicantsCount,
+          views: job.job_views || 0,
+          date: new Date(job.created_at).toLocaleDateString("en-GB", {
+            day: "2-digit",
+            month: "short",
+            year: "numeric",
+          }),
+          status: job.job_status || "open",
+          company: recruiter.company,
+        };
+      })
+    );
+
+    // 5️⃣ Respond
     return NextResponse.json(
-      { recruiterId: recruiter.recruiter_id, jobs: formatted },
+      { recruiterId: recruiter.recruiter_id, jobs: jobsWithCounts },
       { status: 200 }
     );
   } catch (err: any) {
