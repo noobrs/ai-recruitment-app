@@ -16,6 +16,7 @@ export default function CompaniesPage() {
   const [error, setError] = useState<string | null>(null);
   const [isExpanded, setIsExpanded] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [visibleJobsCount, setVisibleJobsCount] = useState(4);
 
   const companiesPerPage = 5;
 
@@ -30,7 +31,12 @@ export default function CompaniesPage() {
 
         const data = await res.json();
         setCompanies(data.companies || []);
-        if (data.companies.length > 0) setSelectedCompanyId(data.companies[0].comp_id);
+        if (data.companies.length > 0) {
+          const firstId = data.companies[0].comp_id;
+          setSelectedCompanyId(firstId);
+          await handleSelectCompany(firstId);
+        }
+
       } catch (err: any) {
         console.error("Error fetching companies:", err.message);
         setError(err.message);
@@ -58,6 +64,7 @@ export default function CompaniesPage() {
 
   const handleSelectCompany = async (id: number) => {
     setSelectedCompanyId(id);
+    setVisibleJobsCount(4);
     setLoading(true);
     try {
       const res = await fetch(`/api/jobseeker/companies?company_id=${id}`);
@@ -265,21 +272,50 @@ export default function CompaniesPage() {
             {/* Jobs Section */}
             {selectedCompany.jobs && selectedCompany.jobs.length > 0 && (
               <section className="mt-8">
-                <h3 className="text-xl font-semibold text-gray-700 mb-3">Jobs</h3>
-                <div className="grid gap-4">
-                  {selectedCompany.jobs.map((job: any) => (
-                    <JobCard
-                      key={job.job_id}
-                      jobId={job.job_id}
-                      compLogo={selectedCompany.comp_logo}
-                      compName={selectedCompany.comp_name}
-                      jobTitle={job.job_title}
-                      jobLocation={job.job_location || "Unknown"}
-                      jobType={job.job_type || "N/A"}
-                      createdAt={new Date(job.created_at).toLocaleDateString()}
-                      navigateOnClick={true}
-                    />
-                  ))}
+                {/* Title */}
+                <h3 className="text-xl font-semibold text-gray-700 mb-3">
+                  Jobs ({selectedCompany.jobs.length} open)
+                </h3>
+
+                {/* Job Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  {selectedCompany.jobs
+                    .slice(0, visibleJobsCount)
+                    .map((job: any) => (
+                      <JobCard
+                        key={job.job_id}
+                        jobId={job.job_id}
+                        compLogo={selectedCompany.comp_logo}
+                        compName={selectedCompany.comp_name}
+                        jobTitle={job.job_title}
+                        jobLocation={job.job_location || "Unknown"}
+                        jobType={job.job_type || "N/A"}
+                        createdAt={new Date(job.created_at).toLocaleDateString()}
+                        navigateOnClick={true}
+                      />
+                    ))}
+                </div>
+
+                {/* Buttons at the bottom */}
+                <div className="flex justify-center mt-6">
+                  {selectedCompany.jobs.length > visibleJobsCount ? (
+                    <button
+                      onClick={() => {
+                        setVisibleJobsCount(prev => prev + 4);
+                        setTimeout(() => window.scrollBy({ top: 300, behavior: "smooth" }), 200);
+                      }}
+                      className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                    >
+                      Show more jobs →
+                    </button>
+                  ) : visibleJobsCount > 4 ? (
+                    <button
+                      onClick={() => setVisibleJobsCount(4)}
+                      className="text-sm text-gray-500 hover:text-gray-700"
+                    >
+                      Show less
+                    </button>
+                  ) : null}
                 </div>
               </section>
             )}
