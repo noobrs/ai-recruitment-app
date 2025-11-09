@@ -15,21 +15,30 @@ interface JobPost {
   status: string;
 }
 
+const STATUS_OPTIONS = ["draft", "open", "closed", "deleted"];
+
 export default function RecruiterPostsPage() {
   const [posts, setPosts] = useState<JobPost[]>([]);
+  const [filteredPosts, setFilteredPosts] = useState<JobPost[]>([]);
+  const [selectedStatuses, setSelectedStatuses] = useState<string[]>(['open']);
+  const [searchTerm, setSearchTerm] = useState("");
   const [visibleCount, setVisibleCount] = useState(10);
   const [loading, setLoading] = useState(true);
-  const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
   const router = useRouter();
 
   // Fetch recruiter jobs
   useEffect(() => {
     async function fetchRecruiterJobs() {
       try {
+        setLoading(true);
         const res = await fetch("/api/recruiter/posts");
         const data = await res.json();
-        if (res.ok) setPosts(data.jobs || []);
-        else console.error("Error fetching recruiter posts:", data.error);
+        if (res.ok) {
+          setPosts(data.jobs || []);
+          setFilteredPosts(data.jobs || []);
+        } else {
+          console.error("Error fetching recruiter posts:", data.error);
+        }
       } catch (err) {
         console.error("Fetch recruiter jobs error:", err);
       } finally {
@@ -39,24 +48,42 @@ export default function RecruiterPostsPage() {
     fetchRecruiterJobs();
   }, []);
 
-  // See more handler
-  const handleSeeMore = () => setVisibleCount((prev) => prev + 10);
+  // 🔍 Handle search
+  useEffect(() => {
+    const term = searchTerm.toLowerCase();
+    const filtered = posts.filter(
+      (p) =>
+        p.title.toLowerCase().includes(term) ||
+        p.type?.toLowerCase().includes(term) ||
+        p.location?.toLowerCase().includes(term)
+    );
 
-  // Handle status toggle
+    // Apply selected status filters on top of search
+    const statusFiltered =
+      selectedStatuses.length > 0
+        ? filtered.filter((p) =>
+            selectedStatuses.includes(p.status.toLowerCase())
+          )
+        : filtered;
+
+    setFilteredPosts(statusFiltered);
+    setVisibleCount(10); // reset pagination
+  }, [searchTerm, selectedStatuses, posts]);
+
+  // 🟣 Toggle multi-status filters
   const handleStatusToggle = (status: string) => {
     setSelectedStatuses((prev) =>
       prev.includes(status)
         ? prev.filter((s) => s !== status)
         : [...prev, status]
     );
+    setVisibleCount(10); // reset pagination
   };
 
-  // Filter posts by selected statuses
-  const filteredPosts =
-    selectedStatuses.length > 0
-      ? posts.filter((p) => selectedStatuses.includes(p.status.toLowerCase()))
-      : posts;
+  // 📈 See more handler
+  const handleSeeMore = () => setVisibleCount((prev) => prev + 10);
 
+  // Slice visible items
   const displayedPosts = filteredPosts.slice(0, visibleCount);
 
   return (
@@ -79,8 +106,10 @@ export default function RecruiterPostsPage() {
           <Search className="w-5 h-5 text-gray-400 mr-2" />
           <input
             type="text"
-            placeholder="Search and Filter"
+            placeholder="Search jobs by title, type, or location"
             className="w-full outline-none text-gray-700 placeholder-gray-400"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
           />
           <Filter className="w-5 h-5 text-gray-400 ml-2" />
         </div>
@@ -88,7 +117,7 @@ export default function RecruiterPostsPage() {
 
       {/* Tabs (multi-select filter) */}
       <div className="flex gap-3 mb-6 flex-wrap">
-        {["draft", "open", "closed", "deleted"].map((status) => {
+        {STATUS_OPTIONS.map((status) => {
           const isSelected = selectedStatuses.includes(status);
           const label =
             status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
