@@ -87,7 +87,7 @@ export default function RecruiterPostsPage() {
   const displayedPosts = filteredPosts.slice(0, visibleCount);
 
   return (
-    <div className="max-w-8/10 p-10 justify-center mx-auto my-5">
+    <div className="max-w-8/10 p-10 justify-center mx-auto my-5 min-h-screen">
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Posts</h1>
