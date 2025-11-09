@@ -337,3 +337,74 @@ export async function countApplicationsByJobId(jobId: number): Promise<number> {
 
   return count || 0;
 }
+
+/**
+ * Get all applicants for a recruiter (joined with job, job_seeker, and resume)
+ */
+export async function getApplicantsByRecruiter(
+  recruiterId: number,
+  statuses?: string[]
+) {
+  const supabase = await createClient();
+
+  let query = supabase
+    .from("application")
+    .select(
+      `
+      application_id,
+      job_id,
+      job_seeker_id,
+      match_score,
+      status,
+      created_at,
+      job:job_id (job_title, recruiter_id),
+      job_seeker:job_seeker_id (
+        job_seeker_id,
+        user: user_id (
+          first_name,
+          last_name
+        )
+      ),
+      resume:resume_id (
+        resume_id,
+        extracted_skills
+      )
+    `
+    )
+    .order("created_at", { ascending: false });
+
+  // Filter by recruiter
+  query = query.eq("job.recruiter_id", recruiterId);
+
+  // Filter by multiple statuses (excluding unknown by default)
+  if (statuses && statuses.length > 0) {
+    query = query.in("status", statuses);
+  } else {
+    query = query.neq("status", "unknown");
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error("Error fetching recruiter applicants:", error);
+    return [];
+  }
+
+  // Map to frontend format
+  return (
+    data?.map((a: any) => ({
+      id: a.application_id,
+      applicantName:
+        `${a.job_seeker?.user?.first_name || ""} ${a.job_seeker?.user?.last_name || ""}`.trim() ||
+        "Unknown",
+      jobTitle: a.job?.job_title || "Untitled Job",
+      date: new Date(a.created_at).toLocaleDateString("en-GB", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      }),
+      score: a.match_score ?? 0,
+      status: a.status || "received",
+    })) || []
+  );
+}
