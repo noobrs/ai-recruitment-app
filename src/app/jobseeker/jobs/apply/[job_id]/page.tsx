@@ -128,9 +128,9 @@ export default function ApplyJobPage() {
   // === Step 1: Upload Resume ===
   if (step === 1) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 py-10">
+      <div className="flex flex-col items-center justify-center bg-gray-50 py-25">
         <div className="bg-white shadow-md rounded-2xl p-10 w-full max-w-2xl">
-          {/* Back Button */}
+          {/* Back Button */} 
           <button
             onClick={() => router.back()}
             className="flex items-center text-gray-500 hover:text-black transition mb-6"
