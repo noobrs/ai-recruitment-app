@@ -149,7 +149,7 @@ export default function RecruiterPostsPage() {
                       View
                     </button>
                   </td>
-                  <td className="px-6 py-4">{post.views || 0}</td>
+                  <td className="px-6 py-4">{post.views}</td>
                   <td className="px-6 py-4">{post.date}</td>
                   <td className="px-6 py-4 font-medium">
                     {post.status === "draft" && (

@@ -318,3 +318,22 @@ export async function createBookmarkApplication(
     return null;
   }
 }
+
+/**
+ * Count applications by job_id (excluding 'unknown' status)
+ */
+export async function countApplicationsByJobId(jobId: number): Promise<number> {
+  const supabase = await createClient();
+  const { count, error } = await supabase
+    .from("application")
+    .select("application_id", { count: "exact", head: true })
+    .eq("job_id", jobId)
+    .neq("status", "unknown");
+
+  if (error) {
+    console.error("Error counting applications:", error);
+    return 0;
+  }
+
+  return count || 0;
+}
