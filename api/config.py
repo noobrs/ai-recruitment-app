@@ -1,6 +1,5 @@
 from pathlib import Path
-from pydantic import HttpUrl, Field
-from pydantic_settings import BaseSettings
+from pydantic import HttpUrl, Field, BaseSettings
 
 ENV_PATH = Path(__file__).resolve().parent.parent / ".env.local"
 
