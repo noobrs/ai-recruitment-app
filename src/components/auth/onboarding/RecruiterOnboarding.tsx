@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
-import { Loader2, Mail, User, Building2, Globe } from 'lucide-react';
+import { Loader2, Mail, User, Globe, Briefcase } from 'lucide-react';
 import { completeOnboarding } from '@/app/auth/onboarding/actions';
 import { uploadProfilePictureAction } from '@/app/actions/profile-picture.actions';
 import {
@@ -11,6 +11,8 @@ import {
     ALLOWED_FORMATS_TEXT
 } from '@/constants/profile-picture.constants';
 import ProfilePictureUpload from '@/components/shared/profile/ProfilePictureUpload';
+import CompanyAutocomplete from './CompanyAutocomplete';
+import { Company } from '@/types';
 
 interface RecruiterOnboardingProps {
     userId: string;
@@ -28,10 +30,44 @@ export default function RecruiterOnboarding({
     const [isLoading, setIsLoading] = useState(false);
     const [profilePicture, setProfilePicture] = useState<File | null>(null);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+    
+    // Company autocomplete state
+    const [companyName, setCompanyName] = useState('');
+    const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
+    
+    // Company details state
+    const [companyWebsite, setCompanyWebsite] = useState('');
+    const [companyIndustry, setCompanyIndustry] = useState('');
+    const [companyLocation, setCompanyLocation] = useState('');
+    const [companyDescription, setCompanyDescription] = useState('');
+    const [companySize, setCompanySize] = useState('');
+    const [companyFounded, setCompanyFounded] = useState('');
 
     const handleProfilePictureChange = (file: File | null, preview: string | null) => {
         setProfilePicture(file);
         setPreviewUrl(preview);
+    };
+    
+    const handleCompanySelect = (company: Company | null) => {
+        setSelectedCompany(company);
+        
+        if (company) {
+            // Populate fields with existing company data
+            setCompanyWebsite(company.comp_website || '');
+            setCompanyIndustry(company.comp_industry || '');
+            setCompanyLocation(company.comp_location || '');
+            setCompanyDescription(company.comp_description || '');
+            setCompanySize(company.comp_size || '');
+            setCompanyFounded(company.comp_founded ? company.comp_founded.toString() : '');
+        } else {
+            // Clear fields when no company is selected
+            setCompanyWebsite('');
+            setCompanyIndustry('');
+            setCompanyLocation('');
+            setCompanyDescription('');
+            setCompanySize('');
+            setCompanyFounded('');
+        }
     };
 
     // Get initials from default names
@@ -42,13 +78,35 @@ export default function RecruiterOnboarding({
         setIsLoading(true);
 
         const formData = new FormData(e.currentTarget);
+        
+        // Validate company name
+        if (!companyName.trim()) {
+            toast.error('Company name is required');
+            setIsLoading(false);
+            return;
+        }
+        
+        // Get position value
+        const position = formData.get('position') as string;
+        if (!position?.trim()) {
+            toast.error('Position is required');
+            setIsLoading(false);
+            return;
+        }
+        
         const data = {
             role: 'recruiter' as const,
             firstName: formData.get('firstName') as string,
             lastName: formData.get('lastName') as string,
-            companyName: formData.get('companyName') as string,
-            companyWebsite: (formData.get('companyWebsite') as string) || undefined,
-            companyIndustry: (formData.get('companyIndustry') as string) || undefined,
+            position: position.trim(),
+            companyId: selectedCompany?.company_id,
+            companyName: companyName.trim(),
+            companyWebsite: companyWebsite.trim() || undefined,
+            companyIndustry: companyIndustry || undefined,
+            companyLocation: companyLocation.trim() || undefined,
+            companyDescription: companyDescription.trim() || undefined,
+            companySize: companySize || undefined,
+            companyFounded: companyFounded ? parseInt(companyFounded, 10) : undefined,
         };
 
         try {
@@ -149,19 +207,38 @@ export default function RecruiterOnboarding({
 
                 <label className="block">
                     <span className="mb-1 block text-sm font-medium text-neutral-700">
-                        Company Name <span className="text-red-500">*</span>
+                        Position <span className="text-red-500">*</span>
                     </span>
                     <div className="relative">
-                        <Building2 className="absolute left-3 top-2.5 h-4 w-4 text-neutral-400" />
+                        <Briefcase className="absolute left-3 top-2.5 h-4 w-4 text-neutral-400" />
                         <input
                             type="text"
-                            name="companyName"
+                            name="position"
                             required
                             disabled={isLoading}
-                            placeholder="Acme Corporation"
+                            placeholder="e.g., HR Manager, Talent Acquisition Specialist"
                             className="w-full rounded-lg border border-neutral-200 bg-white/70 pl-10 pr-3 py-2 outline-none focus:ring-2 focus:ring-secondary"
                         />
                     </div>
+                </label>
+
+                <label className="block">
+                    <span className="mb-1 block text-sm font-medium text-neutral-700">
+                        Company Name <span className="text-red-500">*</span>
+                    </span>
+                    <CompanyAutocomplete
+                        value={companyName}
+                        onChange={setCompanyName}
+                        onCompanySelect={handleCompanySelect}
+                        selectedCompany={selectedCompany}
+                        disabled={isLoading}
+                        required={true}
+                    />
+                    {!selectedCompany && companyName.trim() && (
+                        <p className="mt-1 text-xs text-neutral-500">
+                            A new company will be created with this name
+                        </p>
+                    )}
                 </label>
 
                 <label className="block">
@@ -173,9 +250,11 @@ export default function RecruiterOnboarding({
                         <input
                             type="url"
                             name="companyWebsite"
-                            disabled={isLoading}
+                            value={companyWebsite}
+                            onChange={(e) => setCompanyWebsite(e.target.value)}
+                            disabled={isLoading || !!selectedCompany}
                             placeholder="https://example.com"
-                            className="w-full rounded-lg border border-neutral-200 bg-white/70 pl-10 pr-3 py-2 outline-none focus:ring-2 focus:ring-secondary"
+                            className="w-full rounded-lg border border-neutral-200 bg-white/70 pl-10 pr-3 py-2 outline-none focus:ring-2 focus:ring-secondary disabled:bg-neutral-100 disabled:cursor-not-allowed"
                         />
                     </div>
                 </label>
@@ -186,8 +265,10 @@ export default function RecruiterOnboarding({
                     </span>
                     <select
                         name="companyIndustry"
-                        disabled={isLoading}
-                        className="w-full rounded-lg border border-neutral-200 bg-white/70 px-3 py-2 outline-none focus:ring-2 focus:ring-secondary"
+                        value={companyIndustry}
+                        onChange={(e) => setCompanyIndustry(e.target.value)}
+                        disabled={isLoading || !!selectedCompany}
+                        className="w-full rounded-lg border border-neutral-200 bg-white/70 px-3 py-2 outline-none focus:ring-2 focus:ring-secondary disabled:bg-neutral-100 disabled:cursor-not-allowed"
                     >
                         <option value="">Select an industry</option>
                         <option value="Technology">Technology</option>
@@ -200,6 +281,76 @@ export default function RecruiterOnboarding({
                         <option value="Other">Other</option>
                     </select>
                 </label>
+
+                <label className="block">
+                    <span className="mb-1 block text-sm font-medium text-neutral-700">
+                        Company Location
+                    </span>
+                    <input
+                        type="text"
+                        name="companyLocation"
+                        value={companyLocation}
+                        onChange={(e) => setCompanyLocation(e.target.value)}
+                        disabled={isLoading || !!selectedCompany}
+                        placeholder="e.g., San Francisco, CA"
+                        className="w-full rounded-lg border border-neutral-200 bg-white/70 px-3 py-2 outline-none focus:ring-2 focus:ring-secondary disabled:bg-neutral-100 disabled:cursor-not-allowed"
+                    />
+                </label>
+
+                <label className="block">
+                    <span className="mb-1 block text-sm font-medium text-neutral-700">
+                        Company Description
+                    </span>
+                    <textarea
+                        name="companyDescription"
+                        value={companyDescription}
+                        onChange={(e) => setCompanyDescription(e.target.value)}
+                        disabled={isLoading || !!selectedCompany}
+                        placeholder="Brief description of the company..."
+                        rows={3}
+                        className="w-full rounded-lg border border-neutral-200 bg-white/70 px-3 py-2 outline-none focus:ring-2 focus:ring-secondary disabled:bg-neutral-100 disabled:cursor-not-allowed resize-none"
+                    />
+                </label>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <label className="block">
+                        <span className="mb-1 block text-sm font-medium text-neutral-700">
+                            Company Size
+                        </span>
+                        <select
+                            name="companySize"
+                            value={companySize}
+                            onChange={(e) => setCompanySize(e.target.value)}
+                            disabled={isLoading || !!selectedCompany}
+                            className="w-full rounded-lg border border-neutral-200 bg-white/70 px-3 py-2 outline-none focus:ring-2 focus:ring-secondary disabled:bg-neutral-100 disabled:cursor-not-allowed"
+                        >
+                            <option value="">Select size</option>
+                            <option value="1-10">1-10 employees</option>
+                            <option value="11-50">11-50 employees</option>
+                            <option value="51-200">51-200 employees</option>
+                            <option value="201-500">201-500 employees</option>
+                            <option value="501-1000">501-1000 employees</option>
+                            <option value="1001+">1001+ employees</option>
+                        </select>
+                    </label>
+
+                    <label className="block">
+                        <span className="mb-1 block text-sm font-medium text-neutral-700">
+                            Year Founded
+                        </span>
+                        <input
+                            type="number"
+                            name="companyFounded"
+                            value={companyFounded}
+                            onChange={(e) => setCompanyFounded(e.target.value)}
+                            disabled={isLoading || !!selectedCompany}
+                            placeholder="e.g., 2020"
+                            min="1800"
+                            max={new Date().getFullYear()}
+                            className="w-full rounded-lg border border-neutral-200 bg-white/70 px-3 py-2 outline-none focus:ring-2 focus:ring-secondary disabled:bg-neutral-100 disabled:cursor-not-allowed"
+                        />
+                    </label>
+                </div>
 
                 <button
                     type="submit"

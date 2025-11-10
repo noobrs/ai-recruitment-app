@@ -10,9 +10,15 @@ type OnboardingData = {
     lastName: string;
     location?: string;
     aboutMe?: string;
+    position?: string;
+    companyId?: number;
     companyName?: string;
     companyWebsite?: string;
     companyIndustry?: string;
+    companyLocation?: string;
+    companyDescription?: string;
+    companySize?: string;
+    companyFounded?: number;
 };
 
 /**
@@ -37,7 +43,22 @@ export async function completeOnboarding(data: OnboardingData) {
         }
 
         const supabaseAdmin = createAdminClient();
-        const { role, firstName, lastName, location, aboutMe, companyName, companyWebsite, companyIndustry } = data;
+        const { 
+            role, 
+            firstName, 
+            lastName, 
+            location, 
+            aboutMe, 
+            position,
+            companyId,
+            companyName, 
+            companyWebsite, 
+            companyIndustry,
+            companyLocation,
+            companyDescription,
+            companySize,
+            companyFounded
+        } = data;
 
         // Validate role
         if (!role || (role !== 'jobseeker' && role !== 'recruiter')) {
@@ -99,34 +120,66 @@ export async function completeOnboarding(data: OnboardingData) {
                 };
             }
         } else if (role === 'recruiter') {
-            // Validate company name for recruiters
+            // Validate required fields for recruiters
             if (!companyName) {
                 return {
                     success: false,
                     error: 'Company name is required for recruiters',
                 };
             }
+            
+            if (!position) {
+                return {
+                    success: false,
+                    error: 'Position is required for recruiters',
+                };
+            }
 
-            // Create or get company
-            const { data: existingCompany } = await supabaseAdmin
-                .from('company')
-                .select('company_id')
-                .eq('comp_name', companyName)
-                .maybeSingle();
+            let finalCompanyId: number;
 
-            let companyId: number;
+            // Check if joining an existing company
+            if (companyId) {
+                // Verify the company exists
+                const { data: existingCompany, error: verifyError } = await supabaseAdmin
+                    .from('company')
+                    .select('company_id')
+                    .eq('company_id', companyId)
+                    .maybeSingle();
 
-            if (existingCompany) {
-                companyId = existingCompany.company_id;
+                if (verifyError || !existingCompany) {
+                    console.error('Error verifying company:', verifyError);
+                    return {
+                        success: false,
+                        error: 'Selected company not found',
+                    };
+                }
+
+                finalCompanyId = existingCompany.company_id;
             } else {
-                // Create new company
+                // Create new company with all provided details
+                const companyData: {
+                    comp_name: string;
+                    comp_website?: string | null;
+                    comp_industry?: string | null;
+                    comp_location?: string | null;
+                    comp_description?: string | null;
+                    comp_size?: string | null;
+                    comp_founded?: number;
+                } = {
+                    comp_name: companyName,
+                };
+
+                // Only add fields if they have values
+                if (companyWebsite) companyData.comp_website = companyWebsite;
+                if (companyIndustry) companyData.comp_industry = companyIndustry;
+                if (companyLocation) companyData.comp_location = companyLocation;
+                if (companyDescription) companyData.comp_description = companyDescription;
+                if (companySize) companyData.comp_size = companySize;
+                if (companyFounded) companyData.comp_founded = companyFounded;
+
                 const { data: newCompany, error: companyError } = await supabaseAdmin
                     .from('company')
-                    .insert({
-                        comp_name: companyName,
-                        comp_website: companyWebsite || null,
-                        comp_industry: companyIndustry || null,
-                    })
+                    .insert(companyData)
                     .select('company_id')
                     .single();
 
@@ -138,16 +191,17 @@ export async function completeOnboarding(data: OnboardingData) {
                     };
                 }
 
-                companyId = newCompany.company_id;
+                finalCompanyId = newCompany.company_id;
             }
 
-            // Create or update recruiter profile
+            // Create or update recruiter profile with position
             const { error: recruiterError } = await supabaseAdmin
                 .from('recruiter')
                 .upsert(
                     {
                         user_id: user.id,
-                        company_id: companyId,
+                        company_id: finalCompanyId,
+                        position: position,
                     },
                     {
                         onConflict: 'user_id',
