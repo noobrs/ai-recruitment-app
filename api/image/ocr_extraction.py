@@ -1,7 +1,13 @@
 import cv2
 import pytesseract
+import platform
+import shutil
 
-pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"  # adjust if needed
+if platform.system() == "Windows":
+    path = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+    pytesseract.pytesseract.tesseract_cmd = path if shutil.which(path) else None
+
+# pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 
 def extract_text_from_segments(img_path: str, boxes):
     """Extract text from detected resume sections."""
@@ -12,3 +18,11 @@ def extract_text_from_segments(img_path: str, boxes):
         text = pytesseract.image_to_string(crop, lang="eng")
         ocr_results.append({"segment_id": i, "text": text.strip()})
     return ocr_results
+
+def extract_text_simple(img_path: str):
+    """Extract all text from the given image using Tesseract."""
+    image = cv2.imread(img_path)
+    if image is None:
+        return {"error": "Image not found or invalid path"}
+    text = pytesseract.image_to_string(image, lang="eng")
+    return {"text": text.strip()}
