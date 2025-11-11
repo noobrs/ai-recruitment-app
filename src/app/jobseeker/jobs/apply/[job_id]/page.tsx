@@ -6,6 +6,7 @@ import InputUploadFile from "@/components/shared/inputs/InputUploadFile";
 import ButtonFilledBlack from "@/components/shared/buttons/ButtonFilledBlack";
 import { ArrowLeftIcon } from "@heroicons/react/24/outline";
 import { submitApplication } from "./actions";
+import { fetchFromFastAPI } from "@/utils/api";
 
 export default function ApplyJobPage() {
   const router = useRouter();
@@ -51,17 +52,16 @@ export default function ApplyJobPage() {
       const formData = new FormData();
       formData.append("file", cvFile);
 
-      // Call Python API for extraction
-      const res = await fetch("/api/webhooks/fastapi/resume-processed", {
+      const result = await fetchFromFastAPI("/api/py/process-image", {
         method: "POST",
         body: formData,
       });
 
-      if (!res.ok) throw new Error("Failed to extract resume data");
+      if (result.status !== "success") throw new Error("Failed to extract resume data");
 
-      const data = await res.json();
-      setResumeData(data);
-      setStep(2); // move to next step
+      setResumeData(result.data);
+      console.log("Extracted resume data:", result.data);
+      setStep(2);
     } catch (err: any) {
       console.error(err);
       setErrorMessage("Resume processing failed. Please try again.");
@@ -130,7 +130,7 @@ export default function ApplyJobPage() {
     return (
       <div className="flex flex-col items-center justify-center bg-gray-50 py-25">
         <div className="bg-white shadow-md rounded-2xl p-10 w-full max-w-2xl">
-          {/* Back Button */} 
+          {/* Back Button */}
           <button
             onClick={() => router.back()}
             className="flex items-center text-gray-500 hover:text-black transition mb-6"
@@ -167,11 +167,11 @@ export default function ApplyJobPage() {
           )}
 
           <InputUploadFile
-            label="Resume"
+            label="Resume (PDF or Image)"
             className="w-full"
+            accept=".pdf,image/*"
             onChange={(file) => setCvFile(file)}
           />
-
           <ButtonFilledBlack
             text={isExtracting ? "Processing..." : "Continue"}
             className="w-full py-3 mt-6"
@@ -239,9 +239,9 @@ export default function ApplyJobPage() {
               {resumeData?.experience?.length ? (
                 resumeData.experience.map((exp: any, i: number) => (
                   <div key={i} className="border p-3 rounded-md mb-2">
-                    <p className="font-semibold">{exp.position}</p>
-                    <p className="text-sm text-gray-500">{exp.company}</p>
-                    <p className="text-sm">{exp.years} years</p>
+                    <p className="font-semibold">{exp.job_title || "N/A"}</p>
+                    <p className="text-sm text-gray-500">{exp.company || "Unknown Company"}</p>
+                    <p className="text-sm">{exp.start_date || exp.end_date || "No date info"}</p>
                   </div>
                 ))
               ) : (

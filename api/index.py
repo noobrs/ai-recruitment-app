@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Request, UploadFile, File, Form
+from fastapi import FastAPI, HTTPException, Request, UploadFile, File, Form, Body
 from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -99,6 +99,19 @@ async def test_supabase():
 #         "job_seeker_id": result.job_seeker_id,
 #         "redacted_file_path": result.redacted_file_path,
 #     }
+
+# route automatically in FastAPI:
+# @app.post("/api/py/process-resume")
+# async def process_resume(file: UploadFile = File(...)):
+#     filename = file.filename.lower()
+#     contents = await file.read()
+
+#     if filename.endswith((".jpg", ".jpeg", ".png")):
+#         return process_image_resume(contents)
+#     elif filename.endswith(".pdf"):
+#         return process_pdf_resume(contents)
+#     else:
+#         raise HTTPException(status_code=400, detail="Unsupported file type")
 
 # @app.post("/api/py/extract/image")
 # async def extract_image(file: UploadFile = File(...)):
