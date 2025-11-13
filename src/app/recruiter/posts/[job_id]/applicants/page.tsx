@@ -12,6 +12,10 @@ interface Applicant {
     status: string;
 }
 
+function generateAlias(id: number) {
+  return `Applicant #${id.toString().padStart(4, "0")}`;
+}
+
 export default function JobApplicantsPage() {
     const { job_id } = useParams();
     const router = useRouter();
@@ -195,65 +199,96 @@ export default function JobApplicantsPage() {
                 </div>
             </div>
 
-            {/* Table */}
-            <div className="overflow-x-auto bg-white rounded-xl shadow-sm">
-                {loading ? (
-                    <p className="text-center py-6 text-gray-500">
-                        Loading applicants...
-                    </p>
-                ) : displayedApplicants.length === 0 ? (
-                    <p className="text-center py-6 text-gray-500">
-                        No applicants found for this job.
-                    </p>
-                ) : (
-                    <table className="min-w-full text-sm text-gray-700">
-                        <thead className="bg-gray-50 text-purple-600 text-left">
-                            <tr>
-                                <th className="px-6 py-3 font-semibold">Applicant</th>
-                                <th className="px-6 py-3 font-semibold">
-                                    <button
-                                        onClick={toggleSort}
-                                        className="flex items-center gap-1 hover:underline"
-                                    >
-                                        Score
-                                        <ArrowUpDown className="w-4 h-4" />
-                                    </button>
-                                </th>
-                                <th className="px-6 py-3 font-semibold">Date Applied</th>
-                                <th className="px-6 py-3 font-semibold">Status</th>
-                                <th className="px-6 py-3"></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {displayedApplicants.map((a, i) => (
-                                <tr
-                                    key={a.id}
-                                    className={`${i % 2 === 0 ? "bg-white" : "bg-gray-50"
-                                        } hover:bg-gray-100 transition`}
-                                >
-                                    <td className="px-6 py-4 flex items-center gap-3 font-semibold capitalize">
-                                        <div
-                                            className={`w-10 h-10 flex items-center justify-center border-2 rounded-full text-xs ${getColor(
-                                                a.score
-                                            )}`}
-                                        >
-                                            {a.score}%
-                                        </div>
-                                        {a.applicantName}
-                                    </td>
-                                    <td className="px-6 py-4">{a.score}</td>
-                                    <td className="px-6 py-4">{a.date}</td>
-                                    <td className="px-6 py-4 capitalize font-medium text-gray-700">
-                                        {a.status}
-                                    </td>
-                                    <td className="px-6 py-4 text-purple-600 font-medium cursor-pointer hover:underline">
-                                        View Details
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                )}
+            {/* Scroll Navigation Tabs */}
+            <div className="flex gap-3 mb-8 flex-wrap">
+                {["shortlisted", "received", "rejected", "withdrawn"].map((status) => {
+                    const count = applicants.filter((a) => a.status === status).length;
+                    if (count === 0) return null;
+
+                    const label = status.charAt(0).toUpperCase() + status.slice(1);
+                    return (
+                        <a
+                            key={status}
+                            href={`#section-${status}`}
+                            className="px-4 py-2 rounded-full border font-medium text-gray-700 bg-white hover:bg-gray-50 transition"
+                        >
+                            {label} ({count})
+                        </a>
+                    );
+                })}
+            </div>
+
+            {/* Grouped Applicants */}
+            <div className="mt-10 space-y-12">
+                {["shortlisted", "received", "rejected", "withdrawn"].map((status) => {
+                    const group = applicants.filter((a) => a.status === status);
+                    if (group.length === 0) return null;
+
+                    return (
+                        <div key={status} id={`section-${status}`} className="scroll-mt-28">
+                            {/* Section Title */}
+                            <h2 className="text-xl font-bold mb-3 capitalize flex items-center gap-2">
+                                {status}
+                                <span className="text-purple-600 text-base font-semibold">
+                                    ({group.length})
+                                </span>
+                            </h2>
+
+                            {/* Table Container */}
+                            <div className="overflow-x-auto bg-white rounded-xl shadow-sm border border-gray-200">
+                                <table className="min-w-full table-fixed text-sm text-gray-700">
+                                    <thead>
+                                        <tr className="bg-gray-50 text-purple-600">
+                                            <th className="px-6 py-4 font-semibold w-[30%] text-left">Applicant</th>
+                                            <th className="px-6 py-4 font-semibold w-[10%] text-left">Score</th>
+                                            <th className="px-6 py-4 font-semibold w-[20%] text-left">Application Date</th>
+                                            <th className="px-6 py-4 font-semibold w-[20%] text-left">Status</th>
+                                            <th className="px-6 py-4 font-semibold w-[20%] text-left"></th>
+                                        </tr>
+                                    </thead>
+
+                                    <tbody>
+                                        {group.map((a, i) => (
+                                            <tr
+                                                key={a.id}
+                                                className={`${i % 2 === 0 ? "bg-white" : "bg-gray-50"
+                                                    } hover:bg-gray-100 transition`}
+                                            >
+                                                {/* Applicant */}
+                                                <td className="px-6 py-4 flex items-center gap-3 font-semibold">
+                                                    <div
+                                                        className={`w-10 h-10 flex items-center justify-center rounded-full border-2 text-xs font-bold ${getColor(
+                                                            a.score
+                                                        )}`}
+                                                    >
+                                                        {a.score}%
+                                                    </div>
+                                                    {generateAlias(a.id)}
+                                                </td>
+
+                                                {/* Score */}
+                                                <td className="px-6 py-4">{a.score}</td>
+
+                                                {/* Date */}
+                                                <td className="px-6 py-4">{a.date}</td>
+
+                                                {/* Status */}
+                                                <td className="px-6 py-4 capitalize font-medium">
+                                                    {a.status}
+                                                </td>
+
+                                                {/* View Details */}
+                                                <td className="px-6 py-4 text-purple-600 font-medium cursor-pointer hover:underline text-right">
+                                                    View Details
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    );
+                })}
             </div>
 
             {/* Footer - See More */}
