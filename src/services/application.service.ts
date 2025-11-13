@@ -408,3 +408,60 @@ export async function getApplicantsByRecruiter(
     })) || []
   );
 }
+
+/**
+ * Get applicants by job ID (for recruiter job view)
+ */
+export async function getApplicantsByJobIdForRecruiter(
+  jobId: string,
+  sortOrder: "asc" | "desc" = "desc"
+) {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("application")
+    .select(
+      `
+      application_id,
+      job_seeker_id,
+      match_score,
+      status,
+      created_at,
+      job_seeker:job_seeker_id (
+        job_seeker_id,
+        user:user_id (
+          first_name,
+          last_name
+        )
+      ),
+      resume:resume_id (
+        resume_id,
+        extracted_skills
+      )
+    `
+    )
+    .eq("job_id", jobId)
+    .neq("status", "unknown")
+    .order("match_score", { ascending: sortOrder === "asc" });
+
+  if (error) {
+    console.error("Error fetching job applicants:", error);
+    return [];
+  }
+
+  return (
+    data?.map((a: any) => ({
+      id: a.application_id,
+      applicantName:
+        `${a.job_seeker?.user?.first_name || ""} ${a.job_seeker?.user?.last_name || ""}`.trim() ||
+        "Unknown",
+      date: new Date(a.created_at).toLocaleDateString("en-GB", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      }),
+      score: a.match_score ?? 0,
+      status: a.status || "received",
+    })) || []
+  );
+}

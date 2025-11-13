@@ -157,3 +157,62 @@ export async function getAllJobsWithRelations(): Promise<JobWithRelations[]> {
     }
     return data || [];
 }
+
+
+/**
+ * Fetch job details for recruiter view
+ */
+export async function getJobDetailsForRecruiter(jobId: string) {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("job")
+    .select(`
+      job_id,
+      job_title,
+      job_type,
+      job_location,
+      job_status,
+      created_at,
+      recruiter:recruiter_id (
+        recruiter_id,
+        company:company_id (
+          comp_name,
+          comp_logo_path
+        )
+      )
+    `)
+    .eq("job_id", jobId)
+    .single();
+
+  if (error) {
+    console.error("Error fetching job details:", error);
+    return null;
+  }
+
+  const recruiter = Array.isArray(data.recruiter)
+    ? data.recruiter[0]
+    : data.recruiter;
+
+  const company = recruiter?.company
+    ? Array.isArray(recruiter.company)
+      ? recruiter.company[0]
+      : recruiter.company
+    : null;
+
+  return {
+    id: data.job_id,
+    title: data.job_title,
+    type: data.job_type,
+    location: data.job_location,
+    status: data.job_status,
+    date: new Date(data.created_at).toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    }),
+    company: company?.comp_name || "Unknown",
+    compLogo: company?.comp_logo_path || "/default-company.png",
+  };
+}
+
