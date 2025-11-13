@@ -47,3 +47,13 @@ To enable the job seeker resume upload flow:
 3. Start the FastAPI service with `npm run fastapi-dev` (installs requirements and runs Uvicorn).
 
 When a resume is uploaded the Next.js server will store the original file in the `resumes-original` bucket, call the FastAPI `/api/py/process-resume` endpoint, and poll for processing updates. The FastAPI service parses the PDF, redacts bias-sensitive information, uploads a redacted copy to the `resumes-redacted` bucket, and notifies Next.js via the signed webhook endpoint.
+
+## Install Tesseract OCR
+
+### Windows
+1. Download installer: https://github.com/UB-Mannheim/tesseract/wiki
+2. Install to default path: `C:\Program Files\Tesseract-OCR\tesseract.exe`
+
+### macOS
+```bash
+brew install tesseract

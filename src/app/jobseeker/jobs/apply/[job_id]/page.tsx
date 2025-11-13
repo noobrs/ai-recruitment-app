@@ -6,6 +6,7 @@ import InputUploadFile from "@/components/shared/inputs/InputUploadFile";
 import ButtonFilledBlack from "@/components/shared/buttons/ButtonFilledBlack";
 import { ArrowLeftIcon } from "@heroicons/react/24/outline";
 import { submitApplication } from "./actions";
+import { fetchFromFastAPI } from "@/utils/api";
 
 export default function ApplyJobPage() {
   const router = useRouter();
@@ -51,17 +52,16 @@ export default function ApplyJobPage() {
       const formData = new FormData();
       formData.append("file", cvFile);
 
-      // Call Python API for extraction
-      const res = await fetch("/api/webhooks/fastapi/resume-processed", {
+      const result = await fetchFromFastAPI("/api/py/process-image", {
         method: "POST",
         body: formData,
       });
 
-      if (!res.ok) throw new Error("Failed to extract resume data");
+      if (result.status !== "success") throw new Error("Failed to extract resume data");
 
-      const data = await res.json();
-      setResumeData(data);
-      setStep(2); // move to next step
+      setResumeData(result.data);
+      console.log("Extracted resume data:", result.data);
+      setStep(2);
     } catch (err: any) {
       console.error(err);
       setErrorMessage("Resume processing failed. Please try again.");
@@ -130,7 +130,7 @@ export default function ApplyJobPage() {
     return (
       <div className="flex flex-col items-center justify-center bg-gray-50 py-25">
         <div className="bg-white shadow-md rounded-2xl p-10 w-full max-w-2xl">
-          {/* Back Button */} 
+          {/* Back Button */}
           <button
             onClick={() => router.back()}
             className="flex items-center text-gray-500 hover:text-black transition mb-6"
@@ -167,11 +167,11 @@ export default function ApplyJobPage() {
           )}
 
           <InputUploadFile
-            label="Resume"
+            label="Resume (PDF or Image)"
             className="w-full"
+            accept=".pdf,image/*"
             onChange={(file) => setCvFile(file)}
           />
-
           <ButtonFilledBlack
             text={isExtracting ? "Processing..." : "Continue"}
             className="w-full py-3 mt-6"
@@ -185,6 +185,35 @@ export default function ApplyJobPage() {
 
   // === Step 2: Review Extracted Info ===
   if (step === 2) {
+    const handleSkillChange = (index: number, newValue: string) => {
+      const updatedSkills = [...(resumeData.skills || [])];
+      updatedSkills[index] = newValue;
+      setResumeData({ ...resumeData, skills: updatedSkills });
+    };
+
+    const handleAddSkill = () => {
+      const updatedSkills = [...(resumeData.skills || []), ""];
+      setResumeData({ ...resumeData, skills: updatedSkills });
+    };
+
+    const handleRemoveSkill = (index: number) => {
+      const updatedSkills = [...(resumeData.skills || [])];
+      updatedSkills.splice(index, 1);
+      setResumeData({ ...resumeData, skills: updatedSkills });
+    };
+
+    const handleExperienceChange = (index: number, key: string, value: string) => {
+      const updated = [...(resumeData.experience || [])];
+      updated[index][key] = value;
+      setResumeData({ ...resumeData, experience: updated });
+    };
+
+    const handleEducationChange = (index: number, key: string, value: string) => {
+      const updated = [...(resumeData.education || [])];
+      updated[index][key] = value;
+      setResumeData({ ...resumeData, education: updated });
+    };
+
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 py-10">
         <div className="bg-white shadow-md rounded-2xl p-10 w-full max-w-3xl">
@@ -211,58 +240,97 @@ export default function ApplyJobPage() {
           </p>
           <div className="w-full h-px bg-gray-200 mb-8"></div>
 
-          <h2 className="text-2xl font-bold mb-6">Review Extracted Information</h2>
+          <h2 className="text-2xl font-bold mb-6">Review & Edit Extracted Information</h2>
 
-          <div className="flex flex-col gap-6 text-gray-700">
-            {/* Skills */}
+          <div className="flex flex-col gap-8 text-gray-700">
+            {/* SKILLS */}
             <div>
               <h3 className="font-bold text-lg mb-2">Skills</h3>
-              <div className="flex flex-wrap gap-2">
-                {resumeData?.skills?.length ? (
-                  resumeData.skills.map((s: string, i: number) => (
-                    <span
-                      key={i}
-                      className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm"
+              <div className="flex flex-col gap-2">
+                {(resumeData.skills || []).map((s: string, i: number) => (
+                  <div key={i} className="flex gap-2 items-center">
+                    <input
+                      type="text"
+                      value={s}
+                      onChange={(e) => handleSkillChange(i, e.target.value)}
+                      className="border border-gray-300 rounded-md px-3 py-1 w-full focus:ring focus:ring-blue-100"
+                    />
+                    <button
+                      onClick={() => handleRemoveSkill(i)}
+                      className="text-red-500 hover:text-red-700"
                     >
-                      {s}
-                    </span>
-                  ))
-                ) : (
-                  <p className="text-gray-400">No skills detected</p>
-                )}
+                      ✕
+                    </button>
+                  </div>
+                ))}
+                <button
+                  onClick={handleAddSkill}
+                  className="text-blue-600 hover:text-blue-800 text-sm mt-1"
+                >
+                  + Add Skill
+                </button>
               </div>
             </div>
 
-            {/* Experience */}
+            {/* EXPERIENCE */}
             <div>
               <h3 className="font-bold text-lg mb-2">Experience</h3>
-              {resumeData?.experience?.length ? (
-                resumeData.experience.map((exp: any, i: number) => (
-                  <div key={i} className="border p-3 rounded-md mb-2">
-                    <p className="font-semibold">{exp.position}</p>
-                    <p className="text-sm text-gray-500">{exp.company}</p>
-                    <p className="text-sm">{exp.years} years</p>
-                  </div>
-                ))
-              ) : (
-                <p className="text-gray-400">No experiences detected</p>
-              )}
+              {(resumeData.experience || []).map((exp: any, i: number) => (
+                <div key={i} className="border p-4 rounded-md mb-3 flex flex-col gap-2">
+                  <input
+                    type="text"
+                    placeholder="Job Title"
+                    value={exp.job_title || ""}
+                    onChange={(e) => handleExperienceChange(i, "job_title", e.target.value)}
+                    className="border border-gray-300 rounded-md px-3 py-1 focus:ring focus:ring-blue-100"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Company"
+                    value={exp.company || ""}
+                    onChange={(e) => handleExperienceChange(i, "company", e.target.value)}
+                    className="border border-gray-300 rounded-md px-3 py-1 focus:ring focus:ring-blue-100"
+                  />
+                  <textarea
+                    placeholder="Achievements / Responsibilities"
+                    value={exp.achievements || ""}
+                    onChange={(e) => handleExperienceChange(i, "achievements", e.target.value)}
+                    className="border border-gray-300 rounded-md px-3 py-1 h-20 resize-none focus:ring focus:ring-blue-100"
+                  />
+                </div>
+              ))}
             </div>
 
-            {/* Education */}
+            {/* EDUCATION */}
             <div>
               <h3 className="font-bold text-lg mb-2">Education</h3>
-              {resumeData?.education?.length ? (
-                resumeData.education.map((edu: any, i: number) => (
-                  <div key={i} className="border p-3 rounded-md mb-2">
-                    <p className="font-semibold">{edu.degree}</p>
-                    <p className="text-sm text-gray-500">{edu.institution}</p>
-                    <p className="text-sm">Year: {edu.year}</p>
-                  </div>
-                ))
-              ) : (
-                <p className="text-gray-400">No education details detected</p>
-              )}
+              {(resumeData.education || []).map((edu: any, i: number) => (
+                <div key={i} className="border p-4 rounded-md mb-3 flex flex-col gap-2">
+                  <input
+                    type="text"
+                    placeholder="Degree"
+                    value={edu.degree || ""}
+                    onChange={(e) => handleEducationChange(i, "degree", e.target.value)}
+                    className="border border-gray-300 rounded-md px-3 py-1 focus:ring focus:ring-blue-100"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Institution"
+                    value={edu.institution || ""}
+                    onChange={(e) => handleEducationChange(i, "institution", e.target.value)}
+                    className="border border-gray-300 rounded-md px-3 py-1 focus:ring focus:ring-blue-100"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Years (e.g., 2020–2024)"
+                    value={edu.dates?.join(" - ") || ""}
+                    onChange={(e) =>
+                      handleEducationChange(i, "dates", e.target.value)
+                    }
+                    className="border border-gray-300 rounded-md px-3 py-1 focus:ring focus:ring-blue-100"
+                  />
+                </div>
+              ))}
             </div>
           </div>
 
