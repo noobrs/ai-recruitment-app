@@ -465,3 +465,84 @@ export async function getApplicantsByJobIdForRecruiter(
     })) || []
   );
 }
+
+/**
+ * Get dashboard counts for multiple jobs
+ */
+export async function getDashboardCountsForJobs(jobIds: number[]) {
+  const supabase = await createClient();
+
+  let totalApplications = 0;
+  let applicationsThisWeek = 0;
+  let hiresThisMonth = 0;
+
+  const oneWeekAgo = new Date();
+  oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+
+  const now = new Date();
+  const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+
+  for (const jobId of jobIds) {
+    // Count non-unknown applications
+    const { count } = await supabase
+      .from("application")
+      .select("application_id", { count: "exact", head: true })
+      .eq("job_id", jobId)
+      .neq("status", "unknown");
+
+    totalApplications += count || 0;
+
+    // Fetch app list for week/month checks
+    const { data: apps } = await supabase
+      .from("application")
+      .select("status, created_at, updated_at")
+      .eq("job_id", jobId);
+
+    if (apps) {
+      applicationsThisWeek += apps.filter(
+        (a) => new Date(a.created_at) >= oneWeekAgo
+      ).length;
+
+      hiresThisMonth += apps.filter(
+        (a) =>
+          a.status === "hired" && new Date(a.updated_at) >= firstDay
+      ).length;
+    }
+  }
+
+  return {
+    totalApplications,
+    applicationsThisWeek,
+    hiresThisMonth,
+  };
+}
+
+/**
+ * Get recent applications for multiple jobs
+ */
+export async function getRecentApplicationsForJobs(jobIds: number[]) {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("application")
+    .select(`
+      application_id,
+      created_at,
+      status,
+      job:job_id(job_title),
+      job_seeker:job_seeker_id(job_seeker_id)
+    `)
+    .in("job_id", jobIds)
+    .order("created_at", { ascending: false })
+    .limit(5);
+
+  if (error || !data) return [];
+
+  return data.map((a: any) => ({
+    id: a.application_id,
+    alias: `Applicant #${String(a.job_seeker?.job_seeker_id).padStart(4, "0")}`,
+    jobTitle: a.job?.job_title || "Untitled",
+    date: new Date(a.created_at).toLocaleDateString("en-GB"),
+    status: a.status,
+  }));
+}
