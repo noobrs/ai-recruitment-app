@@ -37,7 +37,7 @@ export default async function Header() {
           { href: "/recruiter/posts", label: "Posts" },
           { href: "/recruiter/applicants", label: "Applicants" },
           { href: "/recruiter/jobs", label: "Jobs" },
-          { href: "/recruiter/companies", label: "Companies" },
+          { href: "/recruiter/company", label: "Company" },
         ]
         : [];
 
