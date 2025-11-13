@@ -13,7 +13,7 @@ interface Applicant {
 }
 
 function generateAlias(id: number) {
-  return `Applicant #${id.toString().padStart(4, "0")}`;
+    return `Applicant #${id.toString().padStart(4, "0")}`;
 }
 
 export default function JobApplicantsPage() {
@@ -198,6 +198,17 @@ export default function JobApplicantsPage() {
                     <Filter className="w-5 h-5 text-gray-400 ml-2" />
                 </div>
             </div>
+
+            {/* If no applicants at all */}
+            {!loading && applicants.length === 0 && (
+                <div className="text-center mt-20 text-gray-500">
+                    <p className="text-xl font-semibold mb-2">No Applicants Yet</p>
+                    <p className="text-sm">
+                        Once candidates apply for this job, they will appear here.
+                    </p>
+                </div>
+            )}
+
 
             {/* Scroll Navigation Tabs */}
             <div className="flex gap-3 mb-8 flex-wrap">
