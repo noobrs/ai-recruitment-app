@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import ProfileEditActions from "@/components/recruiter/profile/ProfileEditActions";
+import CompanyProfileActions from "@/components/recruiter/company/CompanyProfileActions";
 
 export default function RecruiterCompanyPage() {
     const [company, setCompany] = useState<any>(null);
@@ -95,7 +95,7 @@ export default function RecruiterCompanyPage() {
                     </p>
                 </div>
 
-                <ProfileEditActions
+                <CompanyProfileActions
                     isEditing={isEditing}
                     isSaving={isSaving}
                     onEdit={() => setIsEditing(true)}
