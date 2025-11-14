@@ -8,6 +8,13 @@ interface InputUploadFileProps {
   className?: string;
   nullable?: boolean;
   onChange?: (file: File | null) => void;
+  /** 
+   * Accept file types, e.g.:
+   * ".pdf,.doc,.docx" or "image/*" or "application/pdf,image/*"
+   * Images: accept="image/*"
+   * PDFs: accept=".pdf"
+   * Mixed: accept=".pdf,image/*"
+   */
   accept?: string;
   maxSizeMB?: number;
 }
@@ -40,7 +47,7 @@ export default function InputUploadFile({
   };
 
   return (
-    <div className="flex flex-col gap-2 w-full">
+    <div className={`flex flex-col gap-2 w-full ${className}`}>
       {label && <InputLabel label={label} nullable={nullable} />}
 
       <label className="block border border-gray-300 rounded-md px-4 py-3 text-gray-600 cursor-pointer hover:border-primary transition text-center">
@@ -60,7 +67,9 @@ export default function InputUploadFile({
         )}
       </label>
 
-      <p className="text-gray-500 text-sm">Max file size: {maxSizeMB}MB</p>
+      <p className="text-gray-500 text-sm">
+        Supported formats: PDF, JPG, PNG (max {maxSizeMB}MB)
+      </p>
     </div>
   );
 }

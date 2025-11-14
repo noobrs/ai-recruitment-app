@@ -62,8 +62,8 @@ export default function RecruiterPostsPage() {
     const statusFiltered =
       selectedStatuses.length > 0
         ? filtered.filter((p) =>
-            selectedStatuses.includes(p.status.toLowerCase())
-          )
+          selectedStatuses.includes(p.status.toLowerCase())
+        )
         : filtered;
 
     setFilteredPosts(statusFiltered);
@@ -126,11 +126,10 @@ export default function RecruiterPostsPage() {
             <button
               key={status}
               onClick={() => handleStatusToggle(status)}
-              className={`px-4 py-2 rounded-full font-medium border transition ${
-                isSelected
+              className={`px-4 py-2 rounded-full font-medium border transition ${isSelected
                   ? "bg-purple-600 text-white border-purple-600"
                   : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
-              }`}
+                }`}
             >
               {label}
             </button>
@@ -162,9 +161,8 @@ export default function RecruiterPostsPage() {
               {displayedPosts.map((post, i) => (
                 <tr
                   key={post.job_id}
-                  className={`${
-                    i % 2 === 0 ? "bg-white" : "bg-gray-50"
-                  } hover:bg-gray-100 transition`}
+                  className={`${i % 2 === 0 ? "bg-white" : "bg-gray-50"
+                    } hover:bg-gray-100 transition`}
                 >
                   <td className="px-6 py-5 flex items-center gap-2 font-semibold">
                     <Star className="w-4 h-4 text-purple-600 fill-purple-600" />
@@ -174,7 +172,10 @@ export default function RecruiterPostsPage() {
                   <td className="px-6 py-4">{post.location}</td>
                   <td className="px-6 py-4 flex items-center gap-2">
                     {post.applicants}
-                    <button className="px-3 py-1 border rounded-full text-xs font-medium hover:bg-gray-100">
+                    <button
+                      className="px-3 py-1 border rounded-full text-xs font-medium hover:bg-gray-100"
+                      onClick={() => router.push(`/recruiter/posts/${post.job_id}/applicants`)}
+                    >
                       View
                     </button>
                   </td>

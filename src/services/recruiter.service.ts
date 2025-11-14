@@ -38,6 +38,23 @@ export async function getRecruiterByUserId(userId: string): Promise<Recruiter | 
 }
 
 /**
+ * Get recruiter ID from user ID
+ */
+export async function getRecruiterIdFromUser(userId: string) {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("recruiter")
+    .select("recruiter_id")
+    .eq("user_id", userId)
+    .single();
+
+  if (error || !data) return null;
+  return data.recruiter_id;
+}
+
+
+/**
  * Get recruiters by company ID
  */
 export async function getRecruitersByCompanyId(companyId: number): Promise<Recruiter[]> {
