@@ -1,5 +1,6 @@
 'use server';
 
+import { createAdminClient } from '@/utils/supabase/admin';
 import { createClient } from '@/utils/supabase/server';
 import { revalidatePath } from 'next/cache';
 
@@ -14,6 +15,7 @@ import { revalidatePath } from 'next/cache';
  */
 export async function submitApplication(formData: FormData) {
   const supabase = await createClient();
+  const supabaseAdmin = createAdminClient();
 
   // 1️⃣ Verify user session
   const {
@@ -52,8 +54,8 @@ export async function submitApplication(formData: FormData) {
 
   // 4️⃣ Upload resume file to Supabase Storage
   const filePath = `applications/${user.id}/${Date.now()}_${cvFile.name}`;
-  const { error: uploadError } = await supabase.storage
-    .from('resumes')
+  const { error: uploadError } = await supabaseAdmin.storage
+    .from('resumes-original')
     .upload(filePath, cvFile, { upsert: true });
 
   if (uploadError) {

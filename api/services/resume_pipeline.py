@@ -12,6 +12,8 @@ from ..supabase_client import supabase
 
 # ✅ import your image pipeline
 from ..image.pipeline import process_image_resume
+# ✅ import your pdf pipeline
+from ..pdf.pipeline import process_pdf_resume
 
 logger = logging.getLogger(__name__)
 
@@ -42,8 +44,10 @@ class ResumePipelineService:
             else:
                 logger.info("Detected PDF resume. Running PDF NLP pipeline...")
                 pdf_bytes = await self._ensure_pdf_bytes(payload.mime_type, original_bytes)
+                # Run PDF processing pipeline on bytes
+                pdf_result = process_pdf_resume(pdf_bytes)
+                resume_json = pdf_result.get("data", {})
                 redacted_path = await self._upload_redacted(payload.resume_id, payload.job_seeker_id, pdf_bytes)
-                resume_json = {"skills": [], "education": [], "experience": []}
 
             result = ResumeProcessingResult(
                 resume_id=payload.resume_id,
@@ -55,6 +59,10 @@ class ResumePipelineService:
                 feedback=None,
             )
 
+            logger.info(f"Final processing result for resume_id={payload.resume_id}: "
+                       f"skills={len(result.skills)}, education={len(result.education)}, "
+                       f"experience={len(result.experience)}")
+            
             await self._notify_next(result)
             return result
 

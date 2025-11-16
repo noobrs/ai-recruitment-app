@@ -243,3 +243,20 @@ async def api_process_image(file: UploadFile = File(...)):
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+# ----------------------
+# PDF Part
+# ----------------------
+
+@app.post("/api/py/process-pdf")
+async def api_process_pdf(file: UploadFile = File(...)):
+    """Full end-to-end pipeline for PDF: layout -> grouping -> GLiNER -> aggregate -> build json."""
+    from api.pdf.pipeline import process_pdf_resume
+    
+    tmp_bytes = await file.read()
+    try:
+        result = process_pdf_resume(tmp_bytes)
+        logger.info(f"PDF processing result: {result}")
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

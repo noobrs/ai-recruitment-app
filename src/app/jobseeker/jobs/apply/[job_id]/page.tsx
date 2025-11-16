@@ -52,7 +52,13 @@ export default function ApplyJobPage() {
       const formData = new FormData();
       formData.append("file", cvFile);
 
-      const result = await fetchFromFastAPI("/api/py/process-image", {
+      // Detect file type and route to appropriate endpoint
+      const isPdf = cvFile.type === "application/pdf" || cvFile.name.toLowerCase().endsWith(".pdf");
+      const endpoint = isPdf ? "/api/py/process-pdf" : "/api/py/process-image";
+
+      console.log(`Processing ${isPdf ? "PDF" : "image"} resume via ${endpoint}`);
+
+      const result = await fetchFromFastAPI(endpoint, {
         method: "POST",
         body: formData,
       });
@@ -208,10 +214,32 @@ export default function ApplyJobPage() {
       setResumeData({ ...resumeData, experience: updated });
     };
 
+    const handleAddExperience = () => {
+      const updatedExperience = [...(resumeData.experience || []), { job_title: "", company: "", achievements: "" }];
+      setResumeData({ ...resumeData, experience: updatedExperience });
+    };
+
+    const handleRemoveExperience = (index: number) => {
+      const updatedExperience = [...(resumeData.experience || [])];
+      updatedExperience.splice(index, 1);
+      setResumeData({ ...resumeData, experience: updatedExperience });
+    };
+
     const handleEducationChange = (index: number, key: string, value: string) => {
       const updated = [...(resumeData.education || [])];
       updated[index][key] = value;
       setResumeData({ ...resumeData, education: updated });
+    };
+
+    const handleAddEducation = () => {
+      const updatedEducation = [...(resumeData.education || []), { degree: "", institution: "", dates: [] }];
+      setResumeData({ ...resumeData, education: updatedEducation });
+    };
+
+    const handleRemoveEducation = (index: number) => {
+      const updatedEducation = [...(resumeData.education || [])];
+      updatedEducation.splice(index, 1);
+      setResumeData({ ...resumeData, education: updatedEducation });
     };
 
     return (
@@ -276,61 +304,93 @@ export default function ApplyJobPage() {
             <div>
               <h3 className="font-bold text-lg mb-2">Experience</h3>
               {(resumeData.experience || []).map((exp: any, i: number) => (
-                <div key={i} className="border p-4 rounded-md mb-3 flex flex-col gap-2">
-                  <input
-                    type="text"
-                    placeholder="Job Title"
-                    value={exp.job_title || ""}
-                    onChange={(e) => handleExperienceChange(i, "job_title", e.target.value)}
-                    className="border border-gray-300 rounded-md px-3 py-1 focus:ring focus:ring-blue-100"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Company"
-                    value={exp.company || ""}
-                    onChange={(e) => handleExperienceChange(i, "company", e.target.value)}
-                    className="border border-gray-300 rounded-md px-3 py-1 focus:ring focus:ring-blue-100"
-                  />
-                  <textarea
-                    placeholder="Achievements / Responsibilities"
-                    value={exp.achievements || ""}
-                    onChange={(e) => handleExperienceChange(i, "achievements", e.target.value)}
-                    className="border border-gray-300 rounded-md px-3 py-1 h-20 resize-none focus:ring focus:ring-blue-100"
-                  />
+                <div key={i} className="border p-4 rounded-md mb-3">
+                  <div className="flex justify-end mb-2">
+                    <button
+                      onClick={() => handleRemoveExperience(i)}
+                      className="text-red-500 hover:text-red-700 text-sm"
+                    >
+                      ✕ Remove
+                    </button>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <input
+                      type="text"
+                      placeholder="Job Title"
+                      value={exp.job_title || ""}
+                      onChange={(e) => handleExperienceChange(i, "job_title", e.target.value)}
+                      className="border border-gray-300 rounded-md px-3 py-1 focus:ring focus:ring-blue-100"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Company"
+                      value={exp.company || ""}
+                      onChange={(e) => handleExperienceChange(i, "company", e.target.value)}
+                      className="border border-gray-300 rounded-md px-3 py-1 focus:ring focus:ring-blue-100"
+                    />
+                    <textarea
+                      placeholder="Achievements / Responsibilities"
+                      value={exp.achievements || ""}
+                      onChange={(e) => handleExperienceChange(i, "achievements", e.target.value)}
+                      className="border border-gray-300 rounded-md px-3 py-1 h-20 resize-none focus:ring focus:ring-blue-100"
+                    />
+                  </div>
                 </div>
               ))}
+              <button
+                onClick={handleAddExperience}
+                className="text-blue-600 hover:text-blue-800 text-sm mt-1"
+              >
+                + Add Experience
+              </button>
             </div>
 
             {/* EDUCATION */}
             <div>
               <h3 className="font-bold text-lg mb-2">Education</h3>
               {(resumeData.education || []).map((edu: any, i: number) => (
-                <div key={i} className="border p-4 rounded-md mb-3 flex flex-col gap-2">
-                  <input
-                    type="text"
-                    placeholder="Degree"
-                    value={edu.degree || ""}
-                    onChange={(e) => handleEducationChange(i, "degree", e.target.value)}
-                    className="border border-gray-300 rounded-md px-3 py-1 focus:ring focus:ring-blue-100"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Institution"
-                    value={edu.institution || ""}
-                    onChange={(e) => handleEducationChange(i, "institution", e.target.value)}
-                    className="border border-gray-300 rounded-md px-3 py-1 focus:ring focus:ring-blue-100"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Years (e.g., 2020–2024)"
-                    value={edu.dates?.join(" - ") || ""}
-                    onChange={(e) =>
-                      handleEducationChange(i, "dates", e.target.value)
-                    }
-                    className="border border-gray-300 rounded-md px-3 py-1 focus:ring focus:ring-blue-100"
-                  />
+                <div key={i} className="border p-4 rounded-md mb-3">
+                  <div className="flex justify-end mb-2">
+                    <button
+                      onClick={() => handleRemoveEducation(i)}
+                      className="text-red-500 hover:text-red-700 text-sm"
+                    >
+                      ✕ Remove
+                    </button>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <input
+                      type="text"
+                      placeholder="Degree"
+                      value={edu.degree || ""}
+                      onChange={(e) => handleEducationChange(i, "degree", e.target.value)}
+                      className="border border-gray-300 rounded-md px-3 py-1 focus:ring focus:ring-blue-100"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Institution"
+                      value={edu.institution || ""}
+                      onChange={(e) => handleEducationChange(i, "institution", e.target.value)}
+                      className="border border-gray-300 rounded-md px-3 py-1 focus:ring focus:ring-blue-100"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Years (e.g., 2020–2024)"
+                      value={edu.dates || ""}
+                      onChange={(e) =>
+                        handleEducationChange(i, "dates", e.target.value)
+                      }
+                      className="border border-gray-300 rounded-md px-3 py-1 focus:ring focus:ring-blue-100"
+                    />
+                  </div>
                 </div>
               ))}
+              <button
+                onClick={handleAddEducation}
+                className="text-blue-600 hover:text-blue-800 text-sm mt-1"
+              >
+                + Add Education
+              </button>
             </div>
           </div>
 

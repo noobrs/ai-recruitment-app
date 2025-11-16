@@ -1,16 +1,37 @@
+# FastAPI and Web Framework
 fastapi
 uvicorn
 python-multipart
+
+# Data Validation and Configuration
 pydantic
 pydantic-settings
+
+# Database and Storage
 supabase
+
+# Environment and HTTP
 python-dotenv
 httpx
 
-spacy
+# PDF Processing Dependencies
+spacy>=3.7.0
 spacy-layout
 gliner
 torch
 pymupdf
+rapidfuzz
+
+# Image Processing Dependencies
 opencv-python-headless
+numpy
 Pillow
+pytesseract
+
+# Machine Learning and NLP
+transformers
+torch
+
+# Computer Vision and Detection
+supervision
+inference-sdk
