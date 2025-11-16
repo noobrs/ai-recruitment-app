@@ -144,7 +144,7 @@ export default function PostJobClient() {
         <button
           type="submit"
           disabled={loading}
-          className="mt-4 w-full bg-primary text-white font-medium py-3 rounded-lg hover:bg-primary-dark transition disabled:opacity-50"
+          className="mt-4 w-full bg-secondary text-white font-medium py-3 rounded-lg hover:bg-secondary-dark transition disabled:opacity-50"
         >
           {loading ? "Posting..." : "Post Job"}
         </button>

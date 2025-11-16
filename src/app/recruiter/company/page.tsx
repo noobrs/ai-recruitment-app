@@ -132,8 +132,12 @@ export default function RecruiterCompanyPage() {
                 </div>
 
                 {/* Description */}
-                <Field label="About Company" textarea editing={isEditing}
+                <Field
+                    label="About Company"
                     value={formData.comp_description}
+                    editing={isEditing}
+                    textarea
+                    large
                     onChange={(v) => setFormData({ ...formData, comp_description: v })}
                 />
 
@@ -166,6 +170,7 @@ interface FieldProps {
     editing: boolean;
     textarea?: boolean;
     type?: string;
+    large?: boolean; // NEW → for bigger textarea
 }
 
 function Field({
@@ -175,25 +180,32 @@ function Field({
     editing,
     textarea = false,
     type = "text",
+    large = false,
 }: FieldProps) {
     return (
         <div className="mb-6">
             <label className="text-sm text-gray-500">{label}</label>
 
+            {/* DISPLAY MODE */}
             {!editing ? (
-                <p className="mt-1 text-gray-700">{value || "Not provided"}</p>
+                <p className="mt-1 text-gray-700 whitespace-pre-line text-justify">
+                    {value || "Not provided"}
+                </p>
             ) : textarea ? (
+                /* TEXTAREA (EDIT MODE) */
                 <textarea
                     value={value ?? ""}
                     onChange={(e) => onChange(e.target.value)}
-                    className="mt-2 w-full px-4 py-2 border rounded-md"
+                    className={`mt-2 w-full px-4 py-3 border rounded-md focus:ring-2 focus:ring-primary ${large ? "h-40" : "h-24"
+                        }`}
                 />
             ) : (
+                /* NORMAL INPUT (EDIT MODE) */
                 <input
                     type={type}
                     value={value ?? ""}
                     onChange={(e) => onChange(e.target.value)}
-                    className="mt-2 w-full px-4 py-2 border rounded-md"
+                    className="mt-2 w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-primary"
                 />
             )}
         </div>
