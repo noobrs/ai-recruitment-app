@@ -54,3 +54,11 @@ export function formatDistanceToNow(date: string | Date): string {
     const diffInYears = Math.floor(diffInMonths / 12);
     return `${diffInYears} ${diffInYears === 1 ? 'year' : 'years'} ago`;
 }
+
+export function formatDate(dateString: string) {
+    const d = new Date(dateString);
+    const day = String(d.getDate()).padStart(2, "0");
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const year = d.getFullYear();
+    return `${day}/${month}/${year}`; // 16/11/2025
+}

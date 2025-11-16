@@ -52,12 +52,12 @@ export default async function JobSeekerDashboard() {
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                         <BrowseJobsAction />
                         <UploadResumeAction />
-                        <button className="flex items-center justify-center px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-700 hover:border-indigo-500 hover:text-indigo-600 transition-colors">
+                        <a href="/jobseeker/applications" className="flex items-center justify-center px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-700 hover:border-indigo-500 hover:text-indigo-600 transition-colors">
                             <span className="text-sm font-medium">View Applications</span>
-                        </button>
-                        <button className="flex items-center justify-center px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-700 hover:border-indigo-500 hover:text-indigo-600 transition-colors">
+                        </a>
+                        <a href="/jobseeker/profile" className="flex items-center justify-center px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-700 hover:border-indigo-500 hover:text-indigo-600 transition-colors">
                             <span className="text-sm font-medium">Edit Profile</span>
-                        </button>
+                        </a>
                     </div>
                 </div>
 

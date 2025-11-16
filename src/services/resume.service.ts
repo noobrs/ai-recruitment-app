@@ -47,7 +47,7 @@ export async function getProfileResume(jobSeekerId: number): Promise<Resume | nu
         .select('*')
         .eq('job_seeker_id', jobSeekerId)
         .eq('is_profile', true)
-        .single();
+        .maybeSingle();
 
     if (error) {
         console.error('Error fetching profile resume:', error);

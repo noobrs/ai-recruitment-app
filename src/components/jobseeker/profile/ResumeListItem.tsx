@@ -1,6 +1,7 @@
 'use client';
 
 import { Resume } from '@/types';
+import { formatDate } from '@/utils/utils';
 
 interface ResumeListItemProps {
     resume: Resume;
@@ -49,7 +50,7 @@ export default function ResumeListItem({
                         )}
                     </div>
                     <p className="text-sm text-gray-500">
-                        Uploaded {new Date(resume.created_at).toLocaleDateString()}
+                        Uploaded {formatDate(resume.created_at)}
                     </p>
                 </div>
             </div>

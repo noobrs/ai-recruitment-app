@@ -31,6 +31,7 @@ export default async function Header() {
       ? [
         { href: "/jobseeker/jobs", label: "Jobs" },
         { href: "/jobseeker/companies", label: "Companies" },
+        { href: "/jobseeker/applications", label: "Applications" },
       ]
       : role === "recruiter"
         ? [
