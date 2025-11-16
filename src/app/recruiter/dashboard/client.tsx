@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import ViewApplicantsAction from "@/components/recruiter/applicants/ApplicantsBrowseActions";
+import PostNewJobActions from "@/components/recruiter/posts/PostNewJobActions";
 
 interface DashboardStats {
   activeJobs: number;
@@ -93,10 +94,8 @@ export default function DashboardClient({ user }: DashboardClientProps) {
         </h2>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <button className="flex items-center justify-center px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-700 hover:border-indigo-500 hover:text-indigo-600 transition-colors">
-            <span className="text-sm font-medium">Post New Job</span>
-          </button>
-
+          <PostNewJobActions />
+          
           <ViewApplicantsAction />
 
           <button className="flex items-center justify-center px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-700 hover:border-indigo-500 hover:text-indigo-600 transition-colors">
