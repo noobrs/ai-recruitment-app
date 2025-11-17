@@ -143,6 +143,13 @@ export async function updateSession(request: NextRequest) {
         return supabaseResponse
     }
 
-    // 7) Public routes pass through
+    // 7) Homepage: redirect authenticated active users to their dashboard
+    if (pathname === '/' && user && userStatus === 'active' && userRole) {
+        const url = request.nextUrl.clone();
+        url.pathname = dashboardPath;
+        return NextResponse.redirect(url);
+    }
+
+    // 8) Public routes pass through
     return supabaseResponse
 }

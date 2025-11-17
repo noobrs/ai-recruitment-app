@@ -29,12 +29,14 @@ export default async function Header() {
   const navLinks =
     role === "jobseeker"
       ? [
+        { href: "/jobseeker/dashboard", label: "Dashboard" },
         { href: "/jobseeker/jobs", label: "Jobs" },
         { href: "/jobseeker/companies", label: "Companies" },
         { href: "/jobseeker/applications", label: "Applications" },
       ]
       : role === "recruiter"
         ? [
+          { href: "/recruiter/dashboard", label: "Dashboard" },
           { href: "/recruiter/posts", label: "Posts" },
           { href: "/recruiter/applicants", label: "Applicants" },
           { href: "/recruiter/jobs", label: "Jobs" },
