@@ -1,4 +1,3 @@
-# api/image/ner_extraction.py
 import re
 from transformers import pipeline
 from pathlib import Path

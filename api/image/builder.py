@@ -1,4 +1,3 @@
-# api/image/builder.py
 def build_resume_json_v2(classified_segments, hybrid_results):
     """Builds unified structured JSON from hybrid NER + classification results."""
     resume = {

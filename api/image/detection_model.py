@@ -1,4 +1,3 @@
-# api/image/detection_model.py
 import supervision as sv
 from inference_sdk import InferenceHTTPClient
 from typing import List, Tuple

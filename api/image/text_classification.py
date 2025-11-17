@@ -1,4 +1,4 @@
-# api/image/text_classification.py
+
 from transformers import pipeline
 import os
 
