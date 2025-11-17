@@ -66,7 +66,7 @@ export async function GET() {
         recruiter_id: recruiterObj?.recruiter_id || null,
         company: {
           name: companyObj?.comp_name || "Unknown",
-          logo: companyObj?.comp_logo || "/default-company.png",
+          logo: companyObj?.comp_logo_path || "/default-company.png",
           location: companyObj?.comp_location || "Unknown",
         },
       };

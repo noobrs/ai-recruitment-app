@@ -138,7 +138,7 @@ export default function ProfileClient({ user, profileResume, allResumes }: Profi
 
 
     return (
-        <div className="max-w-5xl mx-auto px-4 py-8">
+        <div data-role="jobseeker" className="max-w-5xl mx-auto px-4 py-8">
             {/* Header */}
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
                 <ProfileHeader

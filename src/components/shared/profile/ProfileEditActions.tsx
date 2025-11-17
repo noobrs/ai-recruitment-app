@@ -34,7 +34,10 @@ export default function ProfileEditActions({
                 <button
                     onClick={onSave}
                     disabled={isSaving}
-                    className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90 transition-colors disabled:opacity-50"
+                    className="px-4 py-2 text-white rounded-md transition-colors disabled:opacity-50"
+                    style={{ backgroundColor: 'hsl(var(--accent))', opacity: isSaving ? 0.5 : 1 }}
+                    onMouseEnter={(e) => !isSaving && (e.currentTarget.style.opacity = '0.9')}
+                    onMouseLeave={(e) => !isSaving && (e.currentTarget.style.opacity = '1')}
                 >
                     {isSaving ? 'Saving...' : 'Save'}
                 </button>
@@ -45,7 +48,10 @@ export default function ProfileEditActions({
     return (
         <button
             onClick={onEdit}
-            className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90 transition-colors"
+            className="px-4 py-2 text-white rounded-md transition-colors"
+            style={{ backgroundColor: 'hsl(var(--accent))' }}
+            onMouseEnter={(e) => e.currentTarget.style.opacity = '0.9'}
+            onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
         >
             Edit Profile
         </button>

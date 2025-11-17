@@ -9,6 +9,22 @@ export type JobWithRelations = Job & {
   job_requirement?: JobRequirement[];
 };
 
+// Type for the formatted response from /api/recruiter/jobs
+export type RecruiterJobItem = {
+  job_id: number;
+  title: string;
+  location: string;
+  type: string;
+  date: string;
+  status: string;
+  recruiter_id: number | null;
+  company: {
+    name: string;
+    logo: string;
+    location: string;
+  };
+};
+
 export async function getAllJobsWithRelations(): Promise<JobWithRelations[]> {
   const supabase = await createClient();
   const { data, error } = await supabase

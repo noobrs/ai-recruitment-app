@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { UserWithRecruiter, Job } from '@/types';
+import { UserWithRecruiter } from '@/types';
+import { RecruiterJobItem } from '@/types/job.types';
 import { updateRecruiterProfile, updateUserProfile } from './actions';
 import {
     ProfileHeader,
@@ -23,7 +24,7 @@ export default function ProfileClient({ user }: ProfileClientProps) {
     const [isEditing, setIsEditing] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [jobsLoading, setJobsLoading] = useState(true);
-    const [postedJobs, setPostedJobs] = useState<Job[]>([]);
+    const [postedJobs, setPostedJobs] = useState<RecruiterJobItem[]>([]);
     const [profilePicture, setProfilePicture] = useState<File | null>(null);
     const [profilePicturePreview, setProfilePicturePreview] = useState<string | null>(null);
     const [formData, setFormData] = useState({
@@ -96,7 +97,7 @@ export default function ProfileClient({ user }: ProfileClientProps) {
     };
 
     return (
-        <div className="max-w-5xl mx-auto px-4 py-8" data-role="recruiter">
+        <div data-role="recruiter" className="max-w-5xl mx-auto px-4 py-8">
             {/* Header */}
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
                 <ProfileHeader

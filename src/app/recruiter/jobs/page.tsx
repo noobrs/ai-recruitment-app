@@ -4,14 +4,15 @@ import { useEffect, useState } from "react";
 import JobCard from "@/components/jobseeker/jobs/JobCard"; // reuse card
 import { Search, Filter, ArrowUpDown } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { RecruiterJobItem } from "@/types/job.types";
 
 const STATUS_OPTIONS = ["open", "closed", "draft", "deleted"];
 
 export default function RecruiterJobsPage() {
   const router = useRouter();
 
-  const [jobs, setJobs] = useState<any[]>([]);
-  const [filteredJobs, setFilteredJobs] = useState<any[]>([]);
+  const [jobs, setJobs] = useState<RecruiterJobItem[]>([]);
+  const [filteredJobs, setFilteredJobs] = useState<RecruiterJobItem[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>(["open"]);
   const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
@@ -119,8 +120,8 @@ export default function RecruiterJobsPage() {
               key={status}
               onClick={() => toggleStatus(status)}
               className={`px-4 py-2 capitalize rounded-full border text-sm font-medium ${active
-                  ? "bg-purple-600 text-white border-purple-600"
-                  : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                ? "bg-purple-600 text-white border-purple-600"
+                : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
                 }`}
             >
               {status}
