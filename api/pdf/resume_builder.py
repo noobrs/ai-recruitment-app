@@ -52,7 +52,7 @@ def extract_candidate_info(full_text: str, gliner: GLiNER) -> Dict:
 
 def build_skills(groups: List[Dict]) -> List[str]:
     """
-    Aggregate Skill/Language entities across all groups and de-duplicate
+    Aggregate Skill entities across all groups and de-duplicate
     based on best scores.
     """
     best: Dict[str, float] = {}
@@ -60,7 +60,23 @@ def build_skills(groups: List[Dict]) -> List[str]:
         ents = g.get("entities", [])
         for e in ents:
             lbl = e["label"].lower()
-            if lbl in ("skill", "language"):
+            if lbl == "skill":
+                _update_best(best, e["text"], e["score"])
+    items = sorted(best.items(), key=lambda kv: kv[1], reverse=True)
+    return [k for k, _ in items]
+
+
+def build_languages(groups: List[Dict]) -> List[str]:
+    """
+    Aggregate Language entities across all groups and de-duplicate
+    based on best scores.
+    """
+    best: Dict[str, float] = {}
+    for g in groups:
+        ents = g.get("entities", [])
+        for e in ents:
+            lbl = e["label"].lower()
+            if lbl == "language":
                 _update_best(best, e["text"], e["score"])
     items = sorted(best.items(), key=lambda kv: kv[1], reverse=True)
     return [k for k, _ in items]

@@ -4,7 +4,7 @@ import tempfile
 from typing import Dict, List
 from pathlib import Path
 
-from api.pdf.resume_builder import build_activities, build_certifications, build_education, build_experience, build_skills, extract_candidate_info
+from api.pdf.resume_builder import build_activities, build_certifications, build_education, build_experience, build_skills, build_languages, extract_candidate_info
 from api.pdf.utils import convert_resume_dict_to_api_response
 from api.types.types import ApiResponse, ResumeData, CandidateOut
 from .layout_extraction import load_doc_with_layout, group_spans_by_heading
@@ -48,6 +48,7 @@ def process_pdf_resume(file_bytes: bytes):
         full_text = doc.text or ""
         candidate = extract_candidate_info(full_text, gliner)
         skills = build_skills(groups)
+        languages = build_languages(groups)
         education = build_education(groups)
         experience = build_experience(groups)
         certifications = build_certifications(groups)
@@ -58,6 +59,7 @@ def process_pdf_resume(file_bytes: bytes):
             "education": education,
             "experience": experience,
             "skills": skills,
+            "languages": languages,
             "certifications": certifications,
             "activities": activities,
         })
