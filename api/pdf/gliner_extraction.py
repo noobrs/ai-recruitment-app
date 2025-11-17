@@ -1,104 +1,120 @@
-from __future__ import annotations
-import os, re
+"""
+GLiNER-related utilities:
+- Model loading
+- Entity prediction on grouped text
+- Bias (race/gender) detection via regex fallback
+"""
+
+import re
+from collections import defaultdict
 from typing import Dict, List
+
 from gliner import GLiNER
+from gliner.model import GLiNERConfig
 
-from .config import (
-    GLINER_MODEL_NAME, GLINER_LABELS,
-    THR_SKILL, THR_DEGREE, THR_TITLE, THR_LANG, REGEX_EDU_SCORE
+from api.pdf.config import BIAS_LABELS, GLINER_LABELS, GLINER_MODEL_NAME
+from api.pdf.utils import _pass_threshold
+from api.pdf.regexes import EMAIL_RE, PHONE_RE  # imported for other helpers if needed
+
+# Minimal race/gender regex fallback (for gating in bias endpoint)
+GENDER_LINE_RE = re.compile(
+    r"\b(Gender|Sex)\b\s*[:\-]?\s*(Male|Female|M|F)\b", re.I
 )
-from .types import Entity, GroupBlock
-from .utils import update_best, similar
+ETHNICITY_LINE_RE = re.compile(
+    r"\b(Ethnicity|Race)\b\s*[:\-]?\s*([A-Za-z \-]{3,})\b", re.I
+)
+ETHNIC_KEYWORDS = re.compile(
+    r"\b(Malay|Chinese|Indian|Bumiputera|Iban|Kadazan(?:-Dusun)?|Bidayuh|Orang Asli|Eurasian)\b",
+    re.I,
+)
 
-# ---------- lazy GLiNER ----------
-_GLINER: GLiNER | None = None
 
-def get_gliner() -> GLiNER:
-    global _GLINER
-    if _GLINER is None:
-        os.environ.setdefault("HF_HUB_DISABLE_TELEMETRY", "1")
-        _GLINER = GLiNER.from_pretrained(GLINER_MODEL_NAME)
-    return _GLINER
+def get_gliner(model_name: str = GLINER_MODEL_NAME) -> GLiNER:
+    """
+    Load GLiNER model and print its backbone for debugging.
+    """
+    cfg = GLiNERConfig.from_pretrained(model_name)
+    print(f"[GLiNER] backbone: {cfg.model_name}")
+    return GLiNER.from_pretrained(model_name)
 
-# ---------- degree/major regex ----------
-DEGREE_PATTERNS = [
-    r"\bBachelor(?:'s)?\s+(?:of\s+)?([A-Z][\w &/().,-]{2,})(?=$|[.,;)\n])",
-    r"\bBachelor(?:'s)?\s+in\s+([A-Z][\w &/().,-]{2,})(?=$|[.,;)\n])",
-    r"\bB\.?\s?(?:Sc|Eng|Tech|CompSci|CS|IT|A|BA)\b(?:\s*\(Hons?\))?\s+([A-Z][\w &/().,-]{2,})",
-    r"\bMaster(?:'s)?\s+(?:of\s+)?([A-Z][\w &/().,-]{2,})(?=$|[.,;)\n])",
-    r"\bMaster(?:'s)?\s+in\s+([A-Z][\w &/().,-]{2,})(?=$|[.,;)\n])",
-    r"\bM\.?\s?(?:Sc|Eng|Tech|IT|BA|PA|Ed)\b(?:\s*\(Hons?\))?\s+([A-Z][\w &/().,-]{2,})",
-    r"\bMBA\b(?:\s?(?:in|of)\s([A-Z][\w &/().,-]{2,}))?",
-    r"\bPh\.?D\.?\s+in\s+([A-Z][\w &/().,-]{2,})",
-    r"\bDoctor\s+of\s+([A-Z][\w &/().,-]{2,})",
-    r"\bDPhil\s+in\s+([A-Z][\w &/().,-]{2,})",
-    r"\bDiploma\s+(?:in|of)\s+([A-Z][\w &/().,-]{2,})",
-]
 
-def _infer_degree_prefix(context: str) -> str:
-    ctx = context.lower()
-    if "bachelor" in ctx or re.search(r"\bB\.?\s?(Sc|Eng|Tech|A|CS|IT)\b", ctx, re.I):
-        return "Bachelor of "
-    if "master" in ctx or re.search(r"\bM\.?\s?(Sc|Eng|Tech|IT|BA|PA|Ed)\b", ctx, re.I) or "mba" in ctx:
-        return "Master of "
-    if "phd" in ctx or "doctor of" in ctx or "dphil" in ctx:
-        return "Doctor of "
-    if "diploma" in ctx:
-        return "Diploma in "
-    return ""
+def run_gliner_on_group(gliner: GLiNER, heading: str, body: str) -> Dict:
+    """
+    Run GLiNER on a grouped section (heading + body) and return:
+      - entities: non-bias entities that pass threshold
+      - bias_hits: entities labeled with bias labels (race/gender)
+      - sensitive: True if any bias entity is present
 
-def extract_majors_from_text(text: str) -> List[str]:
-    majors: List[str] = []
-    for pat in DEGREE_PATTERNS:
-        for m in re.finditer(pat, text, flags=re.IGNORECASE):
-            span_text  = text[max(0, m.start()-30): m.end()+30]
-            major_core = m.group(1) if m.lastindex else "Business Administration"
-            major_core = re.sub(r"[\s,.;:)\]]+$", "", (major_core or "").strip())
-            prefix     = _infer_degree_prefix(span_text)
-            pretty     = f"{prefix}{major_core}" if prefix else major_core
-            if pretty and all(not similar(pretty, x) for x in majors):
-                majors.append(pretty)
-    return majors
+    Returns:
+        {
+            "entities": [...],
+            "bias_hits": [...],
+            "sensitive": True/False
+        }
+    """
 
-def run_gliner_on_group(
-    gliner: GLiNER,
-    heading: str,
-    body: str,
-    thr_skill: float = THR_SKILL,
-    thr_degree: float = THR_DEGREE,
-    thr_title: float = THR_TITLE,
-    thr_lang: float  = THR_LANG,
-) -> List[Entity]:
-    out: List[Entity] = []
-    thr_map = {
-        "skill": thr_skill,
-        "degree": thr_degree,
-        "job title": thr_title,
-        "language": thr_lang,
-    }
+    def predict(text: str):
+        if not text or not text.strip():
+            return []
+        return gliner.predict_entities(text, GLINER_LABELS, threshold=0.0)
 
-    def _keep(e: Dict) -> bool:
-        score = float(e.get("score", 0.0))
-        need = thr_map.get((e.get("label") or "").lower(), 0.0)
-        return score >= need
-
-    if (body or "").strip():
-        for e in gliner.predict_entities(body, GLINER_LABELS, threshold=0.0):
-            if _keep(e):
-                out.append({
-                    "text": e["text"], "label": e["label"],
-                    "start_char": int(e.get("start", -1)),
-                    "end_char": int(e.get("end", -1)),
-                    "score": float(e.get("score", 0.0)),
-                })
-
+    raw = []
+    raw += predict(body)
     if heading and heading not in ("", "NO_HEADING"):
-        for e in gliner.predict_entities(heading, GLINER_LABELS, threshold=0.0):
-            if _keep(e):
-                out.append({
-                    "text": e["text"], "label": e["label"],
-                    "start_char": int(e.get("start", -1)),
-                    "end_char": int(e.get("end", -1)),
-                    "score": float(e.get("score", 0.0)),
-                })
-    return out
+        raw += predict(heading)
+
+    entities: List[Dict] = []
+    bias_hits: List[Dict] = []
+
+    for e in raw:
+        lbl = (e.get("label") or "").strip()
+        score = float(e.get("score", 0.0))
+        if not _pass_threshold(lbl, score):
+            continue
+
+        item = {
+            "text": e["text"],
+            "label": lbl,
+            "start_char": int(e.get("start", -1)),
+            "end_char": int(e.get("end", -1)),
+            "score": float(score),
+        }
+        if lbl in BIAS_LABELS:
+            bias_hits.append(item)
+        else:
+            entities.append(item)
+
+    sensitive = len(bias_hits) > 0
+    return {"entities": entities, "bias_hits": bias_hits, "sensitive": sensitive}
+
+
+def detect_race_gender_regex(text: str) -> List[Dict]:
+    """
+    Regex-based fallback for detecting gender and race/ethnicity
+    in a text block, used to mark groups as sensitive.
+    """
+    hits: List[Dict] = []
+
+    def add(_type: str, match_text: str, full_text: str, start: int, end: int):
+        span = full_text[max(0, start - 20) : end + 20]
+        hits.append(
+            {"type": _type, "value": match_text.strip(), "snippet": span.strip()}
+        )
+
+    for m in GENDER_LINE_RE.finditer(text):
+        add("gender", m.group(0), text, m.start(), m.end())
+
+    for m in ETHNICITY_LINE_RE.finditer(text):
+        add("race_ethnicity", m.group(0), text, m.start(), m.end())
+
+    for m in ETHNIC_KEYWORDS.finditer(text):
+        add("race_ethnicity", m.group(0), text, m.start(), m.end())
+
+    return hits
+
+
+__all__ = [
+    "get_gliner",
+    "run_gliner_on_group",
+    "detect_race_gender_regex",
+]

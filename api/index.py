@@ -2,6 +2,8 @@ from fastapi import FastAPI, HTTPException, Request, UploadFile, File, Form, Bod
 from fastapi.middleware.cors import CORSMiddleware
 
 import logging
+
+from api.types.types import ApiResponse
 from .supabase_client import supabase
 
 # import pipeline stage functions
@@ -245,7 +247,7 @@ async def api_process_image(file: UploadFile = File(...)):
 # ----------------------
 
 @app.post("/api/py/process-pdf")
-async def api_process_pdf(file: UploadFile = File(...)):
+async def api_process_pdf(file: UploadFile = File(...)) -> ApiResponse:
     """Full end-to-end pipeline for PDF: layout -> grouping -> GLiNER -> aggregate -> build json."""
     from api.pdf.pipeline import process_pdf_resume
     

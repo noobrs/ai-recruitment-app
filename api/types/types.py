@@ -52,4 +52,5 @@ class ResumeData(BaseModel):
 
 class ApiResponse(BaseModel):
     status: str
-    data: ResumeData
+    data: Optional[ResumeData] = None
+    message: Optional[str] = None
