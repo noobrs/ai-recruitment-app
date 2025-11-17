@@ -2,164 +2,89 @@
 
 import { useState, useEffect } from "react";
 import CompanyProfileActions from "@/components/recruiter/company/CompanyProfileActions";
+import { getCompanyForRecruiter, updateCompany } from "./actions";
 
 export default function RecruiterCompanyPage() {
     const [company, setCompany] = useState<any>(null);
-    const [formData, setFormData] = useState({
-        comp_name: "",
-        comp_industry: "",
-        comp_website: "",
-    });
-
     const [loading, setLoading] = useState(true);
     const [isEditing, setIsEditing] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
 
-    // Fetch company
+    const [formData, setFormData] = useState({
+        comp_name: "",
+        comp_industry: "",
+        comp_website: "",
+        comp_description: "",
+        comp_location: "",
+        comp_size: "",
+        comp_founded: "",
+    });
+
+    // Load company
     useEffect(() => {
-        async function fetchCompany() {
-            try {
-                const res = await fetch("/api/recruiter/company");
-
-                const data = await res.json();
-                if (!res.ok) throw new Error(data.error);
-
-                setCompany(data.company);
-                setFormData({
-                    comp_name: data.company.comp_name || "",
-                    comp_industry: data.company.comp_industry || "",
-                    comp_website: data.company.comp_website || "",
-                });
-            } catch (err) {
-                console.error("Fetch error:", err);
-            } finally {
-                setLoading(false);
-            }
+        async function load() {
+            const res = await getCompanyForRecruiter();
+            if (!res.company) return;
+            setCompany(res.company);
+            setFormData({
+                comp_name: res.company.comp_name || "",
+                comp_industry: res.company.comp_industry || "",
+                comp_website: res.company.comp_website || "",
+                comp_description: res.company.comp_description || "",
+                comp_location: res.company.comp_location || "",
+                comp_size: res.company.comp_size || "",
+                comp_founded: res.company.comp_founded?.toString() || "",
+            });
+            setLoading(false);
         }
-
-        fetchCompany();
+        load();
     }, []);
 
-    // Change handler
-    const handleChange = (field: string, value: string) => {
-        setFormData((prev) => ({ ...prev, [field]: value }));
-    };
-
-    // Save
-    const handleSave = async () => {
+    const save = async () => {
         setIsSaving(true);
-        try {
-            const res = await fetch("/api/recruiter/company", {
-                method: "PATCH",
-                body: JSON.stringify(formData),
-            });
-
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error);
-
-            setCompany(data.company);
+        const result = await updateCompany(formData);
+        if (!result.error) {
+            setCompany(result.company);
             setIsEditing(false);
-        } catch (err: any) {
-            alert(err.message);
-        } finally {
-            setIsSaving(false);
         }
+        setIsSaving(false);
     };
 
-    // Cancel
-    const handleCancel = () => {
+    const cancel = () => {
         setFormData({
             comp_name: company.comp_name,
             comp_industry: company.comp_industry,
             comp_website: company.comp_website,
+            comp_description: company.comp_description,
+            comp_location: company.comp_location,
+            comp_size: company.comp_size,
+            comp_founded: company.comp_founded,
         });
         setIsEditing(false);
     };
 
     if (loading)
-        return (
-            <div className="flex items-center justify-center h-screen text-gray-600">
-                Loading company profile...
-            </div>
-        );
+        return <div className="flex items-center justify-center p-20 text-gray-600 min-h-screen">Loading company…</div>;
 
     return (
-        <div className="max-w-5xl mx-auto p-10 bg-white shadow-md rounded-xl border border-gray-200 my-10">
+        <div className="max-w-5xl mx-auto p-10 bg-white shadow-md rounded-xl border border-gray-200 my-10 min-h-screen">
 
-            {/* Header */}
             <div className="flex justify-between items-start mb-8">
                 <div>
                     <h1 className="text-3xl font-bold">Company Profile</h1>
-                    <p className="text-gray-500 mt-1">
-                        Manage your company’s public information
-                    </p>
+                    <p className="text-gray-500 mt-1">Manage your company details</p>
                 </div>
-
                 <CompanyProfileActions
                     isEditing={isEditing}
                     isSaving={isSaving}
                     onEdit={() => setIsEditing(true)}
-                    onCancel={handleCancel}
-                    onSave={handleSave}
+                    onCancel={cancel}
+                    onSave={save}
                 />
             </div>
 
-            {/* Company Info Card */}
-            <div className="bg-gray-50 p-8 rounded-xl border border-gray-200">
-
-                {/* Company Name */}
-                <div className="mb-6">
-                    <label className="text-sm text-gray-500">Company Name</label>
-                    {!isEditing ? (
-                        <p className="text-lg font-semibold mt-1">{company.comp_name}</p>
-                    ) : (
-                        <input
-                            type="text"
-                            value={formData.comp_name}
-                            onChange={(e) => handleChange("comp_name", e.target.value)}
-                            className="mt-2 w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-primary"
-                        />
-                    )}
-                </div>
-
-                {/* Industry */}
-                <div className="mb-6">
-                    <label className="text-sm text-gray-500">Industry</label>
-                    {!isEditing ? (
-                        <p className="text-gray-700 mt-1">
-                            {company.comp_industry || "Not specified"}
-                        </p>
-                    ) : (
-                        <input
-                            type="text"
-                            value={formData.comp_industry}
-                            onChange={(e) => handleChange("comp_industry", e.target.value)}
-                            className="mt-2 w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-primary"
-                        />
-                    )}
-                </div>
-
-                {/* Website */}
-                <div className="mb-6">
-                    <label className="text-sm text-gray-500">Company Website</label>
-                    {!isEditing ? (
-                        <a
-                            href={company.comp_website}
-                            target="_blank"
-                            className="text-blue-600 underline mt-1 block"
-                        >
-                            {company.comp_website || "Not provided"}
-                        </a>
-                    ) : (
-                        <input
-                            type="text"
-                            value={formData.comp_website}
-                            onChange={(e) => handleChange("comp_website", e.target.value)}
-                            className="mt-2 w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-primary"
-                            placeholder="https://example.com"
-                        />
-                    )}
-                </div>
+            {/* Main Company Card */}
+            <div className="bg-gray-50 px-8 py-6 rounded-xl border border-gray-200">
 
                 {/* Company Logo Placeholder */}
                 <div className="mb-6">
@@ -173,7 +98,116 @@ export default function RecruiterCompanyPage() {
                         />
                     </div>
                 </div>
+
+                {/* Company Name */}
+                <Field label="Company Name" editing={isEditing} value={formData.comp_name}
+                    onChange={(v) => setFormData({ ...formData, comp_name: v })}
+                />
+
+                {/* Industry */}
+                <Field label="Industry" editing={isEditing} value={formData.comp_industry}
+                    onChange={(v) => setFormData({ ...formData, comp_industry: v })}
+                />
+
+                {/* Website */}
+                <div className="mb-6">
+                    <label className="text-sm text-gray-500">Website</label>
+                    {!isEditing ? (
+                        <a
+                            href={company.comp_website}
+                            target="_blank"
+                            className="text-blue-600 underline mt-1 block"
+                        >
+                            {company.comp_website || "Not provided"}
+                        </a>
+                    ) : (
+                        <input
+                            type="text"
+                            value={formData.comp_website}
+                            onChange={(v) => setFormData({ ...formData, comp_website: v.target.value })}
+                            className="mt-2 w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-primary"
+                            placeholder="https://example.com"
+                        />
+                    )}
+                </div>
+
+                {/* Description */}
+                <Field
+                    label="About Company"
+                    value={formData.comp_description}
+                    editing={isEditing}
+                    textarea
+                    large
+                    onChange={(v) => setFormData({ ...formData, comp_description: v })}
+                />
+
+                {/* Location */}
+                <Field label="Headquarters Location" editing={isEditing}
+                    value={formData.comp_location}
+                    onChange={(v) => setFormData({ ...formData, comp_location: v })}
+                />
+
+                {/* Size */}
+                <Field label="Company Size" editing={isEditing} value={formData.comp_size}
+                    onChange={(v) => setFormData({ ...formData, comp_size: v })}
+                />
+
+                {/* Founded Year */}
+                <Field label="Founded Year" editing={isEditing} type="number"
+                    value={formData.comp_founded}
+                    onChange={(v) => setFormData({ ...formData, comp_founded: v })}
+                />
+
             </div>
+        </div>
+    );
+}
+
+interface FieldProps {
+    label: string;
+    value: string | number | null;
+    onChange: (value: string) => void;
+    editing: boolean;
+    textarea?: boolean;
+    type?: string;
+    large?: boolean; // NEW → for bigger textarea
+}
+
+function Field({
+    label,
+    value,
+    onChange,
+    editing,
+    textarea = false,
+    type = "text",
+    large = false,
+}: FieldProps) {
+    return (
+        <div className="mb-6">
+            <label className="text-sm text-gray-500">{label}</label>
+
+            {/* DISPLAY MODE */}
+            {!editing ? (
+                <p className="mt-1 text-gray-700 whitespace-pre-line text-justify">
+                    {value || "Not provided"}
+                </p>
+            ) : textarea ? (
+                /* TEXTAREA (EDIT MODE) */
+                <textarea
+                    value={value ?? ""}
+                    onChange={(e) => onChange(e.target.value)}
+                    className={`mt-2 w-full px-4 py-3 border rounded-md focus:ring-2 focus:ring-primary ${large ? "h-40" : "h-24"
+                        }`}
+                />
+            ) : (
+                /* NORMAL INPUT (EDIT MODE) */
+                <input
+                    type={type}
+                    value={value ?? ""}
+                    onChange={(e) => onChange(e.target.value)}
+                    className="mt-2 w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-primary"
+                />
+            )}
         </div>
     );
 }

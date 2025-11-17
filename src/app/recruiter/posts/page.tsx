@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { MoreVertical, Search, Filter, ChevronDown, Star } from "lucide-react";
+import { MoreVertical, Search, Filter, ChevronDown, Star, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 interface JobPost {
@@ -94,9 +94,9 @@ export default function RecruiterPostsPage() {
 
         <button
           className="flex items-center px-4 py-2 border rounded-full font-medium hover:bg-gray-50"
-          onClick={() => router.push("/recruiter/applicants")}
+          onClick={() => router.push("/recruiter/jobs/create")}
         >
-          Applicants <ChevronDown className="ml-2 w-4 h-4" />
+          New Job Post <Plus className="ml-2 w-4 h-4" />
         </button>
       </div>
 
