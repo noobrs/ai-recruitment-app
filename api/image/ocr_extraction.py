@@ -1,4 +1,3 @@
-# api/image/ocr_extraction.py
 import cv2
 import pytesseract
 import platform
