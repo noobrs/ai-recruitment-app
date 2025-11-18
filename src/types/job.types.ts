@@ -9,6 +9,17 @@ export type JobWithRelations = Job & {
   job_requirement?: JobRequirement[];
 };
 
+export interface JobDetails {
+  job_id: number;
+  job_title: string;
+  job_location: string;
+  job_type: string;
+  company?: {
+    comp_name: string;
+    comp_logo_path?: string | null;
+  } | null;
+}
+
 // Type for the formatted response from /api/recruiter/jobs
 export type RecruiterJobItem = {
   job_id: number;

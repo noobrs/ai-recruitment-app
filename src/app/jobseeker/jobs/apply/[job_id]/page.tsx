@@ -1,109 +1,56 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
-import InputUploadFile from "@/components/shared/inputs/InputUploadFile";
-import ButtonFilledBlack from "@/components/shared/buttons/ButtonFilledBlack";
-import { ArrowLeftIcon } from "@heroicons/react/24/outline";
-import { submitApplication } from "./actions";
-import { fetchFromFastAPI } from "@/utils/api";
+import { useState, useEffect } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import { ResumeData } from '@/types/fastapi.types';
+import { JobDetails } from '@/types/job.types';
+import {
+  ResumeUploadStep,
+  ResumeReviewStep,
+  SuccessConfirmation,
+} from '@/components/jobseeker/jobs';
+
+export type ApplicationStep = 1 | 2 | 3;
 
 export default function ApplyJobPage() {
   const router = useRouter();
-  const { job_id } = useParams();
-  const [job, setJob] = useState<any>(null);
-  const [step, setStep] = useState(1); // Step 1: Upload resume, Step 2: Review extracted info
+  const { job_id } = useParams<{ job_id: string }>();
+  const [job, setJob] = useState<JobDetails | null>(null);
+  const [step, setStep] = useState<ApplicationStep>(1);
   const [cvFile, setCvFile] = useState<File | null>(null);
-  const [resumeData, setResumeData] = useState<any>(null);
-  const [isExtracting, setIsExtracting] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
-  const [agreePolicy, setAgreePolicy] = useState(false);
+  const [resumeData, setResumeData] = useState<ResumeData | null>(null);
 
   // Fetch job details for display
   useEffect(() => {
     async function fetchJobDetails() {
       try {
-        const res = await fetch("/api/jobseeker/jobs");
+        const res = await fetch('/api/jobseeker/jobs');
         if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
 
         const data = await res.json();
         const jobs = Array.isArray(data) ? data : data.jobs;
-        const jobFound = jobs?.find((j: any) => j.job_id.toString() === job_id);
+        const jobFound = jobs?.find(
+          (j: JobDetails) => j.job_id.toString() === job_id
+        );
         setJob(jobFound || null);
       } catch (err) {
-        console.error("Error fetching job:", err);
+        console.error('Error fetching job:', err);
       }
     }
     fetchJobDetails();
   }, [job_id]);
 
-  // === Step 1: Upload Resume + Extraction ===
-  const handleResumeUpload = async () => {
-    if (!cvFile) {
-      setErrorMessage("Please upload your resume to continue.");
-      return;
-    }
-
-    setIsExtracting(true);
-    setErrorMessage("");
-
-    try {
-      const formData = new FormData();
-      formData.append("file", cvFile);
-
-      // Detect file type and route to appropriate endpoint
-      const isPdf = cvFile.type === "application/pdf" || cvFile.name.toLowerCase().endsWith(".pdf");
-      const endpoint = isPdf ? "/api/py/process-pdf" : "/api/py/process-image";
-
-      console.log(`Processing ${isPdf ? "PDF" : "image"} resume via ${endpoint}`);
-
-      const result = await fetchFromFastAPI(endpoint, {
-        method: "POST",
-        body: formData,
-      });
-
-      if (result.status !== "success") throw new Error("Failed to extract resume data");
-
-      setResumeData(result.data);
-      console.log("Extracted resume data:", result.data);
-      setStep(2);
-    } catch (err: any) {
-      console.error(err);
-      setErrorMessage("Resume processing failed. Please try again.");
-    } finally {
-      setIsExtracting(false);
-    }
+  const handleUploadSuccess = (data: ResumeData, file: File) => {
+    setResumeData(data);
+    setCvFile(file);
+    setStep(2);
   };
 
-  // === Step 2: Submit Application ===
-  const handleSubmit = async () => {
-    if (!agreePolicy) {
-      setErrorMessage("Please agree to the Privacy Policy before submitting.");
-      return;
-    }
-
-    setIsSubmitting(true);
-    setErrorMessage("");
-
-    try {
-      const formData = new FormData();
-      formData.append("job_id", String(job_id));
-      formData.append("cvFile", cvFile as File);
-      formData.append("extracted_skills", JSON.stringify(resumeData.skills || []));
-      formData.append("extracted_experiences", JSON.stringify(resumeData.experience || []));
-      formData.append("extracted_education", JSON.stringify(resumeData.education || []));
-
-      const result = await submitApplication(formData);
-      if (result.success) setStep(3);
-    } catch (err: any) {
-      setErrorMessage(err.message || "Failed to submit application.");
-    } finally {
-      setIsSubmitting(false);
-    }
+  const handleReviewSuccess = () => {
+    setStep(3);
   };
 
-  // === Loading job ===
+  // Loading job details
   if (!job) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen text-gray-600">
@@ -112,317 +59,40 @@ export default function ApplyJobPage() {
     );
   }
 
-  // === Step 3: Submission Confirmation ===
+  // Step 3: Success confirmation
   if (step === 3) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen text-center p-10">
-        <h1 className="text-3xl font-bold text-green-600 mb-3">
-          🎉 Application Submitted!
-        </h1>
-        <p className="text-gray-600 mb-6">
-          Thank you for applying for {job.job_title}.
-        </p>
-        <ButtonFilledBlack
-          text="Back to Job Listings"
-          className="px-6 py-3"
-          onClick={() => router.push("/jobseeker/job")}
-        />
-      </div>
+      <SuccessConfirmation
+        jobTitle={job.job_title}
+        onNavigateBack={() => router.push('/jobseeker/jobs')}
+      />
     );
   }
 
-  // === Step 1: Upload Resume ===
+  // Step 1: Upload resume
   if (step === 1) {
     return (
-      <div className="flex flex-col items-center justify-center bg-gray-50 py-25">
-        <div className="bg-white shadow-md rounded-2xl p-10 w-full max-w-2xl">
-          {/* Back Button */}
-          <button
-            onClick={() => router.back()}
-            className="flex items-center text-gray-500 hover:text-black transition mb-6"
-          >
-            <ArrowLeftIcon className="w-5 h-5 mr-1" />
-            Back
-          </button>
-
-          {/* Job Header */}
-          <div className="flex flex-row items-center mb-4">
-            <img
-              src={job.company?.comp_logo_path || "/default-company.png"}
-              alt=""
-              className="w-8 h-8 mr-2"
-            />
-            <p className="text-lg text-gray-500">{job.company?.comp_name}</p>
-          </div>
-          <h1 className="text-4xl font-bold mb-2">{job.job_title}</h1>
-          <p className="text-gray-500 font-bold text-sm mb-6">
-            {job.job_location} ({job.job_type})
-          </p>
-          <div className="w-full h-px bg-gray-200 mb-8"></div>
-
-          {/* Upload Form */}
-          <h2 className="text-2xl font-bold mb-4">Upload Your Resume</h2>
-          <p className="text-gray-500 text-sm mb-6">
-            Upload your resume for automatic information extraction.
-          </p>
-
-          {errorMessage && (
-            <div className="text-red-500 bg-red-50 border border-red-200 px-4 py-2 rounded-md mb-6 text-center">
-              {errorMessage}
-            </div>
-          )}
-
-          <InputUploadFile
-            label="Resume (PDF or Image)"
-            className="w-full"
-            accept=".pdf,image/*"
-            onChange={(file) => setCvFile(file)}
-          />
-          <ButtonFilledBlack
-            text={isExtracting ? "Processing..." : "Continue"}
-            className="w-full py-3 mt-6"
-            disabled={isExtracting}
-            onClick={handleResumeUpload}
-          />
-        </div>
-      </div>
+      <ResumeUploadStep
+        job={job}
+        onUploadSuccess={handleUploadSuccess}
+        onBack={() => router.back()}
+      />
     );
   }
 
-  // === Step 2: Review Extracted Info ===
-  if (step === 2) {
-    const handleSkillChange = (index: number, newValue: string) => {
-      const updatedSkills = [...(resumeData.skills || [])];
-      updatedSkills[index] = newValue;
-      setResumeData({ ...resumeData, skills: updatedSkills });
-    };
-
-    const handleAddSkill = () => {
-      const updatedSkills = [...(resumeData.skills || []), ""];
-      setResumeData({ ...resumeData, skills: updatedSkills });
-    };
-
-    const handleRemoveSkill = (index: number) => {
-      const updatedSkills = [...(resumeData.skills || [])];
-      updatedSkills.splice(index, 1);
-      setResumeData({ ...resumeData, skills: updatedSkills });
-    };
-
-    const handleExperienceChange = (index: number, key: string, value: string) => {
-      const updated = [...(resumeData.experience || [])];
-      updated[index][key] = value;
-      setResumeData({ ...resumeData, experience: updated });
-    };
-
-    const handleAddExperience = () => {
-      const updatedExperience = [...(resumeData.experience || []), { job_title: "", company: "", achievements: "" }];
-      setResumeData({ ...resumeData, experience: updatedExperience });
-    };
-
-    const handleRemoveExperience = (index: number) => {
-      const updatedExperience = [...(resumeData.experience || [])];
-      updatedExperience.splice(index, 1);
-      setResumeData({ ...resumeData, experience: updatedExperience });
-    };
-
-    const handleEducationChange = (index: number, key: string, value: string) => {
-      const updated = [...(resumeData.education || [])];
-      updated[index][key] = value;
-      setResumeData({ ...resumeData, education: updated });
-    };
-
-    const handleAddEducation = () => {
-      const updatedEducation = [...(resumeData.education || []), { degree: "", institution: "", dates: [] }];
-      setResumeData({ ...resumeData, education: updatedEducation });
-    };
-
-    const handleRemoveEducation = (index: number) => {
-      const updatedEducation = [...(resumeData.education || [])];
-      updatedEducation.splice(index, 1);
-      setResumeData({ ...resumeData, education: updatedEducation });
-    };
-
+  // Step 2: Review and submit
+  if (step === 2 && resumeData && cvFile) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 py-10">
-        <div className="bg-white shadow-md rounded-2xl p-10 w-full max-w-3xl">
-          <button
-            onClick={() => setStep(1)}
-            className="flex items-center text-gray-500 hover:text-black transition mb-6"
-          >
-            <ArrowLeftIcon className="w-5 h-5 mr-1" />
-            Back
-          </button>
-
-          {/* Job Info */}
-          <div className="flex flex-row items-center mb-4">
-            <img
-              src={job.company?.comp_logo_path || "/default-company.png"}
-              alt=""
-              className="w-8 h-8 mr-2"
-            />
-            <p className="text-lg text-gray-500">{job.company?.comp_name}</p>
-          </div>
-          <h1 className="text-4xl font-bold mb-2">{job.job_title}</h1>
-          <p className="text-gray-500 font-bold text-sm mb-6">
-            {job.job_location} ({job.job_type})
-          </p>
-          <div className="w-full h-px bg-gray-200 mb-8"></div>
-
-          <h2 className="text-2xl font-bold mb-6">Review & Edit Extracted Information</h2>
-
-          <div className="flex flex-col gap-8 text-gray-700">
-            {/* SKILLS */}
-            <div>
-              <h3 className="font-bold text-lg mb-2">Skills</h3>
-              <div className="flex flex-col gap-2">
-                {(resumeData.skills || []).map((s: string, i: number) => (
-                  <div key={i} className="flex gap-2 items-center">
-                    <input
-                      type="text"
-                      value={s}
-                      onChange={(e) => handleSkillChange(i, e.target.value)}
-                      className="border border-gray-300 rounded-md px-3 py-1 w-full focus:ring focus:ring-blue-100"
-                    />
-                    <button
-                      onClick={() => handleRemoveSkill(i)}
-                      className="text-red-500 hover:text-red-700"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                ))}
-                <button
-                  onClick={handleAddSkill}
-                  className="text-blue-600 hover:text-blue-800 text-sm mt-1"
-                >
-                  + Add Skill
-                </button>
-              </div>
-            </div>
-
-            {/* EXPERIENCE */}
-            <div>
-              <h3 className="font-bold text-lg mb-2">Experience</h3>
-              {(resumeData.experience || []).map((exp: any, i: number) => (
-                <div key={i} className="border p-4 rounded-md mb-3">
-                  <div className="flex justify-end mb-2">
-                    <button
-                      onClick={() => handleRemoveExperience(i)}
-                      className="text-red-500 hover:text-red-700 text-sm"
-                    >
-                      ✕ Remove
-                    </button>
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <input
-                      type="text"
-                      placeholder="Job Title"
-                      value={exp.job_title || ""}
-                      onChange={(e) => handleExperienceChange(i, "job_title", e.target.value)}
-                      className="border border-gray-300 rounded-md px-3 py-1 focus:ring focus:ring-blue-100"
-                    />
-                    <input
-                      type="text"
-                      placeholder="Company"
-                      value={exp.company || ""}
-                      onChange={(e) => handleExperienceChange(i, "company", e.target.value)}
-                      className="border border-gray-300 rounded-md px-3 py-1 focus:ring focus:ring-blue-100"
-                    />
-                    <textarea
-                      placeholder="Achievements / Responsibilities"
-                      value={exp.achievements || ""}
-                      onChange={(e) => handleExperienceChange(i, "achievements", e.target.value)}
-                      className="border border-gray-300 rounded-md px-3 py-1 h-20 resize-none focus:ring focus:ring-blue-100"
-                    />
-                  </div>
-                </div>
-              ))}
-              <button
-                onClick={handleAddExperience}
-                className="text-blue-600 hover:text-blue-800 text-sm mt-1"
-              >
-                + Add Experience
-              </button>
-            </div>
-
-            {/* EDUCATION */}
-            <div>
-              <h3 className="font-bold text-lg mb-2">Education</h3>
-              {(resumeData.education || []).map((edu: any, i: number) => (
-                <div key={i} className="border p-4 rounded-md mb-3">
-                  <div className="flex justify-end mb-2">
-                    <button
-                      onClick={() => handleRemoveEducation(i)}
-                      className="text-red-500 hover:text-red-700 text-sm"
-                    >
-                      ✕ Remove
-                    </button>
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <input
-                      type="text"
-                      placeholder="Degree"
-                      value={edu.degree || ""}
-                      onChange={(e) => handleEducationChange(i, "degree", e.target.value)}
-                      className="border border-gray-300 rounded-md px-3 py-1 focus:ring focus:ring-blue-100"
-                    />
-                    <input
-                      type="text"
-                      placeholder="Institution"
-                      value={edu.institution || ""}
-                      onChange={(e) => handleEducationChange(i, "institution", e.target.value)}
-                      className="border border-gray-300 rounded-md px-3 py-1 focus:ring focus:ring-blue-100"
-                    />
-                    <input
-                      type="text"
-                      placeholder="Years (e.g., 2020–2024)"
-                      value={edu.dates || ""}
-                      onChange={(e) =>
-                        handleEducationChange(i, "dates", e.target.value)
-                      }
-                      className="border border-gray-300 rounded-md px-3 py-1 focus:ring focus:ring-blue-100"
-                    />
-                  </div>
-                </div>
-              ))}
-              <button
-                onClick={handleAddEducation}
-                className="text-blue-600 hover:text-blue-800 text-sm mt-1"
-              >
-                + Add Education
-              </button>
-            </div>
-          </div>
-
-          {/* Privacy Policy Checkbox */}
-          <div className="flex items-start gap-3 mt-6 text-sm text-gray-600">
-            <input
-              type="checkbox"
-              checked={agreePolicy}
-              onChange={(e) => setAgreePolicy(e.target.checked)}
-              className="w-4 h-4 accent-primary cursor-pointer"
-            />
-            <span>
-              By submitting this application, I agree to the{" "}
-              <a href="/privacy-policy" className="text-blue-600 underline">
-                Privacy Policy
-              </a>{" "}
-              and confirm that Jobior may store my resume information to process my application.
-            </span>
-          </div>
-
-          {errorMessage && (
-            <div className="text-red-500 mt-4 text-center">{errorMessage}</div>
-          )}
-
-          <ButtonFilledBlack
-            text={isSubmitting ? "Submitting..." : "Submit Application"}
-            className="w-full py-3 mt-6"
-            disabled={isSubmitting}
-            onClick={handleSubmit}
-          />
-        </div>
-      </div>
+      <ResumeReviewStep
+        job={job}
+        resumeData={resumeData}
+        cvFile={cvFile}
+        jobId={job_id}
+        onBack={() => setStep(1)}
+        onSuccess={handleReviewSuccess}
+      />
     );
   }
+
+  return null;
 }

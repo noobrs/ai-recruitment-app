@@ -53,3 +53,6 @@ export type NotificationUpdate = TablesUpdate<'notification'>;
 
 // Export composite types
 export * from './composite.types';
+
+// Export FastAPI related types
+export * from './fastapi.types';
