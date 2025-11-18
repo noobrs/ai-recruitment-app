@@ -139,22 +139,13 @@ export default function ResumeUploadStep({
                     Select an existing resume or upload a new one.
                 </p>
 
-                {/* Toggle between select and upload */}
+                {/* Upload New Resume Button */}
                 <div className="flex gap-2 mb-6">
-                    <button
-                        onClick={() => setMode('select')}
-                        className={`flex-1 py-2 px-4 rounded-lg border transition-colors ${mode === 'select'
-                                ? 'bg-indigo-600 text-white border-indigo-600'
-                                : 'bg-white text-gray-700 border-gray-300 hover:border-indigo-600'
-                            }`}
-                    >
-                        Select Existing
-                    </button>
                     <button
                         onClick={() => setMode('upload')}
                         className={`flex-1 py-2 px-4 rounded-lg border transition-colors ${mode === 'upload'
-                                ? 'bg-indigo-600 text-white border-indigo-600'
-                                : 'bg-white text-gray-700 border-gray-300 hover:border-indigo-600'
+                            ? 'bg-indigo-600 text-white border-indigo-600'
+                            : 'bg-white text-gray-700 border-gray-300 hover:border-indigo-600'
                             }`}
                     >
                         Upload New
@@ -176,8 +167,8 @@ export default function ResumeUploadStep({
                                         key={resume.resume_id}
                                         onClick={() => setSelectedResumeId(resume.resume_id)}
                                         className={`p-4 border rounded-lg cursor-pointer transition-colors ${selectedResumeId === resume.resume_id
-                                                ? 'border-indigo-600 bg-indigo-50'
-                                                : 'border-gray-300 hover:border-indigo-400'
+                                            ? 'border-indigo-600 bg-indigo-50'
+                                            : 'border-gray-300 hover:border-indigo-400'
                                             }`}
                                     >
                                         <div className="flex items-center justify-between">
@@ -195,8 +186,8 @@ export default function ResumeUploadStep({
                                                 </p>
                                             </div>
                                             <div className={`w-5 h-5 rounded-full border-2 ${selectedResumeId === resume.resume_id
-                                                    ? 'border-indigo-600 bg-indigo-600'
-                                                    : 'border-gray-300'
+                                                ? 'border-indigo-600 bg-indigo-600'
+                                                : 'border-gray-300'
                                                 }`}>
                                                 {selectedResumeId === resume.resume_id && (
                                                     <svg className="w-full h-full text-white" fill="currentColor" viewBox="0 0 20 20">

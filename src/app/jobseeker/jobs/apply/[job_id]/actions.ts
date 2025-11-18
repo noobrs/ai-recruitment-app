@@ -1,12 +1,8 @@
 'use server';
 
-import { ApiResponse, ResumeData, isSuccessResponse } from '@/types';
-import { fetchFromFastAPI } from '@/utils/api';
 import { createAdminClient } from '@/utils/supabase/admin';
 import { createClient } from '@/utils/supabase/server';
 import { revalidatePath } from 'next/cache';
-
-const FASTAPI_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
 
 /**
  * submitApplication()
@@ -58,8 +54,6 @@ export async function submitApplication(formData: FormData) {
 
   const jobSeekerId = jobSeeker.job_seeker_id;
   let resumeId: number;
-  let needsFastAPIProcessing = false;
-  let uploadedFilePath: string | null = null;
 
   // 4️⃣ Handle resume: use existing or upload new
   if (existingResumeId) {
@@ -88,8 +82,6 @@ export async function submitApplication(formData: FormData) {
       console.error('Resume upload error:', uploadError);
       throw new Error('Failed to upload resume.');
     }
-
-    uploadedFilePath = filePath;
 
     // Generate permanent signed URL (expires in 10 years)
     const { data: signedUrlData, error: signedUrlError } = await supabaseAdmin.storage
@@ -128,73 +120,27 @@ export async function submitApplication(formData: FormData) {
     }
 
     resumeId = resumeInsert.resume_id;
-    needsFastAPIProcessing = !extracted_skills; // Only process if data not already provided
 
-    // 5️⃣ Call FastAPI to process resume if needed
-    if (needsFastAPIProcessing) {
-      try {
-        const isPdf = cvFile.name.toLowerCase().endsWith('.pdf');
-        const endpoint = isPdf ? '/api/py/process-pdf' : '/api/py/process-image';
+    // 5️⃣ Insert application record
+    const { error: appError } = await supabase.from('application').insert([
+      {
+        job_id: jobId,
+        job_seeker_id: jobSeekerId,
+        resume_id: resumeId,
+        match_score: null,
+        status: 'received',
+      },
+    ]);
 
-        const result = (await fetchFromFastAPI(endpoint, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ signed_url: signedUrlData.signedUrl }),
-        })) as ApiResponse<ResumeData>;
-
-        if (!isSuccessResponse(result)) {
-          throw new Error(`FastAPI processing failed`);
-        }
-
-        if (result.status === 'success' && result.data) {
-          // Update resume with extracted data
-          await supabase
-            .from('resume')
-            .update({
-              extracted_skills: JSON.stringify(result.data.skills || []),
-              extracted_experiences: JSON.stringify(result.data.experience || []),
-              extracted_education: JSON.stringify(result.data.education || []),
-              status: 'processed',
-            })
-            .eq('resume_id', resumeId);
-        }
-      } catch (fastapiError) {
-        console.error('FastAPI processing error:', fastapiError);
-
-        // Rollback: delete resume record and file from storage
-        await supabase.from('resume').delete().eq('resume_id', resumeId);
-        if (uploadedFilePath) {
-          await supabaseAdmin.storage.from('resumes-original').remove([uploadedFilePath]);
-        }
-
-        throw new Error('Resume processing failed. Please try again.');
-      }
+    if (appError) {
+      console.error('Application insert error:', appError);
+      throw new Error('Failed to submit application.');
     }
-  } else {
-    throw new Error('Please select an existing resume or upload a new one.');
+
+    // 6️⃣ Revalidate paths
+    revalidatePath('/jobseeker/jobs');
+    revalidatePath('/jobseeker/applications');
+
+    return { success: true };
   }
-
-  // 6️⃣ Insert application record
-  const { error: appError } = await supabase.from('application').insert([
-    {
-      job_id: jobId,
-      job_seeker_id: jobSeekerId,
-      resume_id: resumeId,
-      match_score: null,
-      status: 'received',
-    },
-  ]);
-
-  if (appError) {
-    console.error('Application insert error:', appError);
-    throw new Error('Failed to submit application.');
-  }
-
-  // 7️⃣ Revalidate paths
-  revalidatePath('/jobseeker/jobs');
-  revalidatePath('/jobseeker/applications');
-
-  return { success: true };
 }

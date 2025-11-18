@@ -41,7 +41,7 @@ export default function ResumeListItem({
                 <div>
                     <div className="flex items-center gap-2">
                         <p className="font-medium text-gray-900">
-                            Resume {index + 1}
+                            Resume {resume.resume_id}
                         </p>
                         {resume.is_profile && (
                             <span className="px-2 py-0.5 bg-primary/10 text-primary text-xs rounded-full">

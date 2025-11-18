@@ -49,20 +49,20 @@ export default function ResumeReviewStep({
         try {
             const formData = new FormData();
             formData.append('job_id', jobId);
-            
+
             // Add existing resume ID or new file
             if (existingResumeId) {
                 formData.append('existing_resume_id', existingResumeId.toString());
             } else if (cvFile) {
                 formData.append('cvFile', cvFile);
             }
-            
+
             formData.append('extracted_skills', JSON.stringify(resumeData.skills));
             formData.append('extracted_experiences', JSON.stringify(resumeData.experience));
             formData.append('extracted_education', JSON.stringify(resumeData.education));
 
             const result = await submitApplication(formData);
-            if (result.success) {
+            if (result?.success) {
                 onSuccess();
             }
         } catch (err) {

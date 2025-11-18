@@ -24,7 +24,7 @@ export default async function Home() {
   const health = await getHealth()
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+    <main className="min-h-screen from-blue-50 via-indigo-50 to-purple-50">
       <div className="max-w-7xl mx-auto px-6 lg:px-8 py-24">
 
         {/* ======================= */}
@@ -105,8 +105,8 @@ export default async function Home() {
                       d={index === 0
                         ? "M13 10V3L4 14h7v7l9-11h-7z"
                         : index === 1
-                        ? "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                        : "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"}
+                          ? "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                          : "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"}
                     />
                   </svg>
                 </div>
