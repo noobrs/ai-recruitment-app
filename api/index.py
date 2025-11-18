@@ -233,9 +233,26 @@ async def api_entities(classified_segments: list = Body(...)):
 
 
 @app.post("/api/py/process-image")
-async def api_process_image(file: UploadFile = File(...)):
-    """Full end-to-end pipeline: detect -> ocr -> classify -> ner -> build json."""
-    tmp_bytes = await file.read()
+async def api_process_image(file: UploadFile = File(None), signed_url: str = Body(None)):
+    """Full end-to-end pipeline: detect -> ocr -> classify -> ner -> build json.
+    Accepts either a file upload or a signed URL to download from."""
+    import httpx
+    
+    if signed_url:
+        # Download file from signed URL
+        try:
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                response = await client.get(signed_url)
+                response.raise_for_status()
+                tmp_bytes = response.content
+        except Exception as e:
+            logger.error(f"Failed to download from signed URL: {e}")
+            raise HTTPException(status_code=400, detail=f"Failed to download file: {str(e)}")
+    elif file:
+        tmp_bytes = await file.read()
+    else:
+        raise HTTPException(status_code=400, detail="Either file or signed_url must be provided")
+    
     try:
         result = process_image_resume(tmp_bytes)
         return result
@@ -247,11 +264,27 @@ async def api_process_image(file: UploadFile = File(...)):
 # ----------------------
 
 @app.post("/api/py/process-pdf")
-async def api_process_pdf(file: UploadFile = File(...)) -> ApiResponse:
-    """Full end-to-end pipeline for PDF: layout -> grouping -> GLiNER -> aggregate -> build json."""
+async def api_process_pdf(file: UploadFile = File(None), signed_url: str = Body(None)) -> ApiResponse:
+    """Full end-to-end pipeline for PDF: layout -> grouping -> GLiNER -> aggregate -> build json.
+    Accepts either a file upload or a signed URL to download from."""
     from api.pdf.pipeline import process_pdf_resume
+    import httpx
     
-    tmp_bytes = await file.read()
+    if signed_url:
+        # Download file from signed URL
+        try:
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                response = await client.get(signed_url)
+                response.raise_for_status()
+                tmp_bytes = response.content
+        except Exception as e:
+            logger.error(f"Failed to download from signed URL: {e}")
+            raise HTTPException(status_code=400, detail=f"Failed to download file: {str(e)}")
+    elif file:
+        tmp_bytes = await file.read()
+    else:
+        raise HTTPException(status_code=400, detail="Either file or signed_url must be provided")
+    
     try:
         result = process_pdf_resume(tmp_bytes)
         logger.info(f"PDF processing result: {result}")

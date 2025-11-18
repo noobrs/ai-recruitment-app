@@ -13,8 +13,9 @@ import { JobDetails } from '@/types/job.types';
 interface ResumeReviewStepProps {
     job: JobDetails;
     resumeData: ResumeData;
-    cvFile: File;
+    cvFile: File | null;
     jobId: string;
+    existingResumeId?: number;
     onBack: () => void;
     onSuccess: () => void;
 }
@@ -27,6 +28,7 @@ export default function ResumeReviewStep({
     resumeData: initialResumeData,
     cvFile,
     jobId,
+    existingResumeId,
     onBack,
     onSuccess,
 }: ResumeReviewStepProps) {
@@ -47,7 +49,14 @@ export default function ResumeReviewStep({
         try {
             const formData = new FormData();
             formData.append('job_id', jobId);
-            formData.append('cvFile', cvFile);
+            
+            // Add existing resume ID or new file
+            if (existingResumeId) {
+                formData.append('existing_resume_id', existingResumeId.toString());
+            } else if (cvFile) {
+                formData.append('cvFile', cvFile);
+            }
+            
             formData.append('extracted_skills', JSON.stringify(resumeData.skills));
             formData.append('extracted_experiences', JSON.stringify(resumeData.experience));
             formData.append('extracted_education', JSON.stringify(resumeData.education));

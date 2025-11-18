@@ -19,6 +19,7 @@ export default function ApplyJobPage() {
   const [step, setStep] = useState<ApplicationStep>(1);
   const [cvFile, setCvFile] = useState<File | null>(null);
   const [resumeData, setResumeData] = useState<ResumeData | null>(null);
+  const [existingResumeId, setExistingResumeId] = useState<number | undefined>(undefined);
 
   // Fetch job details for display
   useEffect(() => {
@@ -40,9 +41,10 @@ export default function ApplyJobPage() {
     fetchJobDetails();
   }, [job_id]);
 
-  const handleUploadSuccess = (data: ResumeData, file: File) => {
+  const handleUploadSuccess = (data: ResumeData, file: File | null, resumeId?: number) => {
     setResumeData(data);
     setCvFile(file);
+    setExistingResumeId(resumeId);
     setStep(2);
   };
 
@@ -81,13 +83,14 @@ export default function ApplyJobPage() {
   }
 
   // Step 2: Review and submit
-  if (step === 2 && resumeData && cvFile) {
+  if (step === 2 && resumeData) {
     return (
       <ResumeReviewStep
         job={job}
         resumeData={resumeData}
         cvFile={cvFile}
         jobId={job_id}
+        existingResumeId={existingResumeId}
         onBack={() => setStep(1)}
         onSuccess={handleReviewSuccess}
       />

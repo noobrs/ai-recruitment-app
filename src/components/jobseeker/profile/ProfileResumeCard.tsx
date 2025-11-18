@@ -35,10 +35,20 @@ export default function ProfileResumeCard({ resume }: ProfileResumeCardProps) {
                 <ResumeEducation education={education} />
             </div>
 
-            <div className="mt-4 pt-4 border-t border-gray-200">
+            <div className="mt-4 pt-4 border-t border-gray-200 flex items-center justify-between">
                 <p className="text-sm text-gray-500">
                     Uploaded on {new Date(resume.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
                 </p>
+                {resume.original_file_path && (
+                    <a
+                        href={resume.original_file_path}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors"
+                    >
+                        View Resume
+                    </a>
+                )}
             </div>
         </div>
     );

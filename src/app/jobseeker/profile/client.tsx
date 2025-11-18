@@ -173,6 +173,7 @@ export default function ProfileClient({ user, profileResume, allResumes }: Profi
                 resumes={allResumes}
                 settingProfileId={settingProfile}
                 onSetAsProfile={handleSetAsProfile}
+                jobSeekerId={user.job_seeker.job_seeker_id}
             />
 
             {/* Dynamic My Activities */}

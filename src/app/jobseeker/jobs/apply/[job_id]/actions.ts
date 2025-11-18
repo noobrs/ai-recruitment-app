@@ -1,17 +1,22 @@
 'use server';
 
+import { ApiResponse, ResumeData, isSuccessResponse } from '@/types';
+import { fetchFromFastAPI } from '@/utils/api';
 import { createAdminClient } from '@/utils/supabase/admin';
 import { createClient } from '@/utils/supabase/server';
 import { revalidatePath } from 'next/cache';
+
+const FASTAPI_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
 
 /**
  * submitApplication()
  * Handles a bias-free job application submission.
  *
  * ✅ User must be authenticated (jobseeker)
- * ✅ Resume file is mandatory
- * ✅ Resume saved to Storage + resume table
- * ✅ Application links job, jobseeker, and resume
+ * ✅ Can use existing resume or upload new one
+ * ✅ Resume stored with permanent signed URL
+ * ✅ FastAPI processes resume from signed URL
+ * ✅ Rollback on FastAPI failure
  */
 export async function submitApplication(formData: FormData) {
   const supabase = await createClient();
@@ -27,15 +32,16 @@ export async function submitApplication(formData: FormData) {
     throw new Error('Unauthorized');
   }
 
-  // 2️⃣ Extract basic form fields
+  // 2️⃣ Extract form fields
   const jobId = formData.get('job_id')?.toString();
+  const existingResumeId = formData.get('existing_resume_id')?.toString();
   const cvFile = formData.get('cvFile') as File | null;
   const extracted_skills = formData.get('extracted_skills')?.toString();
   const extracted_experiences = formData.get('extracted_experiences')?.toString();
   const extracted_education = formData.get('extracted_education')?.toString();
 
-  if (!jobId || !cvFile) {
-    throw new Error('Missing required job or resume file.');
+  if (!jobId) {
+    throw new Error('Missing required job ID.');
   }
 
   // 3️⃣ Find jobseeker profile
@@ -51,56 +57,132 @@ export async function submitApplication(formData: FormData) {
   }
 
   const jobSeekerId = jobSeeker.job_seeker_id;
+  let resumeId: number;
+  let needsFastAPIProcessing = false;
+  let uploadedFilePath: string | null = null;
 
-  // 4️⃣ Upload resume file to Supabase Storage
-  const filePath = `applications/${user.id}/${Date.now()}_${cvFile.name}`;
-  const { error: uploadError } = await supabaseAdmin.storage
-    .from('resumes-original')
-    .upload(filePath, cvFile, { upsert: true });
+  // 4️⃣ Handle resume: use existing or upload new
+  if (existingResumeId) {
+    // Use existing resume - no FastAPI processing needed
+    resumeId = parseInt(existingResumeId);
 
-  if (uploadError) {
-    console.error('Resume upload error:', uploadError);
-    throw new Error('Failed to upload resume.');
+    // Verify resume belongs to this jobseeker
+    const { data: existingResume, error: verifyError } = await supabase
+      .from('resume')
+      .select('resume_id, job_seeker_id')
+      .eq('resume_id', resumeId)
+      .eq('job_seeker_id', jobSeekerId)
+      .single();
+
+    if (verifyError || !existingResume) {
+      throw new Error('Invalid resume selection.');
+    }
+  } else if (cvFile) {
+    // Upload new resume
+    const filePath = `applications/${user.id}/${Date.now()}_${cvFile.name}`;
+    const { error: uploadError } = await supabaseAdmin.storage
+      .from('resumes-original')
+      .upload(filePath, cvFile, { upsert: true });
+
+    if (uploadError) {
+      console.error('Resume upload error:', uploadError);
+      throw new Error('Failed to upload resume.');
+    }
+
+    uploadedFilePath = filePath;
+
+    // Generate permanent signed URL (expires in 10 years)
+    const { data: signedUrlData, error: signedUrlError } = await supabaseAdmin.storage
+      .from('resumes-original')
+      .createSignedUrl(filePath, 315360000); // 10 years in seconds
+
+    if (signedUrlError || !signedUrlData?.signedUrl) {
+      // Rollback: delete uploaded file
+      await supabaseAdmin.storage.from('resumes-original').remove([filePath]);
+      console.error('Signed URL error:', signedUrlError);
+      throw new Error('Failed to generate resume signed URL.');
+    }
+
+    // Create resume record with signed URL
+    const { data: resumeInsert, error: resumeError } = await supabase
+      .from('resume')
+      .insert([
+        {
+          job_seeker_id: jobSeekerId,
+          original_file_path: signedUrlData.signedUrl,
+          extracted_skills,
+          extracted_experiences,
+          extracted_education,
+          is_profile: false,
+          status: 'uploaded',
+        },
+      ])
+      .select('resume_id')
+      .single();
+
+    if (resumeError || !resumeInsert) {
+      // Rollback: delete uploaded file
+      await supabaseAdmin.storage.from('resumes-original').remove([filePath]);
+      console.error('Resume insert error:', resumeError);
+      throw new Error('Failed to save resume record.');
+    }
+
+    resumeId = resumeInsert.resume_id;
+    needsFastAPIProcessing = !extracted_skills; // Only process if data not already provided
+
+    // 5️⃣ Call FastAPI to process resume if needed
+    if (needsFastAPIProcessing) {
+      try {
+        const isPdf = cvFile.name.toLowerCase().endsWith('.pdf');
+        const endpoint = isPdf ? '/api/py/process-pdf' : '/api/py/process-image';
+
+        const result = (await fetchFromFastAPI(endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ signed_url: signedUrlData.signedUrl }),
+        })) as ApiResponse<ResumeData>;
+
+        if (!isSuccessResponse(result)) {
+          throw new Error(`FastAPI processing failed`);
+        }
+
+        if (result.status === 'success' && result.data) {
+          // Update resume with extracted data
+          await supabase
+            .from('resume')
+            .update({
+              extracted_skills: JSON.stringify(result.data.skills || []),
+              extracted_experiences: JSON.stringify(result.data.experience || []),
+              extracted_education: JSON.stringify(result.data.education || []),
+              status: 'processed',
+            })
+            .eq('resume_id', resumeId);
+        }
+      } catch (fastapiError) {
+        console.error('FastAPI processing error:', fastapiError);
+
+        // Rollback: delete resume record and file from storage
+        await supabase.from('resume').delete().eq('resume_id', resumeId);
+        if (uploadedFilePath) {
+          await supabaseAdmin.storage.from('resumes-original').remove([uploadedFilePath]);
+        }
+
+        throw new Error('Resume processing failed. Please try again.');
+      }
+    }
+  } else {
+    throw new Error('Please select an existing resume or upload a new one.');
   }
 
-  // 5️⃣ Create a resume record in the database
-  const { data: resumeInsert, error: resumeError } = await supabase
-    .from('resume')
-    .insert([
-      {
-        job_seeker_id: jobSeekerId,
-        original_file_path: filePath,
-        extracted_skills,
-        extracted_experiences,
-        extracted_education,
-        is_profile: false,
-        status: 'uploaded',
-      },
-    ])
-    .select('resume_id')
-    .single();
-
-  if (resumeError || !resumeInsert) {
-    console.error('Resume insert error:', resumeError);
-    throw new Error('Failed to save resume record.');
-  }
-
-  const resumeId = resumeInsert.resume_id;
-
-  // 5️⃣ (TODO) Call external ranking model to get match score
-  // await supabase
-  // .from('application')
-  // .update({ match_score: calculatedScore })
-  // .eq('application_id', id);
-
-
-  // 6️⃣ Insert new application record
+  // 6️⃣ Insert application record
   const { error: appError } = await supabase.from('application').insert([
     {
       job_id: jobId,
       job_seeker_id: jobSeekerId,
       resume_id: resumeId,
-      match_score: null, // to be updated later by ranking model
+      match_score: null,
       status: 'received',
     },
   ]);
@@ -110,8 +192,9 @@ export async function submitApplication(formData: FormData) {
     throw new Error('Failed to submit application.');
   }
 
-  // 7️⃣ Optional: trigger revalidation of profile or job list
-  revalidatePath('/jobseeker/job');
+  // 7️⃣ Revalidate paths
+  revalidatePath('/jobseeker/jobs');
+  revalidatePath('/jobseeker/applications');
 
   return { success: true };
 }

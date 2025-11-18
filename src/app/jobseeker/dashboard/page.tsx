@@ -1,6 +1,5 @@
 import { redirect } from 'next/navigation';
 import { getCurrentJobSeeker } from '@/services';
-import UploadResumeAction from '@/components/resume/UploadResumeAction';
 import BrowseJobsAction from '@/components/jobseeker/jobs/JobsBrowseAction';
 
 export default async function JobSeekerDashboard() {
@@ -51,7 +50,9 @@ export default async function JobSeekerDashboard() {
                     <h2 className="text-xl font-semibold text-gray-900 mb-4">Quick Actions</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                         <BrowseJobsAction />
-                        <UploadResumeAction />
+                        <a href="#" className="flex items-center justify-center px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-700 hover:border-indigo-500 hover:text-indigo-600 transition-colors">
+                            <span className="text-sm font-medium">Upload Resume</span>
+                        </a>
                         <a href="/jobseeker/applications" className="flex items-center justify-center px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-700 hover:border-indigo-500 hover:text-indigo-600 transition-colors">
                             <span className="text-sm font-medium">View Applications</span>
                         </a>
