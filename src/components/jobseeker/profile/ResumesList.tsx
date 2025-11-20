@@ -4,7 +4,7 @@ import { Resume } from '@/types';
 import ResumeListItem from './ResumeListItem';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { uploadResumeToProfile } from '@/app/jobseeker/profile/actions';
+import ResumeUploadDialog from './ResumeUploadDialog';
 
 interface ResumesListProps {
     resumes: Resume[];
@@ -26,29 +26,11 @@ export default function ResumesList({
     jobSeekerId,
 }: ResumesListProps) {
     const router = useRouter();
-    const [isUploading, setIsUploading] = useState(false);
-    const [uploadError, setUploadError] = useState<string | null>(null);
+    const [showUploadDialog, setShowUploadDialog] = useState(false);
 
-    const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
-        if (!file) return;
-
-        setIsUploading(true);
-        setUploadError(null);
-
-        try {
-            const formData = new FormData();
-            formData.append('file', file);
-            formData.append('job_seeker_id', jobSeekerId.toString());
-
-            await uploadResumeToProfile(formData);
-            router.refresh();
-        } catch (error) {
-            console.error('Error uploading resume:', error);
-            setUploadError(error instanceof Error ? error.message : 'Failed to upload resume');
-        } finally {
-            setIsUploading(false);
-        }
+    const handleUploadSuccess = () => {
+        setShowUploadDialog(false);
+        router.refresh();
     };
 
     return (
@@ -57,24 +39,14 @@ export default function ResumesList({
                 <h2 className="text-xl font-semibold text-gray-900">My Resumes</h2>
                 <div className="flex items-center gap-3">
                     <span className="text-sm text-gray-500">{resumes.length} resume(s)</span>
-                    <label className="px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg cursor-pointer hover:bg-primary/90 transition-colors">
-                        {isUploading ? 'Uploading...' : 'Upload Resume'}
-                        <input
-                            type="file"
-                            accept=".pdf,image/*"
-                            className="hidden"
-                            onChange={handleFileUpload}
-                            disabled={isUploading}
-                        />
-                    </label>
+                    <button
+                        onClick={() => setShowUploadDialog(true)}
+                        className="px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors"
+                    >
+                        Upload Resume
+                    </button>
                 </div>
             </div>
-
-            {uploadError && (
-                <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
-                    {uploadError}
-                </div>
-            )}
 
             {resumes.length === 0 ? (
                 <EmptyResumesState />
@@ -90,6 +62,15 @@ export default function ResumesList({
                         />
                     ))}
                 </div>
+            )}
+
+            {/* Upload Dialog */}
+            {showUploadDialog && (
+                <ResumeUploadDialog
+                    jobSeekerId={jobSeekerId}
+                    onSuccess={handleUploadSuccess}
+                    onCancel={() => setShowUploadDialog(false)}
+                />
             )}
         </div>
     );

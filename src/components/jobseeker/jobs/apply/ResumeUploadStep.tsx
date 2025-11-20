@@ -110,6 +110,7 @@ export default function ResumeUploadStep({
                 `Processing ${isPdf ? 'PDF' : 'image'} resume via ${endpoint}`
             );
 
+            // Call FastAPI directly for extraction only (no DB save)
             const result = (await fetchFromFastAPI(endpoint, {
                 method: 'POST',
                 body: formData,
@@ -120,6 +121,7 @@ export default function ResumeUploadStep({
             }
 
             console.log('Extracted resume data:', result.data);
+            // Pass extracted data and file to parent - resume will be saved when application is submitted
             onUploadSuccess(result.data, cvFile);
         } catch (err) {
             console.error(err);

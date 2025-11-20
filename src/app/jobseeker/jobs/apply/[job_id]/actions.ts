@@ -1,22 +1,21 @@
 'use server';
 
-import { createAdminClient } from '@/utils/supabase/admin';
 import { createClient } from '@/utils/supabase/server';
 import { revalidatePath } from 'next/cache';
+import { saveResumeToDatabase } from '@/app/actions/resume.actions';
+import { ResumeData } from '@/types/fastapi.types';
 
 /**
  * submitApplication()
  * Handles a bias-free job application submission.
  *
  * ✅ User must be authenticated (jobseeker)
- * ✅ Can use existing resume or upload new one
- * ✅ Resume stored with permanent signed URL
- * ✅ FastAPI processes resume from signed URL
- * ✅ Rollback on FastAPI failure
+ * ✅ Can use existing resume or upload new one with extracted data
+ * ✅ Resume saved to storage with format: [jobseeker_id]/unique_filename
+ * ✅ Generates long-lived signed URL for resume access
  */
 export async function submitApplication(formData: FormData) {
   const supabase = await createClient();
-  const supabaseAdmin = createAdminClient();
 
   // 1️⃣ Verify user session
   const {
@@ -55,9 +54,9 @@ export async function submitApplication(formData: FormData) {
   const jobSeekerId = jobSeeker.job_seeker_id;
   let resumeId: number;
 
-  // 4️⃣ Handle resume: use existing or upload new
+  // 4️⃣ Handle resume: use existing or create new
   if (existingResumeId) {
-    // Use existing resume - no FastAPI processing needed
+    // Use existing resume - no processing needed
     resumeId = parseInt(existingResumeId);
 
     // Verify resume belongs to this jobseeker
@@ -71,76 +70,43 @@ export async function submitApplication(formData: FormData) {
     if (verifyError || !existingResume) {
       throw new Error('Invalid resume selection.');
     }
-  } else if (cvFile) {
-    // Upload new resume
-    const filePath = `applications/${user.id}/${Date.now()}_${cvFile.name}`;
-    const { error: uploadError } = await supabaseAdmin.storage
-      .from('resumes-original')
-      .upload(filePath, cvFile, { upsert: true });
+  } else if (cvFile && extracted_skills && extracted_experiences && extracted_education) {
+    // Create new resume with extracted data using shared function
+    const extractedData: ResumeData = {
+      candidate: { name: null, email: null, phone: null, location: null },
+      skills: JSON.parse(extracted_skills),
+      experience: JSON.parse(extracted_experiences),
+      education: JSON.parse(extracted_education),
+      languages: [],
+      certifications: [],
+      activities: [],
+    };
 
-    if (uploadError) {
-      console.error('Resume upload error:', uploadError);
-      throw new Error('Failed to upload resume.');
-    }
-
-    // Generate permanent signed URL (expires in 10 years)
-    const { data: signedUrlData, error: signedUrlError } = await supabaseAdmin.storage
-      .from('resumes-original')
-      .createSignedUrl(filePath, 315360000); // 10 years in seconds
-
-    if (signedUrlError || !signedUrlData?.signedUrl) {
-      // Rollback: delete uploaded file
-      await supabaseAdmin.storage.from('resumes-original').remove([filePath]);
-      console.error('Signed URL error:', signedUrlError);
-      throw new Error('Failed to generate resume signed URL.');
-    }
-
-    // Create resume record with signed URL
-    const { data: resumeInsert, error: resumeError } = await supabase
-      .from('resume')
-      .insert([
-        {
-          job_seeker_id: jobSeekerId,
-          original_file_path: signedUrlData.signedUrl,
-          extracted_skills,
-          extracted_experiences,
-          extracted_education,
-          is_profile: false,
-          status: 'uploaded',
-        },
-      ])
-      .select('resume_id')
-      .single();
-
-    if (resumeError || !resumeInsert) {
-      // Rollback: delete uploaded file
-      await supabaseAdmin.storage.from('resumes-original').remove([filePath]);
-      console.error('Resume insert error:', resumeError);
-      throw new Error('Failed to save resume record.');
-    }
-
-    resumeId = resumeInsert.resume_id;
-
-    // 5️⃣ Insert application record
-    const { error: appError } = await supabase.from('application').insert([
-      {
-        job_id: jobId,
-        job_seeker_id: jobSeekerId,
-        resume_id: resumeId,
-        match_score: null,
-        status: 'received',
-      },
-    ]);
-
-    if (appError) {
-      console.error('Application insert error:', appError);
-      throw new Error('Failed to submit application.');
-    }
-
-    // 6️⃣ Revalidate paths
-    revalidatePath('/jobseeker/jobs');
-    revalidatePath('/jobseeker/applications');
-
-    return { success: true };
+    const result = await saveResumeToDatabase(cvFile, extractedData, false);
+    resumeId = result.resume.resume_id;
+  } else {
+    throw new Error('Either existing resume or new resume with extracted data is required.');
   }
+
+  // 5️⃣ Insert application record
+  const { error: appError } = await supabase.from('application').insert([
+    {
+      job_id: jobId,
+      job_seeker_id: jobSeekerId,
+      resume_id: resumeId,
+      match_score: null,
+      status: 'received',
+    },
+  ]);
+
+  if (appError) {
+    console.error('Application insert error:', appError);
+    throw new Error('Failed to submit application.');
+  }
+
+  // 6️⃣ Revalidate paths
+  revalidatePath('/jobseeker/jobs');
+  revalidatePath('/jobseeker/applications');
+
+  return { success: true };
 }

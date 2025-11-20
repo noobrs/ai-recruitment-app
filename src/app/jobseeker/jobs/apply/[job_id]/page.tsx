@@ -61,16 +61,6 @@ export default function ApplyJobPage() {
     );
   }
 
-  // Step 3: Success confirmation
-  if (step === 3) {
-    return (
-      <SuccessConfirmation
-        jobTitle={job.job_title}
-        onNavigateBack={() => router.push('/jobseeker/jobs')}
-      />
-    );
-  }
-
   // Step 1: Upload resume
   if (step === 1) {
     return (
@@ -93,6 +83,16 @@ export default function ApplyJobPage() {
         existingResumeId={existingResumeId}
         onBack={() => setStep(1)}
         onSuccess={handleReviewSuccess}
+      />
+    );
+  }
+
+  // Step 3: Success confirmation
+  if (step === 3) {
+    return (
+      <SuccessConfirmation
+        jobTitle={job.job_title}
+        onNavigateBack={() => router.push('/jobseeker/jobs')}
       />
     );
   }

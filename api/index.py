@@ -233,30 +233,20 @@ async def api_entities(classified_segments: list = Body(...)):
 
 
 @app.post("/api/py/process-image")
-async def api_process_image(file: UploadFile = File(None), signed_url: str = Body(None)):
+async def api_process_image(file: UploadFile = File(...)):
     """Full end-to-end pipeline: detect -> ocr -> classify -> ner -> build json.
-    Accepts either a file upload or a signed URL to download from."""
-    import httpx
+    Accepts a file upload via multipart form data.
+    This endpoint only extracts data and does NOT save to database."""
     
-    if signed_url:
-        # Download file from signed URL
-        try:
-            async with httpx.AsyncClient(timeout=60.0) as client:
-                response = await client.get(signed_url)
-                response.raise_for_status()
-                tmp_bytes = response.content
-        except Exception as e:
-            logger.error(f"Failed to download from signed URL: {e}")
-            raise HTTPException(status_code=400, detail=f"Failed to download file: {str(e)}")
-    elif file:
-        tmp_bytes = await file.read()
-    else:
-        raise HTTPException(status_code=400, detail="Either file or signed_url must be provided")
+    if not file:
+        raise HTTPException(status_code=400, detail="File is required")
     
     try:
+        tmp_bytes = await file.read()
         result = process_image_resume(tmp_bytes)
         return result
     except Exception as e:
+        logger.error(f"Image processing error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 # ----------------------
@@ -264,30 +254,20 @@ async def api_process_image(file: UploadFile = File(None), signed_url: str = Bod
 # ----------------------
 
 @app.post("/api/py/process-pdf")
-async def api_process_pdf(file: UploadFile = File(None), signed_url: str = Body(None)) -> ApiResponse:
+async def api_process_pdf(file: UploadFile = File(...)) -> ApiResponse:
     """Full end-to-end pipeline for PDF: layout -> grouping -> GLiNER -> aggregate -> build json.
-    Accepts either a file upload or a signed URL to download from."""
+    Accepts a file upload via multipart form data.
+    This endpoint only extracts data and does NOT save to database."""
     from api.pdf.pipeline import process_pdf_resume
-    import httpx
     
-    if signed_url:
-        # Download file from signed URL
-        try:
-            async with httpx.AsyncClient(timeout=60.0) as client:
-                response = await client.get(signed_url)
-                response.raise_for_status()
-                tmp_bytes = response.content
-        except Exception as e:
-            logger.error(f"Failed to download from signed URL: {e}")
-            raise HTTPException(status_code=400, detail=f"Failed to download file: {str(e)}")
-    elif file:
-        tmp_bytes = await file.read()
-    else:
-        raise HTTPException(status_code=400, detail="Either file or signed_url must be provided")
+    if not file:
+        raise HTTPException(status_code=400, detail="File is required")
     
     try:
+        tmp_bytes = await file.read()
         result = process_pdf_resume(tmp_bytes)
         logger.info(f"PDF processing result: {result}")
         return result
     except Exception as e:
+        logger.error(f"PDF processing error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
