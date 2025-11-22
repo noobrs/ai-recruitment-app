@@ -41,7 +41,7 @@ export default function MyActivities({
   // ✅ Actual content
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-      <h2 className="text-2xl font-semibold mb-4">My Activities</h2>
+      <h2 className="text-xl font-semibold mb-4">My Activities</h2>
 
       {/* === Bookmarked Jobs === */}
       <div className="mb-6">

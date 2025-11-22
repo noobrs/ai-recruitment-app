@@ -6,6 +6,73 @@ import { ResumeData } from '@/types/fastapi.types';
 import { randomUUID } from 'crypto';
 
 /**
+ * Delete resume by updating its status to 'deleted'
+ * 
+ * @param resumeId - The resume ID to delete
+ * @returns Success status
+ */
+export async function deleteResume(resumeId: number) {
+    const supabase = await createClient();
+
+    // Get authenticated user
+    const {
+        data: { user },
+        error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+        throw new Error('Unauthorized');
+    }
+
+    // Get jobseeker profile
+    const { data: jobSeeker, error: seekerError } = await supabase
+        .from('job_seeker')
+        .select('job_seeker_id')
+        .eq('user_id', user.id)
+        .single();
+
+    if (seekerError || !jobSeeker) {
+        throw new Error('Jobseeker profile not found');
+    }
+
+    try {
+        // Verify the resume belongs to the user
+        const { data: resume, error: verifyError } = await supabase
+            .from('resume')
+            .select('resume_id, job_seeker_id, is_profile')
+            .eq('resume_id', resumeId)
+            .eq('job_seeker_id', jobSeeker.job_seeker_id)
+            .single();
+
+        if (verifyError || !resume) {
+            throw new Error('Resume not found or access denied');
+        }
+
+        // Update resume status to 'deleted'
+        const { error: updateError } = await supabase
+            .from('resume')
+            .update({ 
+                status: 'deleted',
+                is_profile: false,  // Remove profile status if it was set
+                updated_at: new Date().toISOString()
+            })
+            .eq('resume_id', resumeId);
+
+        if (updateError) {
+            throw new Error('Failed to delete resume');
+        }
+
+        return {
+            success: true,
+            message: 'Resume deleted successfully'
+        };
+    } catch (error) {
+        console.error('Error deleting resume:', error);
+        throw error;
+    }
+}
+
+/**
  * Save resume to database and storage
  * This is called after the user confirms they want to save the extracted resume
  * 

@@ -8,10 +8,11 @@ import {
     ProfileHeader,
     ProfileAboutSection,
     ProfileResumeCard,
-    ResumesList,
     MyActivities,
 } from '@/components/jobseeker/profile';
+import ResumeDropdown from '@/components/jobseeker/profile/ResumeDropdown';
 import { uploadProfilePictureAction } from '@/app/actions/profile-picture.actions';
+import { deleteResume } from '@/app/actions/resume.actions';
 import toast from 'react-hot-toast';
 import { useBookmark } from "@/hooks/useBookmark";
 
@@ -27,6 +28,7 @@ export default function ProfileClient({ user, profileResume, allResumes }: Profi
     const [isEditing, setIsEditing] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [settingProfile, setSettingProfile] = useState<number | null>(null);
+    const [deletingResume, setDeletingResume] = useState<number | null>(null);
     const [activitiesLoading, setActivitiesLoading] = useState(true);
     const [bookmarkedJobs, setBookmarkedJobs] = useState<any[]>([]);
     const [appliedJobs, setAppliedJobs] = useState<any[]>([]);
@@ -108,11 +110,25 @@ export default function ProfileClient({ user, profileResume, allResumes }: Profi
         setSettingProfile(resumeId);
         try {
             await setProfileResume(user.job_seeker.job_seeker_id, resumeId);
+            toast.success('Profile resume updated successfully!');
             router.refresh();
         } catch (error) {
-            alert('Failed to set profile resume.');
+            toast.error('Failed to set profile resume. Please try again.');
         } finally {
             setSettingProfile(null);
+        }
+    };
+
+    const handleDeleteResume = async (resumeId: number) => {
+        setDeletingResume(resumeId);
+        try {
+            await deleteResume(resumeId);
+            toast.success('Resume deleted successfully!');
+            router.refresh();
+        } catch (error) {
+            toast.error('Failed to delete resume. Please try again.');
+        } finally {
+            setDeletingResume(null);
         }
     };
 
@@ -165,16 +181,19 @@ export default function ProfileClient({ user, profileResume, allResumes }: Profi
                 />
             </div>
 
-            {/* Resume Info */}
-            {profileResume && <ProfileResumeCard resume={profileResume} />}
-
-            {/* All Resumes */}
-            <ResumesList
+            {/* Resume Dropdown */}
+            <ResumeDropdown
                 resumes={allResumes}
+                profileResume={profileResume}
                 settingProfileId={settingProfile}
                 onSetAsProfile={handleSetAsProfile}
+                onDeleteResume={handleDeleteResume}
                 jobSeekerId={user.job_seeker.job_seeker_id}
+                deletingResumeId={deletingResume}
             />
+
+            {/* Resume Info */}
+            {profileResume && <ProfileResumeCard resume={profileResume} />}
 
             {/* Dynamic My Activities */}
             <MyActivities

@@ -10,8 +10,7 @@ export { default as ResumeExperience } from './ResumeExperience';
 export { default as ResumeEducation } from './ResumeEducation';
 export { default as ProfileResumeCard } from './ProfileResumeCard';
 
-export { default as ResumeListItem } from './ResumeListItem';
-export { default as ResumesList } from './ResumesList';
+export { default as ResumeDropdown } from './ResumeDropdown';
 
 export { default as MyActivities } from './MyActivitiesCard';
 

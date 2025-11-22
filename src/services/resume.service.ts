@@ -20,7 +20,7 @@ export async function getResumeById(resumeId: number): Promise<Resume | null> {
 }
 
 /**
- * Get resumes by job seeker ID
+ * Get resumes by job seeker ID (excluding deleted resumes)
  */
 export async function getResumesByJobSeekerId(jobSeekerId: number): Promise<Resume[]> {
     const supabase = await createClient();
@@ -28,6 +28,7 @@ export async function getResumesByJobSeekerId(jobSeekerId: number): Promise<Resu
         .from('resume')
         .select('*')
         .eq('job_seeker_id', jobSeekerId)
+        .neq('status', 'deleted')
         .order('created_at', { ascending: false });
 
     if (error) {
@@ -38,7 +39,7 @@ export async function getResumesByJobSeekerId(jobSeekerId: number): Promise<Resu
 }
 
 /**
- * Get profile resume (is_profile = true)
+ * Get profile resume (is_profile = true, excluding deleted resumes)
  */
 export async function getProfileResume(jobSeekerId: number): Promise<Resume | null> {
     const supabase = await createClient();
@@ -47,6 +48,7 @@ export async function getProfileResume(jobSeekerId: number): Promise<Resume | nu
         .select('*')
         .eq('job_seeker_id', jobSeekerId)
         .eq('is_profile', true)
+        .neq('status', 'deleted')
         .maybeSingle();
 
     if (error) {
