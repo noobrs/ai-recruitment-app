@@ -102,6 +102,105 @@ export async function getCurrentRecruiter() {
 }
 
 /**
+ * Get the authenticated user's job seeker profile
+ * @throws Error if user is not authenticated or job seeker profile not found
+ * @returns The job seeker ID
+ */
+export async function getAuthenticatedJobSeeker() {
+    const supabase = await createClient();
+
+    // Get authenticated user
+    const {
+        data: { user },
+        error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+        throw new Error('Unauthorized');
+    }
+
+    // Get jobseeker profile
+    const { data: jobSeeker, error: seekerError } = await supabase
+        .from('job_seeker')
+        .select('job_seeker_id')
+        .eq('user_id', user.id)
+        .single();
+
+    if (seekerError || !jobSeeker) {
+        throw new Error('Jobseeker profile not found');
+    }
+
+    return jobSeeker.job_seeker_id;
+}
+
+/**
+ * Get the authenticated user and their job seeker profile
+ * @throws Error if user is not authenticated or job seeker profile not found
+ * @returns Object containing user and job seeker ID
+ */
+export async function getAuthenticatedJobSeekerWithUser() {
+    const supabase = await createClient();
+
+    // Get authenticated user
+    const {
+        data: { user },
+        error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+        throw new Error('Unauthorized');
+    }
+
+    // Get jobseeker profile
+    const { data: jobSeeker, error: seekerError } = await supabase
+        .from('job_seeker')
+        .select('job_seeker_id')
+        .eq('user_id', user.id)
+        .single();
+
+    if (seekerError || !jobSeeker) {
+        throw new Error('Jobseeker profile not found');
+    }
+
+    return {
+        user,
+        jobSeekerId: jobSeeker.job_seeker_id,
+    };
+}
+
+/**
+ * Get the authenticated user's recruiter profile
+ * @throws Error if user is not authenticated or recruiter profile not found
+ * @returns The recruiter ID
+ */
+export async function getAuthenticatedRecruiter() {
+    const supabase = await createClient();
+
+    // Get authenticated user
+    const {
+        data: { user },
+        error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+        throw new Error('Unauthorized');
+    }
+
+    // Get recruiter profile
+    const { data: recruiter, error: recruiterError } = await supabase
+        .from('recruiter')
+        .select('recruiter_id')
+        .eq('user_id', user.id)
+        .single();
+
+    if (recruiterError || !recruiter) {
+        throw new Error('Recruiter profile not found');
+    }
+
+    return recruiter.recruiter_id;
+}
+
+/**
  * Sign out
  */
 export async function signOut() {

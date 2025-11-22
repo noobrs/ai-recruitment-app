@@ -4,6 +4,8 @@ import { createClient } from '@/utils/supabase/server';
 import { revalidatePath } from 'next/cache';
 import { saveResumeToDatabase } from '@/app/actions/resume.actions';
 import { ResumeData } from '@/types/fastapi.types';
+import { getAuthenticatedJobSeeker } from '@/services/auth.service';
+import { verifyResumeOwnership } from '@/services/resume.service';
 
 /**
  * submitApplication()
@@ -17,15 +19,8 @@ import { ResumeData } from '@/types/fastapi.types';
 export async function submitApplication(formData: FormData) {
   const supabase = await createClient();
 
-  // 1️⃣ Verify user session
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
-
-  if (authError || !user) {
-    throw new Error('Unauthorized');
-  }
+  // 1️⃣ Verify user session and get jobseeker profile
+  const jobSeekerId = await getAuthenticatedJobSeeker();
 
   // 2️⃣ Extract form fields
   const jobId = formData.get('job_id')?.toString();
@@ -39,37 +34,13 @@ export async function submitApplication(formData: FormData) {
     throw new Error('Missing required job ID.');
   }
 
-  // 3️⃣ Find jobseeker profile
-  const { data: jobSeeker, error: seekerError } = await supabase
-    .from('job_seeker')
-    .select('job_seeker_id')
-    .eq('user_id', user.id)
-    .single();
-
-  if (seekerError || !jobSeeker) {
-    console.error('Jobseeker not found:', seekerError);
-    throw new Error('Jobseeker profile not found.');
-  }
-
-  const jobSeekerId = jobSeeker.job_seeker_id;
   let resumeId: number;
 
-  // 4️⃣ Handle resume: use existing or create new
+  // 3️⃣ Handle resume: use existing or create new
   if (existingResumeId) {
-    // Use existing resume - no processing needed
+    // Use existing resume - verify ownership
     resumeId = parseInt(existingResumeId);
-
-    // Verify resume belongs to this jobseeker
-    const { data: existingResume, error: verifyError } = await supabase
-      .from('resume')
-      .select('resume_id, job_seeker_id')
-      .eq('resume_id', resumeId)
-      .eq('job_seeker_id', jobSeekerId)
-      .single();
-
-    if (verifyError || !existingResume) {
-      throw new Error('Invalid resume selection.');
-    }
+    await verifyResumeOwnership(resumeId, jobSeekerId);
   } else if (cvFile && extracted_skills && extracted_experiences && extracted_education) {
     // Create new resume with extracted data using shared function
     const extractedData: ResumeData = {
