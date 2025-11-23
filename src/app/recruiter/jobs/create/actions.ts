@@ -3,6 +3,7 @@
 import { createJob } from "@/services/job.service";
 import { getCurrentRecruiter } from "@/services";
 import { JobInsert } from "@/types";
+import { createMultipleRequirements } from "@/services/job-requirement.service";
 
 export async function createJobAction(formData: FormData) {
   const user = await getCurrentRecruiter();
@@ -28,6 +29,28 @@ export async function createJobAction(formData: FormData) {
 
   if (!newJob) {
     return { success: false, error: "Failed to create job." };
+  }
+
+  // Handle job requirements if provided
+  const requirementsData = formData.get("requirements") as string;
+  if (requirementsData) {
+    try {
+      const requirements = JSON.parse(requirementsData);
+
+      if (Array.isArray(requirements) && requirements.length > 0) {
+        const jobRequirements = requirements.map((req) => ({
+          job_id: newJob.job_id,
+          requirement: req.requirement,
+          type: req.type,
+          weightage: req.weightage / 10,
+        }));
+
+        await createMultipleRequirements(jobRequirements);
+      }
+    } catch (error) {
+      console.error("Error creating job requirements:", error);
+      // Don't fail the entire job creation if requirements fail
+    }
   }
 
   return { success: true };
