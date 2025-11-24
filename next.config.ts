@@ -15,6 +15,7 @@ const nextConfig: NextConfig = {
     serverActions: {
       bodySizeLimit: "5mb", // custom body size limit for server actions
     },
+    globalNotFound: true,
   },
   rewrites: async () => {
     return [
