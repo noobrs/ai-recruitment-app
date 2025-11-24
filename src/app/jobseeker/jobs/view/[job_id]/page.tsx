@@ -2,13 +2,15 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import Image from "next/image";
 import ButtonFilledPrimary from "@/components/shared/buttons/ButtonFilledPrimary";
 import { toggleBookmark } from "../../actions";
+import type { JobWithApplicationStatus, JobRequirement } from "@/types";
 
 export default function JobViewPage() {
   const router = useRouter();
   const { job_id } = useParams(); // ✅ dynamic segment
-  const [job, setJob] = useState<any>(null);
+  const [job, setJob] = useState<JobWithApplicationStatus | null>(null);
   const [jobSeekerId, setJobSeekerId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -26,9 +28,10 @@ export default function JobViewPage() {
         const data = await res.json();
         setJob(data.job);
         setJobSeekerId(data.jobSeekerId);
-      } catch (err: any) {
-        console.error("Error fetching job details:", err.message);
-        setError(err.message);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Unknown error';
+        console.error("Error fetching job details:", message);
+        setError(message);
       } finally {
         setLoading(false);
       }
@@ -47,10 +50,10 @@ export default function JobViewPage() {
     try {
       const result = await toggleBookmark(jobSeekerId, job.job_id);
       if (result.success) {
-        setJob((prev: any) => ({
+        setJob((prev: JobWithApplicationStatus | null) => prev ? ({
           ...prev,
-          is_bookmark: result.is_bookmark,
-        }));
+          is_bookmark: !!result.is_bookmark,
+        }) : null);
       } else {
         alert("Failed to update bookmark.");
       }
@@ -86,10 +89,12 @@ export default function JobViewPage() {
       {/* Header */}
       <div className="flex flex-row items-center justify-between pb-3">
         <div className="flex items-center">
-          <img
+          <Image
             src={job.company?.comp_logo || "/default-company.png"}
             alt="Company Logo"
-            className="w-10 h-10 mr-3"
+            width={40}
+            height={40}
+            className="mr-3 object-contain"
           />
           <p className="text-lg font-semibold text-gray-700">
             {job.company?.comp_name || "Unknown Company"}
@@ -97,12 +102,13 @@ export default function JobViewPage() {
         </div>
 
         <div className="flex items-center gap-4">
-          <img
+          <Image
             src={job.is_bookmark ? "/bookmark-solid.svg" : "/bookmark.svg"}
             alt="Bookmark"
-            className={`w-7 h-7 cursor-pointer hover:scale-110 transition-transform ${
-              bookmarkLoading ? "opacity-50" : ""
-            }`}
+            width={28}
+            height={28}
+            className={`cursor-pointer hover:scale-110 transition-transform ${bookmarkLoading ? "opacity-50" : ""
+              }`}
             onClick={handleToggleBookmark}
           />
         </div>
@@ -122,9 +128,13 @@ export default function JobViewPage() {
           </p>
         </div>
         <ButtonFilledPrimary
-          text="Apply Now"
-          onClick={() => router.push(`/jobseeker/jobs/apply/${job.job_id}`)}
-          className="mt-4 sm:mt-0 w-36 h-10 bg-primary"
+          text={job.is_applied ? "Applied" : "Apply Now"}
+          onClick={() => !job.is_applied && router.push(`/jobseeker/jobs/apply/${job.job_id}`)}
+          className={`mt-4 sm:mt-0 w-36 h-10 ${job.is_applied
+            ? "bg-gray-400 cursor-not-allowed opacity-70"
+            : "bg-primary"
+            }`}
+          disabled={job.is_applied}
         />
       </div>
 
@@ -139,13 +149,13 @@ export default function JobViewPage() {
       </section>
 
       {/* Requirements */}
-      {job.job_requirement?.length > 0 && (
+      {job.job_requirement && job.job_requirement.length > 0 && (
         <section className="mb-6">
           <h3 className="text-2xl font-semibold text-gray-700 mb-2">
             Requirements
           </h3>
           <ul className="list-disc list-inside text-gray-600 space-y-1">
-            {job.job_requirement.map((req: any) => (
+            {job.job_requirement.map((req: JobRequirement) => (
               <li key={req.job_requirement_id}>{req.requirement}</li>
             ))}
           </ul>
@@ -176,13 +186,18 @@ export default function JobViewPage() {
           </p>
           <p>
             <span className="font-bold">Website:</span>{" "}
-            <a
-              href={job.company?.comp_website}
-              target="_blank"
-              className="text-blue-500 underline hover:text-blue-600"
-            >
-              {job.company?.comp_website || "N/A"}
-            </a>
+            {job.company?.comp_website ? (
+              <a
+                href={job.company.comp_website}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-500 underline hover:text-blue-600"
+              >
+                {job.company.comp_website}
+              </a>
+            ) : (
+              <span>N/A</span>
+            )}
           </p>
         </div>
       </section>

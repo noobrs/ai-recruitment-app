@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { useBookmark } from "@/hooks/useBookmark";
-
+import type { JobWithApplicationStatus, JobRequirement } from "@/types";
 
 import JobCard from "@/components/jobseeker/jobs/JobCard";
 import ButtonFilledPrimary from "@/components/shared/buttons/ButtonFilledPrimary";
@@ -11,7 +12,7 @@ import ButtonFilledPrimary from "@/components/shared/buttons/ButtonFilledPrimary
 export default function JobPage() {
   const router = useRouter();
 
-  const [jobs, setJobs] = useState<any[]>([]);
+  const [jobs, setJobs] = useState<JobWithApplicationStatus[]>([]);
   const [jobSeekerId, setJobSeekerId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -34,9 +35,10 @@ export default function JobPage() {
         setJobs(data.jobs || []);
         setJobSeekerId(data.jobSeekerId);
         if (data.jobs.length > 0) setSelectedJobId(data.jobs[0].job_id);
-      } catch (err: any) {
-        console.error("Error fetching jobs:", err.message);
-        setError(err.message);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Unknown error';
+        console.error("Error fetching jobs:", message);
+        setError(message);
       } finally {
         setLoading(false);
       }
@@ -59,22 +61,22 @@ export default function JobPage() {
   // Bookmark toggle handler
   // =============================
   const handleToggleBookmark = async (jobId: number) => {
-  if (!jobSeekerId) return;
+    if (!jobSeekerId) return;
 
-  const result = await toggle(jobSeekerId, jobId);
+    const result = await toggle(jobSeekerId, jobId);
 
-  if (result.success) {
-    setJobs((prev) =>
-      prev.map((job) =>
-        job.job_id === jobId
-          ? { ...job, is_bookmark: result.is_bookmark }
-          : job
-      )
-    );
-  } else {
-    alert("Failed to update bookmark.");
-  }
-};
+    if (result.success) {
+      setJobs((prev) =>
+        prev.map((job) =>
+          job.job_id === jobId
+            ? { ...job, is_bookmark: !!result.is_bookmark }
+            : job
+        )
+      );
+    } else {
+      alert("Failed to update bookmark.");
+    }
+  };
 
   // =============================
   // Pagination logic
@@ -120,9 +122,8 @@ export default function JobPage() {
   // =============================
   return (
     <div
-      className={`flex max-w-8/10 mx-auto my-8 transition-all duration-500 ease-in-out ${
-        isExpanded ? "flex-col" : "flex-row"
-      }`}
+      className={`flex max-w-8/10 mx-auto my-8 transition-all duration-500 ease-in-out ${isExpanded ? "flex-col" : "flex-row"
+        }`}
     >
       {/* =================== LEFT: Job List =================== */}
       {!isExpanded && (
@@ -131,17 +132,16 @@ export default function JobPage() {
             <div
               key={job.job_id}
               onClick={() => setSelectedJobId(job.job_id)}
-              className={`mb-5 border rounded-lg cursor-pointer transition-all duration-200 ${
-                job.job_id === selectedJobId
-                  ? "border-primary shadow-md bg-primary/5"
-                  : "border-gray-300 hover:border-gray-400"
-              }`}
+              className={`mb-5 border rounded-lg cursor-pointer transition-all duration-200 ${job.job_id === selectedJobId
+                ? "border-primary shadow-md bg-primary/5"
+                : "border-gray-300 hover:border-gray-400"
+                }`}
             >
               <JobCard
                 jobId={job.job_id}
                 jobTitle={job.job_title}
-                jobLocation={job.job_location}
-                jobType={job.job_type}
+                jobLocation={job.job_location || "Unknown Location"}
+                jobType={job.job_type || "N/A"}
                 compName={job.company?.comp_name || "Unknown Company"}
                 compLogo={job.company?.comp_logo || "/default-company.png"}
                 createdAt={new Date(job.created_at).toLocaleDateString()}
@@ -167,11 +167,10 @@ export default function JobPage() {
               <button
                 onClick={handlePrevPage}
                 disabled={currentPage === 1}
-                className={`px-4 h-9 text-sm font-medium rounded-md border transition-all duration-200 ${
-                  currentPage === 1
-                    ? "bg-gray-100 text-gray-400 border-gray-300 cursor-not-allowed"
-                    : "bg-white text-gray-800 border-gray-400 hover:bg-gray-200 hover:text-black"
-                }`}
+                className={`px-4 h-9 text-sm font-medium rounded-md border transition-all duration-200 ${currentPage === 1
+                  ? "bg-gray-100 text-gray-400 border-gray-300 cursor-not-allowed"
+                  : "bg-white text-gray-800 border-gray-400 hover:bg-gray-200 hover:text-black"
+                  }`}
               >
                 Prev
               </button>
@@ -179,11 +178,10 @@ export default function JobPage() {
               <button
                 onClick={handleNextPage}
                 disabled={currentPage === totalPages}
-                className={`px-4 h-9 text-sm font-medium rounded-md border transition-all duration-200 ${
-                  currentPage === totalPages
-                    ? "bg-gray-100 text-gray-400 border-gray-300 cursor-not-allowed"
-                    : "bg-white text-gray-800 border-gray-400 hover:bg-gray-200 hover:text-black"
-                }`}
+                className={`px-4 h-9 text-sm font-medium rounded-md border transition-all duration-200 ${currentPage === totalPages
+                  ? "bg-gray-100 text-gray-400 border-gray-300 cursor-not-allowed"
+                  : "bg-white text-gray-800 border-gray-400 hover:bg-gray-200 hover:text-black"
+                  }`}
               >
                 Next
               </button>
@@ -198,19 +196,20 @@ export default function JobPage() {
 
       {/* =================== RIGHT: Job Details =================== */}
       <div
-        className={`transition-all duration-500 ease-in-out ${
-          isExpanded ? "basis-full" : "basis-3/4 ms-10"
-        } rounded-lg shadow-md border border-gray-300 p-6 bg-white`}
+        className={`transition-all duration-500 ease-in-out ${isExpanded ? "basis-full" : "basis-3/4 ms-10"
+          } rounded-lg shadow-md border border-gray-300 p-6 bg-white`}
       >
         {selectedJob ? (
           <>
             {/* Header */}
             <div className="flex flex-row items-center justify-between pb-3">
               <div className="flex items-center">
-                <img
+                <Image
                   src={selectedJob.company?.comp_logo || "/default-company.png"}
                   alt="Company Logo"
-                  className="w-10 h-10 mr-3"
+                  width={40}
+                  height={40}
+                  className="mr-3 object-contain"
                 />
                 <p className="text-lg font-semibold text-gray-700">
                   {selectedJob.company?.comp_name || "Unknown Company"}
@@ -218,26 +217,28 @@ export default function JobPage() {
               </div>
 
               <div className="flex items-center gap-4">
-                <img
+                <Image
                   src={
                     selectedJob.is_bookmark
                       ? "/bookmark-solid.svg"
                       : "/bookmark.svg"
                   }
                   alt="Bookmark"
-                  className={`w-7 h-7 cursor-pointer hover:scale-110 transition-transform ${
-                    loadingId === selectedJob.job_id ? "opacity-50" : ""
-                  }`}
+                  width={28}
+                  height={28}
+                  className={`cursor-pointer hover:scale-110 transition-transform ${loadingId === selectedJob.job_id ? "opacity-50" : ""
+                    }`}
                   onClick={() => handleToggleBookmark(selectedJob.job_id)}
                 />
                 <button
                   onClick={() => setIsExpanded(!isExpanded)}
                   className="transition-transform hover:scale-110"
                 >
-                  <img
+                  <Image
                     src={isExpanded ? "/collapse.svg" : "/expand.svg"}
                     alt="Toggle View"
-                    className="w-6 h-6"
+                    width={24}
+                    height={24}
                   />
                 </button>
               </div>
@@ -257,11 +258,15 @@ export default function JobPage() {
                 </p>
               </div>
               <ButtonFilledPrimary
-                text="Apply Now"
+                text={selectedJob.is_applied ? "Applied" : "Apply Now"}
                 onClick={() =>
-                  router.push(`/jobseeker/jobs/apply/${selectedJob.job_id}`)
+                  !selectedJob.is_applied && router.push(`/jobseeker/jobs/apply/${selectedJob.job_id}`)
                 }
-                className="mt-4 sm:mt-0 w-36 h-10 bg-primary"
+                className={`mt-4 sm:mt-0 w-36 h-10 ${selectedJob.is_applied
+                  ? "bg-gray-400 cursor-not-allowed opacity-70"
+                  : "bg-primary"
+                  }`}
+                disabled={selectedJob.is_applied}
               />
             </div>
 
@@ -276,13 +281,13 @@ export default function JobPage() {
             </section>
 
             {/* Requirements */}
-            {selectedJob.job_requirement?.length > 0 && (
+            {selectedJob.job_requirement && selectedJob.job_requirement.length > 0 && (
               <section className="mb-6 fade-in">
                 <h3 className="text-2xl font-semibold text-gray-700 mb-2">
                   Requirements
                 </h3>
                 <ul className="list-disc list-inside text-gray-600 space-y-1">
-                  {selectedJob.job_requirement.map((req: any) => (
+                  {selectedJob.job_requirement.map((req: JobRequirement) => (
                     <li key={req.job_requirement_id}>{req.requirement}</li>
                   ))}
                 </ul>
@@ -313,13 +318,18 @@ export default function JobPage() {
                 </p>
                 <p>
                   <span className="font-bold">Website:</span>{" "}
-                  <a
-                    href={selectedJob.company?.comp_website}
-                    target="_blank"
-                    className="text-blue-500 underline hover:text-blue-600"
-                  >
-                    {selectedJob.company?.comp_website || "N/A"}
-                  </a>
+                  {selectedJob.company?.comp_website ? (
+                    <a
+                      href={selectedJob.company.comp_website}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-500 underline hover:text-blue-600"
+                    >
+                      {selectedJob.company.comp_website}
+                    </a>
+                  ) : (
+                    <span>N/A</span>
+                  )}
                 </p>
               </div>
             </section>

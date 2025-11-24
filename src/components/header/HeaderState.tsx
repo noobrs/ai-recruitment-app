@@ -57,7 +57,7 @@ export default function HeaderState({ user, actionLink, theme, notificationData 
             ) : (
                 // not logged in: you can show login/register here if you like
                 <div className="flex items-center gap-2">
-                    <Link href="/auth/login" className="text-sm text-gray-700 hover:text-gray-900">
+                    <Link href="/auth/login" className="px-3 py-1.5text-sm text-gray-700 hover:text-gray-900">
                         Log in
                     </Link>
                     <Link

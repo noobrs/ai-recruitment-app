@@ -56,3 +56,6 @@ export * from './composite.types';
 
 // Export FastAPI related types
 export * from './fastapi.types';
+
+// Export job-related types
+export * from './job.types';
