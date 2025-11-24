@@ -17,7 +17,7 @@ export default async function Footer() {
 
     return (
         <FooterClient>
-            <footer className="bg-gray-900 text-white border-t border-gray-800">
+            <footer className="bg-white text-gray-600 border-t border-gray-100">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
                         {/* Brand Info */}
@@ -25,7 +25,7 @@ export default async function Footer() {
                             <h3 className={`text-xl font-bold mb-4 ${textColor}`}>
                                 AI-Powered Recruitment
                             </h3>
-                            <p className="text-gray-400 mb-4 leading-relaxed">
+                            <p className="text-gray-600 mb-4 leading-relaxed">
                                 Empowering job seekers and employers through intelligent matching.
                                 Your trusted partner in AI-driven hiring.
                             </p>
@@ -48,7 +48,7 @@ export default async function Footer() {
                                         key={social.label}
                                         href="#"
                                         aria-label={social.label}
-                                        className={`text-gray-400 ${hoverColor} transition-colors`}
+                                        className={`text-gray-600 ${hoverColor} transition-colors`}
                                     >
                                         <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
                                             {social.icon}
@@ -71,7 +71,7 @@ export default async function Footer() {
                                     <li key={link.href}>
                                         <Link
                                             href={link.href}
-                                            className={`text-gray-400 ${hoverColor} transition-colors`}
+                                            className={`text-gray-600 ${hoverColor} transition-colors`}
                                         >
                                             {link.label}
                                         </Link>
@@ -83,7 +83,7 @@ export default async function Footer() {
                         {/* Contact */}
                         <div>
                             <h3 className={`text-lg font-semibold mb-4 ${textColor}`}>Contact</h3>
-                            <ul className="space-y-2 text-gray-400">
+                            <ul className="space-y-2 text-gray-600">
                                 <li className="flex items-center">
                                     <svg className="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path
@@ -93,7 +93,7 @@ export default async function Footer() {
                                             d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
                                         />
                                     </svg>
-                                    contact@aihire.com
+                                    <a href="mailto:ai.powered.recruitment.app@gmail.com">ai.powered.recruitment.app</a>
                                 </li>
                                 <li className="flex items-center">
                                     <svg className="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
