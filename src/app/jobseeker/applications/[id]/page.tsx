@@ -11,31 +11,18 @@ interface ApplicationDetail {
     applicationId: number;
     status: ApplicationStatus;
     appliedDate: string;
-    matchScore: number | null;
     job: {
         jobId: number;
         title: string;
-        description: string;
-        location: string;
-        type: string;
-        salaryRange: string | null;
-        postedDate: string;
     };
     company: {
         companyId: number;
         name: string;
         logo: string;
-        location: string;
-        website: string | null;
-        industry: string;
     };
     resume: {
         resumeId: number;
         filePath: string;
-        skills: string | null;
-        experiences: string | null;
-        education: string | null;
-        uploadedDate: string;
     } | null;
 }
 

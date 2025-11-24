@@ -41,34 +41,21 @@ export async function GET(
                 job_id,
                 status,
                 created_at,
-                match_score,
                 job:job_id!inner (
                     job_id,
                     job_title,
-                    job_description,
-                    job_location,
-                    job_type,
-                    salary_range,
-                    created_at,
                     recruiter:recruiter_id!inner (
                         recruiter_id,
                         company:company_id!inner (
                             company_id,
                             comp_name,
-                            comp_logo_path,
-                            comp_location,
-                            comp_website,
-                            comp_industry
+                            comp_logo_path
                         )
                     )
                 ),
                 resume:resume_id (
                     resume_id,
-                    original_file_path,
-                    extracted_skills,
-                    extracted_experiences,
-                    extracted_education,
-                    created_at
+                    original_file_path
                 )
             `)
             .eq('application_id', id) // 3. Use the awaited 'id' variable here
@@ -98,39 +85,18 @@ export async function GET(
                 month: 'long',
                 day: 'numeric'
             }),
-            matchScore: application.match_score,
             job: {
                 jobId: job?.job_id,
                 title: job?.job_title || 'Untitled Job',
-                description: job?.job_description || '',
-                location: job?.job_location || 'N/A',
-                type: job?.job_type || 'N/A',
-                salaryRange: job?.salary_range,
-                postedDate: job?.created_at ? new Date(job.created_at).toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric'
-                }) : 'N/A',
             },
             company: {
                 companyId: company?.company_id,
                 name: company?.comp_name || 'Unknown Company',
                 logo: company?.comp_logo_path || '/default-company.png',
-                location: company?.comp_location || 'N/A',
-                website: company?.comp_website,
-                industry: company?.comp_industry || 'N/A',
             },
             resume: resume ? {
                 resumeId: resume.resume_id,
                 filePath: resume.original_file_path,
-                skills: resume.extracted_skills,
-                experiences: resume.extracted_experiences,
-                education: resume.extracted_education,
-                uploadedDate: resume.created_at ? new Date(resume.created_at).toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric'
-                }) : 'N/A',
             } : null,
         };
 
