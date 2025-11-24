@@ -3,10 +3,9 @@ export default function ButtonFilledPrimary(
     return (
         <button onClick={onClick}
             disabled={disabled}
-            className={`px-2 py-1 rounded-3xl border border-primary text-black bg-primary hover:bg-white hover:text-primary transition-all duration-300 ${disabled ? 'cursor-not-allowed' : 'cursor-pointer'} ${className}`}>
-
+            className={`px-2 py-1 rounded-3xl border border-primary text-black bg-primary transition-all duration-300 ${disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:bg-white hover:text-primary'} ${className}`}>
             <div className="flex flex-row items-center justify-center gap-2">
-                {icon ? <span className={"fill-white hover:fill-primary transition-all duration-300"}>{icon}</span> : null}
+                {icon ? <span className={`transition-all duration-300 ${!disabled && 'group-hover:fill-primary'}`}>{icon}</span> : null}
                 <span className={"font-bold transition-all duration-300"}>{text}</span>
             </div>
         </button>
