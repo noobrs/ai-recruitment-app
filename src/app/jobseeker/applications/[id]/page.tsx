@@ -48,7 +48,6 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
                 setApplication(data.application);
             } catch (err: unknown) {
                 const message = err instanceof Error ? err.message : "Unknown error";
-                console.error("Error fetching application detail:", message);
                 setError(message);
             } finally {
                 setLoading(false);
