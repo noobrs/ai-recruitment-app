@@ -1,3 +1,5 @@
+import Image from "next/image";
+
 export type CompanyCardProps = {
   compId?: number;
   compLogo?: string;
@@ -19,9 +21,11 @@ export default function CompanyCard(props: CompanyCardProps) {
     >
       {/* Logo */}
       <div className="flex flex-col items-center">
-        <img
+        <Image
           src={props.compLogo || "/company-placeholder.png"}
           alt={`${props.compName} Logo`}
+          width={56}
+          height={56}
           className="w-14 h-14 object-contain mb-3"
         />
 
@@ -32,7 +36,7 @@ export default function CompanyCard(props: CompanyCardProps) {
 
         {/* Rating */}
         <div className="flex items-center justify-center mt-1">
-          <img src="/star.png" alt="Rating" className="w-4 h-4 mr-1" />
+          <Image src="/star.png" alt="Rating" width={16} height={16} className="w-4 h-4 mr-1" />
           <span className="text-sm text-gray-600">{props.rating.toFixed(1)}</span> {/* one decimal place */}
         </div>
       </div>
