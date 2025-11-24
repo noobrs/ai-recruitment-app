@@ -8,6 +8,7 @@ import JobHeader from './JobHeader';
 import SkillsEditor from './SkillsEditor';
 import ExperienceEditor from './ExperienceEditor';
 import EducationEditor from './EducationEditor';
+import ResumeValidationWarning from './ResumeValidationWarning';
 import { JobDetails } from '@/types/job.types';
 
 interface ResumeReviewStepProps {
@@ -81,6 +82,8 @@ export default function ResumeReviewStep({
                 <h2 className="text-2xl font-bold mb-6">
                     Review & Edit Extracted Information
                 </h2>
+
+                <ResumeValidationWarning resumeData={resumeData} />
 
                 <div className="flex flex-col gap-8 text-gray-700">
                     <SkillsEditor

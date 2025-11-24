@@ -142,7 +142,7 @@ export default function ProfilePictureUpload({
                         className="rounded-full object-cover border-4 border-gray-100"
                     />
                 ) : (
-                    <div className="w-[120px] h-[120px] rounded-full bg-linear-to-br from-indigo-500 to-purple-600 flex items-center justify-center border-4 border-gray-100">
+                    <div className="w-[120px] h-[120px] rounded-full bg-linear-to-br from-primary to-secondary flex items-center justify-center border-4 border-gray-100">
                         <span className="text-4xl font-bold text-white">{initials}</span>
                     </div>
                 )}

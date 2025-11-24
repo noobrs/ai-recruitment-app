@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Resume, UserWithJobSeeker } from '@/types';
+import { Resume, UserWithJobSeeker, ApplicationStatus } from '@/types';
 import { updateJobSeekerProfile, updateUserProfile, setProfileResume } from './actions';
 import {
     ProfileHeader,
@@ -15,6 +15,29 @@ import { uploadProfilePictureAction } from '@/app/actions/profile-picture.action
 import { deleteResume } from '@/app/actions/resume.actions';
 import toast from 'react-hot-toast';
 import { useBookmark } from "@/hooks/useBookmark";
+
+interface BookmarkedJob {
+    jobId: number;
+    compLogo: string;
+    compName: string;
+    jobTitle: string;
+    jobLocation: string;
+    jobType: string;
+    createdAt: string;
+    bookmark: boolean;
+}
+
+interface AppliedJob {
+    jobId: number;
+    compLogo: string;
+    compName: string;
+    jobTitle: string;
+    jobLocation: string;
+    jobType: string;
+    createdAt: string;
+    bookmark: boolean;
+    status: ApplicationStatus;
+}
 
 interface ProfileClientProps {
     user: UserWithJobSeeker;
@@ -30,8 +53,8 @@ export default function ProfileClient({ user, profileResume, allResumes }: Profi
     const [settingProfile, setSettingProfile] = useState<number | null>(null);
     const [deletingResume, setDeletingResume] = useState<number | null>(null);
     const [activitiesLoading, setActivitiesLoading] = useState(true);
-    const [bookmarkedJobs, setBookmarkedJobs] = useState<any[]>([]);
-    const [appliedJobs, setAppliedJobs] = useState<any[]>([]);
+    const [bookmarkedJobs, setBookmarkedJobs] = useState<BookmarkedJob[]>([]);
+    const [appliedJobs, setAppliedJobs] = useState<AppliedJob[]>([]);
     const [profilePicture, setProfilePicture] = useState<File | null>(null);
     const [profilePicturePreview, setProfilePicturePreview] = useState<string | null>(null);
     const [formData, setFormData] = useState({

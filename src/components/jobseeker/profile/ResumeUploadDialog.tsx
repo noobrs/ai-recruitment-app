@@ -7,6 +7,7 @@ import { saveResumeToDatabase } from '@/app/actions/resume.actions';
 import SkillsEditor from '@/components/jobseeker/jobs/apply/SkillsEditor';
 import ExperienceEditor from '@/components/jobseeker/jobs/apply/ExperienceEditor';
 import EducationEditor from '@/components/jobseeker/jobs/apply/EducationEditor';
+import ResumeValidationWarning from '@/components/jobseeker/jobs/apply/ResumeValidationWarning';
 
 interface ResumeUploadDialogProps {
     jobSeekerId: number;
@@ -56,7 +57,7 @@ export default function ResumeUploadDialog({
             formData.append('job_seeker_id', jobSeekerId.toString());
 
             const result = await uploadResumeToProfile(formData);
-            
+
             if (result.success && result.extractedData) {
                 setExtractedData(result.extractedData);
                 setStep('review');
@@ -122,7 +123,7 @@ export default function ResumeUploadDialog({
                     {step === 'upload' && (
                         <div>
                             <div className="mb-6">
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                <label className="block text-sm font-medium text-gray-600 mb-2">
                                     Select Resume (PDF or Image)
                                 </label>
                                 <input
@@ -130,7 +131,7 @@ export default function ResumeUploadDialog({
                                     accept=".pdf,image/*"
                                     onChange={handleFileSelect}
                                     disabled={isExtracting}
-                                    className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+                                    className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary hover:file:bg-primary/10"
                                 />
                                 {selectedFile && (
                                     <p className="mt-2 text-sm text-gray-600">
@@ -150,9 +151,9 @@ export default function ResumeUploadDialog({
                                 <button
                                     onClick={handleExtract}
                                     disabled={!selectedFile || isExtracting}
-                                    className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+                                    className="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50"
                                 >
-                                    {isExtracting ? 'Extracting...' : 'Extract Data'}
+                                    {isExtracting ? 'Uploading...' : 'Upload'}
                                 </button>
                             </div>
                         </div>
@@ -164,7 +165,9 @@ export default function ResumeUploadDialog({
                             <p className="text-sm text-gray-600 mb-6">
                                 Review and edit the extracted information before saving your resume.
                             </p>
-                            
+
+                            <ResumeValidationWarning resumeData={extractedData} />
+
                             <div className="mb-6 space-y-6 max-h-[50vh] overflow-y-auto pr-2">
                                 {/* Skills Editor */}
                                 <SkillsEditor
@@ -203,7 +206,7 @@ export default function ResumeUploadDialog({
                                 <button
                                     onClick={() => handleSave(true)}
                                     disabled={isSaving}
-                                    className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+                                    className="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50"
                                 >
                                     {isSaving ? 'Saving...' : 'Save as Profile Resume'}
                                 </button>

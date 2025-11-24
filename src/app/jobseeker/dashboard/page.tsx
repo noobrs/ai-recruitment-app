@@ -34,7 +34,7 @@ export default async function JobSeekerDashboard() {
 
                     <div className="bg-white rounded-lg shadow p-6">
                         <h3 className="text-sm font-medium text-gray-500">Interviews</h3>
-                        <p className="text-3xl font-bold text-indigo-600 mt-2">0</p>
+                        <p className="text-3xl font-bold text-primary mt-2">0</p>
                         <p className="text-sm text-gray-600 mt-1">Scheduled</p>
                     </div>
 
@@ -50,13 +50,13 @@ export default async function JobSeekerDashboard() {
                     <h2 className="text-xl font-semibold text-gray-900 mb-4">Quick Actions</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                         <BrowseJobsAction />
-                        <a href="#" className="flex items-center justify-center px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-700 hover:border-indigo-500 hover:text-indigo-600 transition-colors">
+                        <a href="#" className="flex items-center justify-center px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-700 hover:border-primary hover:text-primary transition-colors">
                             <span className="text-sm font-medium">Upload Resume</span>
                         </a>
-                        <a href="/jobseeker/applications" className="flex items-center justify-center px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-700 hover:border-indigo-500 hover:text-indigo-600 transition-colors">
+                        <a href="/jobseeker/applications" className="flex items-center justify-center px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-700 hover:border-primary hover:text-primary transition-colors">
                             <span className="text-sm font-medium">View Applications</span>
                         </a>
-                        <a href="/jobseeker/profile" className="flex items-center justify-center px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-700 hover:border-indigo-500 hover:text-indigo-600 transition-colors">
+                        <a href="/jobseeker/profile" className="flex items-center justify-center px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-700 hover:border-primary hover:text-primary transition-colors">
                             <span className="text-sm font-medium">Edit Profile</span>
                         </a>
                     </div>

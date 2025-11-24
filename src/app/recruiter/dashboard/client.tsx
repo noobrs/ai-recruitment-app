@@ -95,7 +95,7 @@ export default function DashboardClient({ user }: DashboardClientProps) {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <PostNewJobActions />
-          
+
           <ViewApplicantsAction />
 
           <button className="flex items-center justify-center px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-700 hover:border-indigo-500 hover:text-indigo-600 transition-colors">
@@ -150,10 +150,9 @@ export default function DashboardClient({ user }: DashboardClientProps) {
 
                   <span
                     className={`inline-block mt-1 text-xs font-semibold px-2 py-1 rounded-full
-                      ${
-                        app.status === "shortlisted"
-                          ? "bg-green-100 text-green-700"
-                          : app.status === "rejected"
+                      ${app.status === "shortlisted"
+                        ? "bg-green-100 text-green-700"
+                        : app.status === "rejected"
                           ? "bg-red-100 text-red-700"
                           : "bg-gray-100 text-gray-700"
                       }`}
