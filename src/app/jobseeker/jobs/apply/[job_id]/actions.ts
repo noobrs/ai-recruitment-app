@@ -48,7 +48,6 @@ export async function submitApplication(formData: FormData) {
       skills: JSON.parse(extracted_skills),
       experience: JSON.parse(extracted_experiences),
       education: JSON.parse(extracted_education),
-      languages: [],
       certifications: [],
       activities: [],
     };

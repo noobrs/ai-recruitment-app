@@ -63,7 +63,6 @@ export interface ResumeData {
     education: EducationOut[];
     experience: ExperienceOut[];
     skills: string[];
-    languages: string[];
     certifications: CertificationOut[];
     activities: ActivityOut[];
 }

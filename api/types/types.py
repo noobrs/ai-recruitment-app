@@ -46,7 +46,6 @@ class ResumeData(BaseModel):
     education: List[EducationOut]
     experience: List[ExperienceOut]
     skills: List[str]
-    languages: List[str]
     certifications: List[CertificationOut]
     activities: List[ActivityOut]
 

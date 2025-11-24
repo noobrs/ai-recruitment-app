@@ -73,7 +73,6 @@ export default function ResumeUploadStep({
                 skills: selectedResume.extracted_skills ? JSON.parse(selectedResume.extracted_skills) : [],
                 experience: selectedResume.extracted_experiences ? JSON.parse(selectedResume.extracted_experiences) : [],
                 education: selectedResume.extracted_education ? JSON.parse(selectedResume.extracted_education) : [],
-                languages: [],
                 certifications: [],
                 activities: [],
             };

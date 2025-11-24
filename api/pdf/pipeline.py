@@ -49,6 +49,8 @@ def process_pdf_resume(file_bytes: bytes):
         candidate = extract_candidate_info(full_text, gliner)
         skills = build_skills(groups)
         languages = build_languages(groups)
+        # Merge languages into skills
+        all_skills = skills + languages
         education = build_education(groups)
         experience = build_experience(groups)
         certifications = build_certifications(groups)
@@ -58,8 +60,7 @@ def process_pdf_resume(file_bytes: bytes):
             "candidate": candidate,
             "education": education,
             "experience": experience,
-            "skills": skills,
-            "languages": languages,
+            "skills": all_skills,
             "certifications": certifications,
             "activities": activities,
         })

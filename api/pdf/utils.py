@@ -180,7 +180,6 @@ def convert_resume_dict_to_api_response(resume_dict: Dict) -> ResumeData:
         education=edu_models,
         experience=exp_models,
         skills=resume_dict.get("skills", []),
-        languages=resume_dict.get("languages", []),
         certifications=cert_models,
         activities=act_models,
     )
