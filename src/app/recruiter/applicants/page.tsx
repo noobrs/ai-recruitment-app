@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Search, Filter, ChevronDown } from "lucide-react";
+import { Search, Filter } from "lucide-react";
+import StatusDropdown from "@/components/recruiter/StatusDropdown";
+import { ApplicationStatus } from "@/types";
 
 interface Applicant {
   id: number;
@@ -9,7 +11,7 @@ interface Applicant {
   jobTitle: string;
   date: string;
   score: number;
-  status: string;
+  status: ApplicationStatus;
 }
 
 const STATUS_OPTIONS = ["received", "shortlisted", "rejected", "withdrawn"];
@@ -114,11 +116,10 @@ export default function RecruiterApplicantsPage() {
           <button
             key={status}
             onClick={() => toggleStatus(status)}
-            className={`px-4 py-2 rounded-full font-medium capitalize border transition ${
-              selectedStatuses.includes(status)
-                ? "bg-purple-600 text-white border-purple-600"
-                : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
-            }`}
+            className={`px-4 py-2 rounded-full font-medium capitalize border transition ${selectedStatuses.includes(status)
+              ? "bg-purple-600 text-white border-purple-600"
+              : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+              }`}
           >
             {status}
           </button>
@@ -126,7 +127,7 @@ export default function RecruiterApplicantsPage() {
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto bg-white rounded-xl shadow-sm">
+      <div className="bg-white rounded-xl shadow-sm">
         {loading ? (
           <p className="text-center py-6 text-gray-500">Loading applicants...</p>
         ) : displayedApplicants.length === 0 ? (
@@ -146,9 +147,8 @@ export default function RecruiterApplicantsPage() {
               {displayedApplicants.map((a, i) => (
                 <tr
                   key={a.id}
-                  className={`${
-                    i % 2 === 0 ? "bg-white" : "bg-gray-50"
-                  } hover:bg-gray-100 transition`}
+                  className={`${i % 2 === 0 ? "bg-white" : "bg-gray-50"
+                    } hover:bg-gray-100 transition`}
                 >
                   <td className="px-6 py-4 flex items-center gap-4 font-semibold capitalize">
                     <div
@@ -162,9 +162,28 @@ export default function RecruiterApplicantsPage() {
                   </td>
                   <td className="px-6 py-4">{a.jobTitle}</td>
                   <td className="px-6 py-4">{a.date}</td>
-                  <td className="px-6 py-4 flex items-center gap-1 font-medium text-gray-700 capitalize">
-                    {a.status}
-                    <ChevronDown className="w-4 h-4 text-gray-400" />
+                  <td className="px-6 py-4">
+                    <StatusDropdown
+                      applicationId={a.id}
+                      currentStatus={a.status}
+                      onStatusChange={(newStatus) => {
+                        // Update local state when status changes
+                        setApplicants((prev) =>
+                          prev.map((applicant) =>
+                            applicant.id === a.id
+                              ? { ...applicant, status: newStatus }
+                              : applicant
+                          )
+                        );
+                        setFilteredApplicants((prev) =>
+                          prev.map((applicant) =>
+                            applicant.id === a.id
+                              ? { ...applicant, status: newStatus }
+                              : applicant
+                          )
+                        );
+                      }}
+                    />
                   </td>
                   <td className="px-6 py-4 text-purple-600 font-medium cursor-pointer hover:underline">
                     View Details

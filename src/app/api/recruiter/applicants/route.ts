@@ -47,8 +47,8 @@ export async function GET(request: Request) {
     );
 
     return NextResponse.json({ applicants }, { status: 200 });
-  } catch (err: any) {
-    console.error("Error in /api/recruiter/applicants:", err.message);
+  } catch (err: unknown) {
+    console.error("Error in /api/recruiter/applicants:", err instanceof Error ? err.message : String(err));
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
