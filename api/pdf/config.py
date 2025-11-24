@@ -4,7 +4,7 @@ Global constants for models, labels, thresholds, and spaCy-layout options.
 
 from typing import Dict, List, Set
 
-GLINER_MODEL_NAME: str = "urchade/gliner_small-v2.1"
+GLINER_MODEL_NAME: str = "urchade/gliner_large-v2.1"
 
 # Work-related labels for extraction
 WORK_LABELS: List[str] = ["Skill", "Language", "Degree", "Job Title"]

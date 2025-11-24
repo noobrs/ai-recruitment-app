@@ -191,9 +191,9 @@ export default function ApplicationsPage() {
                                     </td>
                                     <td
                                         className="px-6 py-4 text-primary font-medium cursor-pointer hover:underline"
-                                        onClick={() => router.push(`/jobseeker/jobs/view/${app.jobId}`)}
+                                        onClick={() => router.push(`/jobseeker/applications/${app.applicationId}`)}
                                     >
-                                        View Job
+                                        View Detail
                                     </td>
                                 </tr>
                             ))}
