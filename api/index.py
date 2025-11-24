@@ -16,6 +16,8 @@ from api.image.text_classification import classify_segments
 from api.image.ner_extraction import extract_resume_entities
 from api.image.pipeline import process_image_resume
 
+from api.services.ranking_service import rank_application
+
 # Logging setup
 logging.basicConfig(
     level=logging.INFO,
@@ -270,4 +272,16 @@ async def api_process_pdf(file: UploadFile = File(...)) -> ApiResponse:
         return result
     except Exception as e:
         logger.error(f"PDF processing error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ----------------------
+# Candidate Ranking API
+# ----------------------
+
+@app.post("/api/py/rank/application/{application_id}")
+async def api_rank_application(application_id: int):
+    try:
+        result = await rank_application(application_id)
+        return result
+    except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
