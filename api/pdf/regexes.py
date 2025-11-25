@@ -70,7 +70,7 @@ def extract_majors_from_text(text: str) -> List[str]:
     for pat in DEGREE_PATTERNS:
         for m in re.finditer(pat, text, flags=re.IGNORECASE):
             span_text = text[max(0, m.start() - 30) : m.end() + 30]
-            major_core = m.group(1) if m.lastindex else "Business Administration"
+            major_core = m.group(1) if m.lastindex else ""
             major_core = re.sub(r"[\s,.;:)\]]+$", "", (major_core or "").strip())
             prefix = _infer_degree_prefix(span_text)
             pretty = f"{prefix}{major_core}" if prefix else major_core
