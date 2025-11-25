@@ -6,6 +6,12 @@ import { saveResumeToDatabase } from '@/app/actions/resume.actions';
 import { ResumeData } from '@/types/fastapi.types';
 import { getAuthenticatedJobSeeker } from '@/services/auth.service';
 import { verifyResumeOwnership } from '@/services/resume.service';
+import { getJobById } from '@/services/job.service';
+import { getRecruiterById } from '@/services/recruiter.service';
+import { getCompanyById } from '@/services/company.service';
+import { getUserById } from '@/services/user.service';
+import { notifyJobApplicationSubmitted, notifyNewApplicationReceived } from '@/utils/notification-helper';
+import { createAdminClient } from '@/utils/supabase/admin';
 
 /**
  * submitApplication()
@@ -15,6 +21,8 @@ import { verifyResumeOwnership } from '@/services/resume.service';
  * ✅ Can use existing resume or upload new one with extracted data
  * ✅ Resume saved to storage with format: [jobseeker_id]/unique_filename
  * ✅ Generates long-lived signed URL for resume access
+ * ✅ Sends email and notification to jobseeker
+ * ✅ Sends email and notification to recruiter
  */
 export async function submitApplication(formData: FormData) {
   const supabase = await createClient();
@@ -59,7 +67,7 @@ export async function submitApplication(formData: FormData) {
   }
 
   // 5️⃣ Insert application record
-  const { error: appError } = await supabase.from('application').insert([
+  const { data: application, error: appError } = await supabase.from('application').insert([
     {
       job_id: jobId,
       job_seeker_id: jobSeekerId,
@@ -67,14 +75,94 @@ export async function submitApplication(formData: FormData) {
       match_score: null,
       status: 'received',
     },
-  ]);
+  ]).select().single();
 
-  if (appError) {
+  if (appError || !application) {
     console.error('Application insert error:', appError);
     throw new Error('Failed to submit application.');
   }
 
-  // 6️⃣ Revalidate paths
+  // 6️⃣ Get necessary data for notifications and emails
+  try {
+    const supabaseAdmin = createAdminClient();
+    // Get job details
+    const job = await getJobById(parseInt(jobId));
+    if (!job) throw new Error('Job not found');
+
+    // Get recruiter details
+    const recruiter = await getRecruiterById(job.recruiter_id);
+    if (!recruiter) throw new Error('Recruiter not found');
+
+    // Get company details
+    const company = await getCompanyById(recruiter.company_id);
+    if (!company) throw new Error('Company not found');
+
+    // Get jobseeker user details
+    const { data: jobSeekerData } = await supabase
+      .from('job_seeker')
+      .select('user_id')
+      .eq('job_seeker_id', jobSeekerId)
+      .single();
+
+    if (!jobSeekerData) throw new Error('Job seeker not found');
+
+    const jobSeekerUser = await getUserById(jobSeekerData.user_id);
+    if (!jobSeekerUser) throw new Error('Job seeker user not found');
+
+    // Get jobseeker email from auth
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    const jobSeekerEmail = authUser?.email;
+    if (!jobSeekerEmail) throw new Error('Job seeker email not found');
+
+    // Get recruiter user details
+    const recruiterUser = await getUserById(recruiter.user_id);
+    if (!recruiterUser) throw new Error('Recruiter user not found');
+
+    // Get recruiter email from auth
+    const { data: { user: recruiterAuthUser } } = await supabaseAdmin.auth.admin.getUserById(recruiter.user_id);
+    const recruiterEmail = recruiterAuthUser?.email;
+    if (!recruiterEmail) throw new Error('Recruiter email not found');
+
+    // 7️⃣ Send notification and email to job seeker
+    const jobSeekerName = `${jobSeekerUser.first_name || ''} ${jobSeekerUser.last_name || ''}`.trim() || 'Job Seeker';
+    const applicationDate = new Date().toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+
+    await notifyJobApplicationSubmitted({
+      userId: jobSeekerData.user_id,
+      userEmail: jobSeekerEmail,
+      type: 'application',
+      applicationId: application.application_id,
+      userName: jobSeekerName,
+      jobTitle: job.job_title,
+      companyName: company.comp_name,
+      applicationDate: applicationDate,
+    });
+
+    // 8️⃣ Send notification and email to recruiter
+    const recruiterName = `${recruiterUser.first_name || ''} ${recruiterUser.last_name || ''}`.trim() || 'Recruiter';
+
+    await notifyNewApplicationReceived({
+      userId: recruiter.user_id,
+      userEmail: recruiterEmail,
+      type: 'application',
+      applicationId: application.application_id,
+      recruiterName: recruiterName,
+      jobTitle: job.job_title,
+      applicantName: jobSeekerName,
+      applicationDate: applicationDate,
+    });
+
+    console.log('Notifications and emails sent successfully');
+  } catch (notificationError) {
+    // Don't fail the application submission if notifications fail
+    console.error('Error sending notifications:', notificationError);
+  }
+
+  // 9️⃣ Revalidate paths
   revalidatePath('/jobseeker/jobs');
   revalidatePath('/jobseeker/applications');
 

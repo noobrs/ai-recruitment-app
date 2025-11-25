@@ -2,7 +2,6 @@ import { sendEmail } from '@/services/email.service';
 import { createNotification } from '@/services/notification.service';
 import { NotificationType } from '@/types';
 import {
-    resumeUploadedTemplate,
     jobApplicationSubmittedTemplate,
     applicationStatusUpdatedTemplate,
     newApplicationReceivedTemplate,
@@ -23,41 +22,6 @@ interface BaseNotificationData {
     userEmail: string;
     type: NotificationType;
     applicationId?: number;
-}
-
-/**
- * Send email and create notification for resume upload completion
- */
-export async function notifyResumeUploaded(
-    data: BaseNotificationData & ResumeUploadedData
-): Promise<{ emailSent: boolean; notificationCreated: boolean }> {
-    const { userId, userEmail, type, applicationId, ...templateData } = data;
-
-    // Generate email template
-    const emailTemplate = resumeUploadedTemplate(templateData);
-
-    // Send email
-    const emailResult = await sendEmail({
-        to: userEmail,
-        subject: emailTemplate.subject,
-        html: emailTemplate.html,
-    });
-
-    // Create notification message
-    const notificationMessage = `Your resume "${templateData.fileName}" has been successfully processed and analyzed.`;
-
-    // Create in-app notification
-    const notification = await createNotification({
-        user_id: userId,
-        type: type || 'resume',
-        message: notificationMessage,
-        application_id: applicationId,
-    });
-
-    return {
-        emailSent: emailResult.success,
-        notificationCreated: !!notification,
-    };
 }
 
 /**
