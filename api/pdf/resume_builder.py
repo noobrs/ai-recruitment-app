@@ -5,11 +5,17 @@ Logic for building structured resume information from layout + GLiNER groups:
 - Education entries
 - Experience entries
 - Certifications and activities
+
+Updated to:
+- ignore NO_HEADING groups for skills/edu/exp
+- relate edu/exp entities only within a local degree / job-title "block"
+- clean description text via simple text-cleaning
 """
 
 from collections import defaultdict
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
+import re
 from gliner import GLiNER
 
 from api.pdf.utils import _norm, _update_best
@@ -19,6 +25,69 @@ from api.pdf.regexes import (
     PHONE_RE,
     extract_majors_from_text,
 )
+
+
+# -----------------
+# Helpers
+# -----------------
+
+
+_BULLET_LINE_RE = re.compile(r"^[\s\u2022\u2023\u25E6\u2043\-\*•]+")
+_MULTI_SPACE_RE = re.compile(r"\s+")
+
+
+def _is_no_heading(g: Dict) -> bool:
+    return (g.get("heading") or "").upper() == "NO_HEADING"
+
+
+def clean_description(text: str) -> str:
+    """
+    Simple text cleaning for description blocks:
+      - strip leading bullet characters
+      - remove empty lines
+      - collapse multiple spaces
+    """
+    if not text:
+        return ""
+
+    lines = []
+    for line in text.splitlines():
+        line = _BULLET_LINE_RE.sub("", line).strip()
+        if not line:
+            continue
+        lines.append(line)
+
+    if not lines:
+        return ""
+
+    cleaned = " ".join(lines)
+    cleaned = _MULTI_SPACE_RE.sub(" ", cleaned).strip()
+    return cleaned
+
+
+def _make_window(text: str, start: int, end: int, radius: int = 250) -> Tuple[str, int, int]:
+    """
+    Build a local text window around an anchor [start, end] index.
+    Returns (window_text, window_start, window_end).
+    """
+    if start < 0 or end < 0:
+        return text, 0, len(text)
+
+    window_start = max(0, start - radius)
+    window_end = min(len(text), end + radius)
+    return text[window_start:window_end], window_start, window_end
+
+
+def _in_window(ent: Dict, window_start: int, window_end: int) -> bool:
+    pos = int(ent.get("start_char", -1))
+    if pos < 0:
+        return False
+    return window_start <= pos <= window_end
+
+
+# -----------------
+# Candidate
+# -----------------
 
 
 def extract_candidate_info(full_text: str, gliner: GLiNER) -> Dict:
@@ -50,13 +119,20 @@ def extract_candidate_info(full_text: str, gliner: GLiNER) -> Dict:
     }
 
 
+# -----------------
+# Skills / Languages
+# -----------------
+
+
 def build_skills(groups: List[Dict]) -> List[str]:
     """
-    Aggregate Skill entities across all groups and de-duplicate
-    based on best scores.
+    Aggregate Skill entities across all non-NO_HEADING groups and
+    de-duplicate based on best scores.
     """
     best: Dict[str, float] = {}
     for g in groups:
+        if _is_no_heading(g):
+            continue
         ents = g.get("entities", [])
         for e in ents:
             lbl = e["label"].lower()
@@ -68,11 +144,13 @@ def build_skills(groups: List[Dict]) -> List[str]:
 
 def build_languages(groups: List[Dict]) -> List[str]:
     """
-    Aggregate Language entities across all groups and de-duplicate
-    based on best scores.
+    Aggregate Language entities across all non-NO_HEADING groups and
+    de-duplicate based on best scores.
     """
     best: Dict[str, float] = {}
     for g in groups:
+        if _is_no_heading(g):
+            continue
         ents = g.get("entities", [])
         for e in ents:
             lbl = e["label"].lower()
@@ -82,10 +160,21 @@ def build_languages(groups: List[Dict]) -> List[str]:
     return [k for k, _ in items]
 
 
+# -----------------
+# Education
+# -----------------
+
+
 def build_education(groups: List[Dict]) -> List[Dict]:
     """
     Build education records from groups having an education-like heading
     or containing Degree entities.
+
+    Relationship logic:
+    - For each Degree entity, build a local window ("block") around it.
+    - Within that window, look for organization, location and date range.
+    - Extract majors using regex on that local block.
+    - Use the cleaned block as the description.
 
     Each record:
       - level
@@ -93,49 +182,102 @@ def build_education(groups: List[Dict]) -> List[Dict]:
       - institution
       - location
       - duration (raw text, e.g. '2019 - 2023')
-      - description (full text of the group)
+      - description (cleaned text of the block)
     """
     edu_records: List[Dict] = []
+
     for g in groups:
+        if _is_no_heading(g):
+            continue
+
         head = (g.get("heading") or "").lower()
         is_edu_group = any(
             k in head for k in ["education", "academic", "qualification", "study"]
         )
-        ents = g.get("entities", [])
-        if not is_edu_group and not any(
-            e["label"].lower() == "degree" for e in ents
-        ):
+        ents = g.get("entities", []) or []
+        text = g.get("text", "") or ""
+
+        degree_ents = [e for e in ents if e["label"].lower() == "degree"]
+
+        # Fallback: old behavior when no explicit degree entity
+        if not degree_ents and not is_edu_group:
             continue
 
-        text = g.get("text", "") or ""
-        majors = extract_majors_from_text(text)
-        orgs = [
-            e["text"]
-            for e in ents
-            if e["label"].lower()
-            in ("school", "university", "organization", "company")
-        ]
-        locs = [e["text"] for e in ents if e["label"].lower() == "location"]
-        degrees = [e["text"] for e in ents if e["label"].lower() == "degree"]
-        duration_match = DATE_RANGE_RE.search(text)
+        if not degree_ents:
+            # One coarse record from the entire group
+            majors = extract_majors_from_text(text)
+            orgs = [
+                e["text"]
+                for e in ents
+                if e["label"].lower()
+                in ("school", "university", "organization", "company")
+            ]
+            locs = [e["text"] for e in ents if e["label"].lower() == "location"]
+            duration_match = DATE_RANGE_RE.search(text)
 
-        level = degrees[0] if degrees else None
-        field = majors[0] if majors else None
-        institution = orgs[0] if orgs else None
-        location = locs[0] if locs else None
-        duration = duration_match.group(0) if duration_match else None
+            level = None
+            field = majors[0] if majors else None
+            institution = orgs[0] if orgs else None
+            location = locs[0] if locs else None
+            duration = duration_match.group(0) if duration_match else None
 
-        if any([level, field, institution, duration]):
-            edu_records.append(
-                {
-                    "level": level,
-                    "field": field,
-                    "institution": institution,
-                    "location": location,
-                    "duration": duration,
-                    "description": text.strip(),
-                }
+            if any([field, institution, duration]):
+                edu_records.append(
+                    {
+                        "level": level,
+                        "field": field,
+                        "institution": institution,
+                        "location": location,
+                        "duration": duration,
+                        "description": clean_description(text),
+                    }
+                )
+            continue
+
+        # Fine-grained records per degree "block"
+        for d in degree_ents:
+            window_text, w_start, w_end = _make_window(
+                text, d.get("start_char", -1), d.get("end_char", -1)
             )
+
+            local_ents = [e for e in ents if _in_window(e, w_start, w_end)]
+            local_orgs = [
+                e["text"]
+                for e in local_ents
+                if e["label"].lower()
+                in ("school", "university", "organization", "company")
+            ]
+            local_locs = [
+                e["text"]
+                for e in local_ents
+                if e["label"].lower() == "location"
+            ]
+
+            # Prefer date range inside the local block, then the whole group
+            duration_match = DATE_RANGE_RE.search(window_text) or DATE_RANGE_RE.search(
+                text
+            )
+
+            majors = extract_majors_from_text(window_text or text)
+
+            level = d["text"].strip()
+            field = majors[0] if majors else None
+            institution = local_orgs[0] if local_orgs else None
+            location = local_locs[0] if local_locs else None
+            duration = duration_match.group(0) if duration_match else None
+            description = clean_description(window_text or text)
+
+            if any([level, field, institution, duration, description]):
+                edu_records.append(
+                    {
+                        "level": level,
+                        "field": field,
+                        "institution": institution,
+                        "location": location,
+                        "duration": duration,
+                        "description": description,
+                    }
+                )
 
     # De-duplicate roughly by a key tuple
     unique: List[Dict] = []
@@ -148,10 +290,20 @@ def build_education(groups: List[Dict]) -> List[Dict]:
     return unique
 
 
+# -----------------
+# Experience
+# -----------------
+
+
 def build_experience(groups: List[Dict]) -> List[Dict]:
     """
     Build experience records from groups that look like work experience sections
     or contain Job Title entities.
+
+    Relationship logic:
+    - For each Job Title entity, build a local window ("block") around it.
+    - Within that window, look for company, location and date range.
+    - Use the cleaned local block as the description.
 
     Each record:
       - position
@@ -163,39 +315,87 @@ def build_experience(groups: List[Dict]) -> List[Dict]:
     exp_records: List[Dict] = []
 
     for g in groups:
+        if _is_no_heading(g):
+            continue
+
         head = (g.get("heading") or "").lower()
         is_exp_group = any(
             k in head for k in ["experience", "employment", "work", "career", "professional"]
         )
-        ents = g.get("entities", [])
-        if not is_exp_group and not any(
-            e["label"].lower() == "job title" for e in ents
-        ):
+        ents = g.get("entities", []) or []
+        text = g.get("text", "") or ""
+
+        title_ents = [e for e in ents if e["label"].lower() == "job title"]
+
+        if not is_exp_group and not title_ents:
             continue
 
-        text = g.get("text", "") or ""
-        duration_match = DATE_RANGE_RE.search(text)
-        locs = [e["text"] for e in ents if e["label"].lower() == "location"]
-        orgs = [
-            e["text"] for e in ents if e["label"].lower() in ("organization", "company")
-        ]
-        titles = [e for e in ents if e["label"].lower() == "job title"]
+        if not title_ents:
+            # Fallback: group-level record
+            duration_match = DATE_RANGE_RE.search(text)
+            locs = [e["text"] for e in ents if e["label"].lower() == "location"]
+            orgs = [
+                e["text"]
+                for e in ents
+                if e["label"].lower() in ("organization", "company")
+            ]
 
-        for t in titles:
-            position = t["text"].strip()
+            position = None
             company = orgs[0] if orgs else None
             location = locs[0] if locs else None
             duration = duration_match.group(0) if duration_match else None
+            description = clean_description(text)
 
-            exp_records.append(
-                {
-                    "position": position,
-                    "company": company,
-                    "location": location,
-                    "duration": duration,
-                    "description": text.strip(),
-                }
+            if any([company, location, duration, description]):
+                exp_records.append(
+                    {
+                        "position": position,
+                        "company": company,
+                        "location": location,
+                        "duration": duration,
+                        "description": description,
+                    }
+                )
+            continue
+
+        # Fine-grained records per job-title block
+        for t in title_ents:
+            window_text, w_start, w_end = _make_window(
+                text, t.get("start_char", -1), t.get("end_char", -1)
             )
+
+            local_ents = [e for e in ents if _in_window(e, w_start, w_end)]
+            local_locs = [
+                e["text"]
+                for e in local_ents
+                if e["label"].lower() == "location"
+            ]
+            local_orgs = [
+                e["text"]
+                for e in local_ents
+                if e["label"].lower() in ("organization", "company")
+            ]
+
+            duration_match = DATE_RANGE_RE.search(window_text) or DATE_RANGE_RE.search(
+                text
+            )
+
+            position = t["text"].strip()
+            company = local_orgs[0] if local_orgs else None
+            location = local_locs[0] if local_locs else None
+            duration = duration_match.group(0) if duration_match else None
+            description = clean_description(window_text or text)
+
+            if any([position, company, duration, description]):
+                exp_records.append(
+                    {
+                        "position": position,
+                        "company": company,
+                        "location": location,
+                        "duration": duration,
+                        "description": description,
+                    }
+                )
 
     # De-duplicate by position + company + duration
     unique: List[Dict] = []
@@ -208,6 +408,11 @@ def build_experience(groups: List[Dict]) -> List[Dict]:
     return unique
 
 
+# -----------------
+# Certifications / Activities (unchanged except NO_HEADING guard)
+# -----------------
+
+
 def build_certifications(groups: List[Dict]) -> List[Dict]:
     """
     Build certification records from groups whose heading suggests
@@ -217,6 +422,8 @@ def build_certifications(groups: List[Dict]) -> List[Dict]:
     """
     certs: List[Dict] = []
     for g in groups:
+        if _is_no_heading(g):
+            continue
         head = (g.get("heading") or "").lower()
         is_cert_group = any(
             k in head for k in ["certification", "license", "licence", "award"]
@@ -248,6 +455,8 @@ def build_activities(groups: List[Dict]) -> List[Dict]:
     """
     acts: List[Dict] = []
     for g in groups:
+        if _is_no_heading(g):
+            continue
         head = (g.get("heading") or "").lower()
         if any(
             k in head
