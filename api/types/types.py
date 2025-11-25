@@ -54,3 +54,4 @@ class ApiResponse(BaseModel):
     status: str
     data: Optional[ResumeData] = None
     message: Optional[str] = None
+    redacted_file_url: Optional[str] = None

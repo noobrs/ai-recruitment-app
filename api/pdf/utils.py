@@ -120,7 +120,22 @@ def convert_resume_dict_to_api_response(resume_dict: Dict) -> ResumeData:
       - Derive activity name from first line of description
     """
     # candidate
-    candidate_model = CandidateOut(**resume_dict["candidate"])
+    # candidate_model = CandidateOut(**resume_dict["candidate"])
+    cand_src = resume_dict.get("candidate") or {}
+    # Normalise to a plain dict and drop helper fields (e.g. coordinates)
+    if hasattr(cand_src, "dict"):
+        cand_src = cand_src.dict()
+    else:
+        cand_src = dict(cand_src)
+
+    candidate_payload = {
+        "name": cand_src.get("name"),
+        "email": cand_src.get("email"),
+        "phone": cand_src.get("phone"),
+        "location": cand_src.get("location"),
+    }
+    candidate_model = CandidateOut(**candidate_payload)
+
 
     # education mapping: level + field -> degree, duration -> start/end
     edu_models: List[EducationOut] = []

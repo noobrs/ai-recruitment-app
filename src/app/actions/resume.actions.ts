@@ -39,12 +39,14 @@ export async function deleteResume(resumeId: number) {
  * @param file - The resume file to upload
  * @param extractedData - The extracted resume data from FastAPI
  * @param isProfile - Whether this should be set as the profile resume
+ * @param redactedFileUrl - Optional signed URL of the redacted resume from FastAPI
  * @returns The created resume record
  */
 export async function saveResumeToDatabase(
     file: File,
     extractedData: ResumeData,
-    isProfile: boolean = false
+    isProfile: boolean = false,
+    redactedFileUrl?: string | null
 ) {
     const supabase = await createClient();
     const jobSeekerId = await getAuthenticatedJobSeeker();
@@ -68,6 +70,7 @@ export async function saveResumeToDatabase(
             .insert({
                 job_seeker_id: jobSeekerId,
                 original_file_path: signedUrl,
+                redacted_file_path: redactedFileUrl || null,
                 extracted_skills: JSON.stringify(extractedData.skills || []),
                 extracted_experiences: JSON.stringify(extractedData.experience || []),
                 extracted_education: JSON.stringify(extractedData.education || []),

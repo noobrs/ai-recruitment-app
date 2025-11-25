@@ -110,6 +110,7 @@ export async function uploadResumeToProfile(formData: FormData) {
         return {
             success: true,
             extractedData: response.data,
+            redactedFileUrl: response.redacted_file_url,
             message: 'Resume extracted successfully. Please review and save.',
         };
     } catch (error) {

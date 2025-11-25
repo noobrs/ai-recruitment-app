@@ -78,7 +78,7 @@ def process_pdf_resume(file_bytes: bytes) -> ApiResponse:
 
         # 3) Candidate info from the full raw text
         full_text = doc.text or ""
-        candidate = extract_candidate_info(full_text, gliner)
+        candidate = extract_candidate_info(full_text, gliner, doc=doc)
 
         # 4) Structured sections
         skills = build_skills(groups)
@@ -102,19 +102,45 @@ def process_pdf_resume(file_bytes: bytes) -> ApiResponse:
         )
 
         # 5) Redact the PDF resume (remove candidate info and faces)
-        redaction_result = redact_pdf_resume(file_bytes, candidate)
+        redaction_result = redact_pdf_resume(
+            file_bytes,
+            candidate,
+            candidate_regions=(
+                candidate.get("regions") if isinstance(candidate, dict) else None
+            ),
+        )
 
-        if(redaction_result.get('status') == 'success'):
-            with open('redaction.pdf', 'wb') as f:
-                f.write(redaction_result.get('redacted_resume_file'))
+        # 6) Upload redacted resume to Supabase storage and get signed URL
+        redacted_file_url = None
+        if redaction_result.get('status') == 'success':
+            redacted_file_bytes = redaction_result.get('redacted_resume_file')
+            if redacted_file_bytes:
+                from api.supabase_client import upload_redacted_resume_to_storage
+                
+                upload_result = upload_redacted_resume_to_storage(
+                    file_bytes=redacted_file_bytes,
+                    job_seeker_id=None  # Will be set by Next.js when saving to DB
+                )
+                
+                if upload_result.get('status') == 'success':
+                    redacted_file_url = upload_result.get('signed_url')
+                    print(f"Redacted resume uploaded successfully: {redacted_file_url}")
+                else:
+                    print(f"Failed to upload redacted resume: {upload_result.get('message')}")
         
         # Match the JSON shape you described
         # {
         #   "status": "string",
         #   "data": { ... ResumeData ... },
-        #   "message": "string"
+        #   "message": "string",
+        #   "redacted_file_url": "string" (optional)
         # }
-        return ApiResponse(status="success", data=resume_data, message=None)
+        return ApiResponse(
+            status="success", 
+            data=resume_data, 
+            message=None,
+            redacted_file_url=redacted_file_url
+        )
 
     except Exception as e:
         import traceback
@@ -323,8 +349,7 @@ def _apply_redactions(pdf_doc: fitz.Document, regions: List[Dict[str, Any]]) -> 
 
         for bbox in bboxes:
             rect = fitz.Rect(*bbox)
-            # fill=(1,1,1) → white
-            page.add_redact_annot(rect, fill=(1, 1, 1))
+            page.add_redact_annot(rect, fill=(0, 0, 0))
 
         # Apply once per page after adding all annotations
         page.apply_redactions()
@@ -333,6 +358,7 @@ def _apply_redactions(pdf_doc: fitz.Document, regions: List[Dict[str, Any]]) -> 
 def redact_pdf_resume(
     file_bytes: bytes,
     candidate: Optional[Dict[str, Optional[str]]] = None,
+    candidate_regions: Optional[List[Dict[str, Any]]] = None,
 ) -> Dict[str, Any]:
     """
     Updated algorithm:
@@ -363,16 +389,24 @@ def redact_pdf_resume(
         if candidate is None:
             gliner = get_gliner()
             full_text = doc_spacy.text or ""
-            candidate = extract_candidate_info(full_text, gliner)
+            candidate = extract_candidate_info(full_text, gliner, doc_spacy)
 
         # Open PDF with PyMuPDF
         pdf_doc = fitz.open(str(pdf_path))
 
         # Regions for candidate info (text) → redaction
-        candidate_regions = _collect_candidate_regions(doc_spacy, candidate or {})
+        # Prefer pre-computed regions (either passed in explicitly or
+        # attached on the candidate dict) and fall back to searching
+        # via span text if nothing was provided.
+        if candidate_regions is None and isinstance(candidate, dict):
+            candidate_regions = candidate.get("regions")
+
+        if candidate_regions is None:
+            candidate_regions = _collect_candidate_regions(doc_spacy, candidate or {})
 
         # Regions for faces → direct removal
         face_regions = _detect_face_regions(pdf_doc)
+
 
         if not candidate_regions and not face_regions:
             pdf_doc.close()

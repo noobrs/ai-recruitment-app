@@ -37,6 +37,7 @@ export async function submitApplication(formData: FormData) {
   const extracted_skills = formData.get('extracted_skills')?.toString();
   const extracted_experiences = formData.get('extracted_experiences')?.toString();
   const extracted_education = formData.get('extracted_education')?.toString();
+  const redacted_file_url = formData.get('redacted_file_url')?.toString() || null;
 
   if (!jobId) {
     throw new Error('Missing required job ID.');
@@ -60,7 +61,7 @@ export async function submitApplication(formData: FormData) {
       activities: [],
     };
 
-    const result = await saveResumeToDatabase(cvFile, extractedData, false);
+    const result = await saveResumeToDatabase(cvFile, extractedData, false, redacted_file_url);
     resumeId = result.resume.resume_id;
   } else {
     throw new Error('Either existing resume or new resume with extracted data is required.');

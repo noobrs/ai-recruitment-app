@@ -17,6 +17,7 @@ interface ResumeReviewStepProps {
     cvFile: File | null;
     jobId: string;
     existingResumeId?: number;
+    redactedFileUrl?: string | null;
     onBack: () => void;
     onSuccess: () => void;
 }
@@ -30,6 +31,7 @@ export default function ResumeReviewStep({
     cvFile,
     jobId,
     existingResumeId,
+    redactedFileUrl,
     onBack,
     onSuccess,
 }: ResumeReviewStepProps) {
@@ -61,6 +63,11 @@ export default function ResumeReviewStep({
             formData.append('extracted_skills', JSON.stringify(resumeData.skills));
             formData.append('extracted_experiences', JSON.stringify(resumeData.experience));
             formData.append('extracted_education', JSON.stringify(resumeData.education));
+
+            // Include redacted file URL if available
+            if (redactedFileUrl) {
+                formData.append('redacted_file_url', redactedFileUrl);
+            }
 
             const result = await submitApplication(formData);
             if (result?.success) {

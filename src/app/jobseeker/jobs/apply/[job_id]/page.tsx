@@ -20,6 +20,7 @@ export default function ApplyJobPage() {
   const [cvFile, setCvFile] = useState<File | null>(null);
   const [resumeData, setResumeData] = useState<ResumeData | null>(null);
   const [existingResumeId, setExistingResumeId] = useState<number | undefined>(undefined);
+  const [redactedFileUrl, setRedactedFileUrl] = useState<string | null>(null);
 
   // Fetch job details for display
   useEffect(() => {
@@ -41,10 +42,11 @@ export default function ApplyJobPage() {
     fetchJobDetails();
   }, [job_id]);
 
-  const handleUploadSuccess = (data: ResumeData, file: File | null, resumeId?: number) => {
+  const handleUploadSuccess = (data: ResumeData, file: File | null, resumeId?: number, redactedUrl?: string | null) => {
     setResumeData(data);
     setCvFile(file);
     setExistingResumeId(resumeId);
+    setRedactedFileUrl(redactedUrl || null);
     setStep(2);
   };
 
@@ -81,6 +83,7 @@ export default function ApplyJobPage() {
         cvFile={cvFile}
         jobId={job_id}
         existingResumeId={existingResumeId}
+        redactedFileUrl={redactedFileUrl}
         onBack={() => setStep(1)}
         onSuccess={handleReviewSuccess}
       />

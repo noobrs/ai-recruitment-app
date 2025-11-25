@@ -11,7 +11,7 @@ import { Resume } from '@/types';
 
 interface ResumeUploadStepProps {
     job: JobDetails;
-    onUploadSuccess: (data: ResumeData, file: File | null, existingResumeId?: number) => void;
+    onUploadSuccess: (data: ResumeData, file: File | null, resumeId?: number, redactedUrl?: string | null) => void;
     onBack: () => void;
 }
 
@@ -120,8 +120,9 @@ export default function ResumeUploadStep({
             }
 
             console.log('Extracted resume data:', result.data);
-            // Pass extracted data and file to parent - resume will be saved when application is submitted
-            onUploadSuccess(result.data, cvFile);
+            console.log('Redacted file URL:', result.redacted_file_url);
+            // Pass extracted data, file, and redacted URL to parent - resume will be saved when application is submitted
+            onUploadSuccess(result.data, cvFile, undefined, result.redacted_file_url);
         } catch (err) {
             console.error(err);
             setErrorMessage('Resume processing failed. Please try again.');

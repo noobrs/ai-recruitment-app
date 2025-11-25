@@ -30,6 +30,7 @@ export default function ResumeUploadDialog({
     const [step, setStep] = useState<'upload' | 'review'>('upload');
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [extractedData, setExtractedData] = useState<ResumeData | null>(null);
+    const [redactedFileUrl, setRedactedFileUrl] = useState<string | null>(null);
     const [isExtracting, setIsExtracting] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -60,6 +61,7 @@ export default function ResumeUploadDialog({
 
             if (result.success && result.extractedData) {
                 setExtractedData(result.extractedData);
+                setRedactedFileUrl(result.redactedFileUrl || null);
                 setStep('review');
             } else {
                 throw new Error('Failed to extract resume data');
@@ -82,7 +84,7 @@ export default function ResumeUploadDialog({
         setError(null);
 
         try {
-            await saveResumeToDatabase(selectedFile, extractedData, setAsProfile);
+            await saveResumeToDatabase(selectedFile, extractedData, setAsProfile, redactedFileUrl);
             onSuccess();
         } catch (err) {
             console.error('Save error:', err);
