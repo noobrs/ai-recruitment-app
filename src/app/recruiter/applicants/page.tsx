@@ -12,6 +12,7 @@ interface Applicant {
   date: string;
   score: number;
   status: ApplicationStatus;
+  redactedResumeUrl: string | null;
 }
 
 const STATUS_OPTIONS = ["received", "shortlisted", "rejected", "withdrawn"];
@@ -185,8 +186,21 @@ export default function RecruiterApplicantsPage() {
                       }}
                     />
                   </td>
-                  <td className="px-6 py-4 text-purple-600 font-medium cursor-pointer hover:underline">
-                    View Details
+                  <td className="px-6 py-4">
+                    {a.redactedResumeUrl ? (
+                      <a
+                        href={a.redactedResumeUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-purple-600 font-medium cursor-pointer hover:underline"
+                      >
+                        View Details
+                      </a>
+                    ) : (
+                      <span className="text-gray-400 font-medium">
+                        No Resume
+                      </span>
+                    )}
                   </td>
                 </tr>
               ))}
