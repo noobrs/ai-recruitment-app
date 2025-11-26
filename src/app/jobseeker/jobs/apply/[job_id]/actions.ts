@@ -67,20 +67,56 @@ export async function submitApplication(formData: FormData) {
     throw new Error('Either existing resume or new resume with extracted data is required.');
   }
 
-  // 5️⃣ Insert application record
-  const { data: application, error: appError } = await supabase.from('application').insert([
-    {
-      job_id: jobId,
-      job_seeker_id: jobSeekerId,
-      resume_id: resumeId,
-      match_score: null,
-      status: 'received',
-    },
-  ]).select().single();
+  // 5️⃣ Check if application exists (e.g., from bookmark)
+  const { data: existingApp } = await supabase
+    .from('application')
+    .select('application_id, status')
+    .eq('job_id', jobId)
+    .eq('job_seeker_id', jobSeekerId)
+    .maybeSingle();
 
-  if (appError || !application) {
-    console.error('Application insert error:', appError);
-    throw new Error('Failed to submit application.');
+  let application;
+
+  if (existingApp) {
+    // Update existing application (e.g., convert bookmark to real application)
+    const { data, error: appError } = await supabase
+      .from('application')
+      .update({
+        resume_id: resumeId,
+        match_score: null,
+        status: 'received',
+        is_bookmark: true, // Keep bookmark status
+      })
+      .eq('application_id', existingApp.application_id)
+      .select()
+      .single();
+
+    if (appError || !data) {
+      console.error('Application update error:', appError);
+      throw new Error('Failed to submit application.');
+    }
+    application = data;
+  } else {
+    // Insert new application record
+    const { data, error: appError } = await supabase
+      .from('application')
+      .insert([
+        {
+          job_id: jobId,
+          job_seeker_id: jobSeekerId,
+          resume_id: resumeId,
+          match_score: null,
+          status: 'received',
+        },
+      ])
+      .select()
+      .single();
+
+    if (appError || !data) {
+      console.error('Application insert error:', appError);
+      throw new Error('Failed to submit application.');
+    }
+    application = data;
   }
 
   // 6️⃣ Get necessary data for notifications and emails
