@@ -107,6 +107,14 @@ export default function JobPage() {
             : job
         )
       );
+
+      setFilteredJobs((prev) =>
+        prev.map((job) =>
+          job.job_id === jobId
+            ? { ...job, is_bookmark: !!result.is_bookmark }
+            : job
+        )
+      );
     } else {
       alert("Failed to update bookmark.");
     }
