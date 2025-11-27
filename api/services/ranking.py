@@ -87,7 +87,7 @@ def experience_match(experience_list, requirement):
 # -----------------------------------------
 # Main scoring function
 # -----------------------------------------
-def compute_match_score(resume, job_requirements, weights):
+def compute_match_score(resume, job_requirements):
     skills = resume.get("skills", [])
     education = resume.get("education", [])
     experience = resume.get("experience", [])
@@ -100,42 +100,47 @@ def compute_match_score(resume, job_requirements, weights):
         text = req["normalized_requirement"] or req["requirement"]
         weight = req["weightage"]
 
-        # ---- Skills ----
         if req_type == "skill":
             score = simple_skill_match(skills, text)
             skill_sum += score * weight
             skill_weight += weight
 
-        # ---- Experience ----
         elif req_type == "experience":
             score = experience_match(experience, text)
             exp_sum += score * weight
             exp_weight += weight
 
-        # ---- Education ----
         elif req_type == "education":
             score = education_match(education, text)
             edu_sum += score * weight
             edu_weight += weight
 
-    # Normalized category scores (0–1)
     skill_score = skill_sum / skill_weight if skill_weight > 0 else 0
-    exp_score = exp_sum / exp_weight if exp_weight > 0 else 0
-    edu_score = edu_sum / edu_weight if edu_weight > 0 else 0
+    exp_score   = exp_sum   / exp_weight   if exp_weight > 0 else 0
+    edu_score   = edu_sum   / edu_weight   if edu_weight > 0 else 0
 
-    # Weighted raw score
+    total_category_weight = skill_weight + exp_weight + edu_weight
+
+    cat_skill = skill_weight / total_category_weight if total_category_weight > 0 else 0
+    cat_exp   = exp_weight   / total_category_weight if total_category_weight > 0 else 0
+    cat_edu   = edu_weight   / total_category_weight if total_category_weight > 0 else 0
+
     raw = (
-        weights["alpha"] * skill_score +
-        weights["beta"] * exp_score +
-        weights["gamma"] * edu_score
+        skill_score * cat_skill +
+        exp_score   * cat_exp +
+        edu_score   * cat_edu
     )
 
-    # Convert to 0–100 scale
     final_score = round(raw * 100, 2)
 
     return {
         "skills_score": round(skill_score, 4),
         "experience_score": round(exp_score, 4),
         "education_score": round(edu_score, 4),
-        "final_score": final_score
+        "final_score": final_score,
+        "category_weights": {
+            "skills": round(cat_skill, 4),
+            "experience": round(cat_exp, 4),
+            "education": round(cat_edu, 4),
+        }
     }

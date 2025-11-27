@@ -1,16 +1,6 @@
-# api/services/ranking_service.py
-
 import json
 from .ranking import compute_match_score
 from api.supabase_client import supabase
-
-
-DEFAULT_WEIGHTS = {
-    "alpha": 0.5,   # skills
-    "beta": 0.3,    # experience
-    "gamma": 0.2    # education
-}
-
 
 async def rank_application(application_id: int):
     """
@@ -45,7 +35,7 @@ async def rank_application(application_id: int):
     job_requirements = req_res.data
 
     # 4. Compute score
-    result = compute_match_score(resume, job_requirements, DEFAULT_WEIGHTS)
+    result = compute_match_score(resume, job_requirements)
     final_score = result["final_score"]
 
     # 5. Update application.match_score
