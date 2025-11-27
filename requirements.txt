@@ -31,7 +31,11 @@ pytesseract
 # Machine Learning and NLP
 transformers
 torch
+scikit-learn
 
 # Computer Vision and Detection
 supervision
 inference-sdk
+
+# Date Parsing
+python-dateutil

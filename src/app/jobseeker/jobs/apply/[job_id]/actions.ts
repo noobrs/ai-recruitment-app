@@ -119,7 +119,26 @@ export async function submitApplication(formData: FormData) {
     application = data;
   }
 
-  // 6️⃣ Get necessary data for notifications and emails
+  // 6️⃣ Call ranking API to compute match score
+  try {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
+    const rankingResponse = await fetch(`${apiUrl}/api/py/rank/application/${application.application_id}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    if (!rankingResponse.ok) {
+      throw new Error(`Ranking API returned ${rankingResponse.status}`);
+    }
+
+    const rankingResult = await rankingResponse.json();
+    console.log('Application ranked successfully:', rankingResult);
+  } catch (rankingError) {
+    // Don't fail the application submission if ranking fails
+    console.error('Error ranking application:', rankingError);
+  }
+
+  // 7️⃣ Get necessary data for notifications and emails
   try {
     const supabaseAdmin = createAdminClient();
     // Get job details
@@ -160,7 +179,7 @@ export async function submitApplication(formData: FormData) {
     const recruiterEmail = recruiterAuthUser?.email;
     if (!recruiterEmail) throw new Error('Recruiter email not found');
 
-    // 7️⃣ Send notification and email to job seeker
+    // 8️⃣ Send notification and email to job seeker
     const jobSeekerName = `${jobSeekerUser.first_name || ''} ${jobSeekerUser.last_name || ''}`.trim() || 'Job Seeker';
     const applicationDate = new Date().toLocaleDateString('en-US', {
       year: 'numeric',
@@ -179,7 +198,7 @@ export async function submitApplication(formData: FormData) {
       applicationDate: applicationDate,
     });
 
-    // 8️⃣ Send notification and email to recruiter
+    // 9️⃣ Send notification and email to recruiter
     const recruiterName = `${recruiterUser.first_name || ''} ${recruiterUser.last_name || ''}`.trim() || 'Recruiter';
 
     await notifyNewApplicationReceived({
@@ -199,7 +218,7 @@ export async function submitApplication(formData: FormData) {
     console.error('Error sending notifications:', notificationError);
   }
 
-  // 9️⃣ Revalidate paths
+  // 🔟 Revalidate paths
   revalidatePath('/jobseeker/jobs');
   revalidatePath('/jobseeker/applications');
 
