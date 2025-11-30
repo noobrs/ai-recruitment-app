@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { MoreVertical, Search, Filter, ChevronDown, Star, Plus } from "lucide-react";
+import { MoreVertical, Search, Filter, Star, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 interface JobPost {
@@ -151,7 +151,7 @@ export default function RecruiterPostsPage() {
                 <th className="px-6 py-5 font-semibold">Type</th>
                 <th className="px-6 py-5 font-semibold">Location</th>
                 <th className="px-6 py-5 font-semibold">Applicants</th>
-                <th className="px-6 py-5 font-semibold">Views</th>
+                {/* <th className="px-6 py-5 font-semibold">Views</th> */}
                 <th className="px-6 py-5 font-semibold">Date Posted</th>
                 <th className="px-6 py-5 font-semibold">Status</th>
                 <th className="px-6 py-5"></th>
@@ -179,7 +179,7 @@ export default function RecruiterPostsPage() {
                       View
                     </button>
                   </td>
-                  <td className="px-6 py-4">{post.views}</td>
+                  {/* <td className="px-6 py-4">{post.views}</td> */}
                   <td className="px-6 py-4">{post.date}</td>
                   <td className="px-6 py-4 font-medium">
                     {post.status === "draft" && (

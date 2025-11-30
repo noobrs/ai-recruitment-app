@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ChevronDown, Search, Filter, ArrowUpDown } from "lucide-react";
+import LoadingPostDetailsPage from "./loading";
 
 interface Applicant {
     id: number;
@@ -102,6 +103,8 @@ export default function JobApplicantsPage() {
         setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
 
     const displayedApplicants = filteredApplicants.slice(0, visibleCount);
+
+    if (loading) { return <LoadingPostDetailsPage />; }
 
     return (
         <div className="max-w-8/10 p-10 justify-center mx-auto my-5 min-h-screen">
