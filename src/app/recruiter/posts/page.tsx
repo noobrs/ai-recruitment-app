@@ -231,14 +231,14 @@ export default function RecruiterPostsPage() {
                       >
                         <button
                           onClick={() => router.push(`/recruiter/posts/${post.job_id}/edit`)}
-                          className="w-full text-left px-4 py-2 hover:bg-gray-50 text-gray-700 flex items-center gap-2"
+                          className="w-full text-left px-4 py-2 hover:bg-gray-50 text-gray-700 flex items-center gap-2 cursor-pointer"
                         >
                           <Pencil size={16} /> Edit Job
                         </button>
 
                         <button
                           onClick={() => router.push(`/recruiter/jobs/view/${post.job_id}`)}
-                          className="w-full text-left px-4 py-2 hover:bg-gray-50 text-gray-700 flex items-center gap-2"
+                          className="w-full text-left px-4 py-2 hover:bg-gray-50 text-gray-700 flex items-center gap-2 cursor-pointer"
                         >
                           <View size={16} /> Preview
                         </button>

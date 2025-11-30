@@ -12,7 +12,7 @@ export default function BrowseJobsAction() {
     return (
         <button
             onClick={handleBrowse}
-            className="flex items-center justify-center px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-700 hover:border-primary hover:text-primary transition-colors"
+            className="flex items-center justify-center px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-700 hover:border-primary hover:text-primary transition-colors cursor-pointer"
         >
             <span className="text-sm font-medium">Browse Jobs</span>
         </button>
