@@ -9,6 +9,7 @@ import type { JobWithApplicationStatus, JobRequirement } from "@/types";
 import JobCard from "@/components/jobseeker/jobs/JobCard";
 import ButtonFilledPrimary from "@/components/shared/buttons/ButtonFilledPrimary";
 import SearchBar from "@/components/jobseeker/shared/SearchBar";
+import JobsLoading from "./loading";
 
 export default function JobPage() {
   const router = useRouter();
@@ -138,12 +139,7 @@ export default function JobPage() {
   // =============================
   // Loading and Error Handling
   // =============================
-  if (loading)
-    return (
-      <div className="flex items-center justify-center h-screen text-gray-600">
-        Loading jobs...
-      </div>
-    );
+  if (loading) return <JobsLoading />;
 
   if (error)
     return (
