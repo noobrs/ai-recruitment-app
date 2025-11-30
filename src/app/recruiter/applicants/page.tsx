@@ -8,6 +8,7 @@ import { ApplicationStatus } from "@/types";
 interface Applicant {
   id: number;
   applicantName: string;
+  applicantEmail: string | null;
   jobTitle: string;
   date: string;
   score: number;
@@ -159,7 +160,17 @@ export default function RecruiterApplicantsPage() {
                     >
                       {a.score.toFixed(0)}%
                     </div>
-                    {a.applicantName}
+                    {a.applicantEmail ? (
+                      <a
+                        href={`mailto:${a.applicantEmail}`}
+                        className="hover:underline cursor-pointer"
+                        title={`Email ${a.applicantName}`}
+                      >
+                        {a.applicantName}
+                      </a>
+                    ) : (
+                      <span>{a.applicantName}</span>
+                    )}
                   </td>
                   <td className="px-6 py-4">{a.jobTitle}</td>
                   <td className="px-6 py-4">{a.date}</td>

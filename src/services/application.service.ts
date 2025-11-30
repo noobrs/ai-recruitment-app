@@ -1,4 +1,5 @@
 import { createClient } from '@/utils/supabase/server';
+import { createAdminClient } from '@/utils/supabase/admin';
 import { Application, ApplicationStatus, ApplicationInsert } from '@/types';
 
 /**
@@ -399,6 +400,7 @@ export async function getApplicantsByRecruiter(
   statuses?: string[]
 ) {
   const supabase = await createClient();
+  const supabaseAdmin = createAdminClient();
 
   // First, get all job IDs for this recruiter
   const { data: jobs, error: jobError } = await supabase
@@ -432,6 +434,7 @@ export async function getApplicantsByRecruiter(
       job_seeker:job_seeker_id (
         job_seeker_id,
         user: user_id (
+          id,
           first_name,
           last_name
         )
@@ -459,20 +462,45 @@ export async function getApplicantsByRecruiter(
     return [];
   }
 
+  // Fetch emails for all job seekers
+  const userIds = data?.map((a: any) => a.job_seeker?.user?.id).filter(Boolean) || [];
+  const emailMap: Record<string, string> = {};
+
+  if (userIds.length > 0) {
+    try {
+      // Fetch emails in batches to avoid overwhelming the API
+      const { data: { users }, error: emailError } = await supabaseAdmin.auth.admin.listUsers();
+
+      if (!emailError && users) {
+        users.forEach(user => {
+          if (userIds.includes(user.id) && user.email) {
+            emailMap[user.id] = user.email;
+          }
+        });
+      }
+    } catch (emailError) {
+      console.error("Error fetching user emails:", emailError);
+    }
+  }
+
   return (
-    data?.map((a: any) => ({
-      id: a.application_id,
-      applicantName: `${a.job_seeker?.user?.first_name || ""} ${a.job_seeker?.user?.last_name || ""}`.trim() || "Unknown",
-      jobTitle: a.job?.job_title || "Untitled Job",
-      date: new Date(a.created_at).toLocaleDateString("en-GB", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      }),
-      score: a.match_score ?? 0,
-      status: a.status || "received",
-      redactedResumeUrl: a.resume?.redacted_file_path || null,
-    })) || []
+    data?.map((a: any) => {
+      const userId = a.job_seeker?.user?.id;
+      return {
+        id: a.application_id,
+        applicantName: `${a.job_seeker?.user?.first_name || ""} ${a.job_seeker?.user?.last_name || ""}`.trim() || "Unknown",
+        applicantEmail: userId ? (emailMap[userId] || null) : null,
+        jobTitle: a.job?.job_title || "Untitled Job",
+        date: new Date(a.created_at).toLocaleDateString("en-GB", {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+        }),
+        score: a.match_score ?? 0,
+        status: a.status || "received",
+        redactedResumeUrl: a.resume?.redacted_file_path || null,
+      };
+    }) || []
   );
 }
 
