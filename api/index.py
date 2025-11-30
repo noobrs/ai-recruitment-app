@@ -106,56 +106,6 @@ async def api_process_pdf(file: UploadFile = File(...)) -> ApiResponse:
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.post("/api/py/pdf/layout-groups")
-async def api_pdf_layout_groups(file: UploadFile = File(...)):
-    """Parse PDF layout and return groups from spacy-layout.
-    Returns the grouped text sections with headings, segments, and bounding boxes.
-    This is a raw output of the layout parsing step before entity extraction."""
-    from api.pdf.layout_parser import load_pdf_with_layout, group_spans_by_heading
-    from pathlib import Path
-
-    if not file:
-        raise HTTPException(status_code=400, detail="File is required")
-
-    # Create temp file for PDF
-    fd, tmp_path = tempfile.mkstemp(suffix=".pdf", prefix="layout_")
-    pdf_path = Path(tmp_path)
-
-    try:
-        # Write PDF to temp file
-        tmp_bytes = await file.read()
-        with os.fdopen(fd, "wb") as f:
-            f.write(tmp_bytes)
-
-        # Parse PDF layout
-        logger.info(f"Parsing PDF layout for file: {file.filename}")
-        doc = load_pdf_with_layout(str(pdf_path))
-
-        # Group spans by heading
-        groups = group_spans_by_heading(doc)
-
-        logger.info(f"Found {len(groups)} layout groups")
-
-        return {
-            "status": "success",
-            "filename": file.filename,
-            "total_groups": len(groups),
-            "groups": groups
-        }
-
-    except Exception as e:
-        logger.error(f"Layout parsing error: {e}")
-        import traceback
-        logger.error(f"Traceback: {traceback.format_exc()}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-    finally:
-        # Cleanup temp file
-        try:
-            pdf_path.unlink(missing_ok=True)
-        except Exception:
-            pass
-
 # ----------------------
 # Candidate Ranking API
 # ----------------------
