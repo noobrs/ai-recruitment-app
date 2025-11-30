@@ -8,6 +8,7 @@ import CompanyCard from "@/components/jobseeker/companies/CompanyCard";
 import ButtonFilledPrimary from "@/components/shared/buttons/ButtonFilledPrimary";
 import JobCard from "@/components/jobseeker/jobs/JobCard";
 import SearchBar from "@/components/jobseeker/shared/SearchBar";
+import CompaniesLoading from "./loading";
 
 // Type for company data from API with additional fields
 type CompanyWithJobs = {
@@ -144,12 +145,7 @@ export default function CompaniesPage() {
   // =============================
   // Loading and Error Handling
   // =============================
-  if (loading)
-    return (
-      <div className="flex items-center justify-center h-screen text-gray-600">
-        Loading companies...
-      </div>
-    );
+  if (loading) return <CompaniesLoading />;
 
   if (error)
     return (
