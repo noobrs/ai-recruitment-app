@@ -3,9 +3,10 @@ Build structured resume data from classified sections and extracted entities.
 Uses ML-based section classification instead of hardcoded keywords.
 """
 
+import re
 from typing import Dict, List
 
-from api.pdf.utils import clean_description, make_text_window, is_in_window
+from api.pdf.utils import clean_description, make_text_window, is_in_window, remove_duplicate_content
 from api.pdf.extraction_helpers import (
     extract_entities_by_label,
     extract_date_range,
@@ -42,7 +43,11 @@ def build_education(groups: List[Dict]) -> List[Dict]:
         # Use ML-based classification
         section_type = group.get("section_type")
         entities = group.get("entities", [])
+        heading = group.get("heading", "")
         text = group.get("text", "")
+
+        # Concatenate heading + text for better context
+        full_text = f"{heading}\n{text}" if heading and heading != "NO_HEADING" else text
 
         # Check for degree entities or education section type
         degree_entities = [e for e in entities if e["label"].lower() == "degree"]
@@ -53,13 +58,13 @@ def build_education(groups: List[Dict]) -> List[Dict]:
 
         # If no degree entities, create one record for the whole group
         if not degree_entities:
-            edu_records.append(_build_education_record(entities, text, None))
+            edu_records.append(_build_education_record(entities, full_text, None))
             continue
 
         # Create records for each degree entity
         for degree_entity in degree_entities:
             window_text, w_start, w_end = make_text_window(
-                text,
+                full_text,
                 degree_entity.get("start_char", -1),
                 degree_entity.get("end_char", -1),
             )
@@ -69,19 +74,19 @@ def build_education(groups: List[Dict]) -> List[Dict]:
             # Try to get date from local entities first, fallback to all entities
             duration = extract_date_range(local_entities, window_text)
             if not duration:
-                duration = extract_date_range(entities, text)
+                duration = extract_date_range(entities, full_text)
 
             edu_records.append(
                 _build_education_record(
                     local_entities,
-                    window_text or text,
+                    window_text or full_text,
                     degree_entity["text"].strip(),
                     duration,
                 )
             )
 
-    # Deduplicate by institution, duration, and location
-    return deduplicate_records(edu_records, ("institution", "duration", "location"))
+    # Deduplicate by title, institution, duration, and location
+    return deduplicate_records(edu_records, ("title", "institution", "duration", "location"))
 
 
 def _build_education_record(
@@ -103,12 +108,30 @@ def _build_education_record(
     if duration is None:
         duration = extract_date_range(entities, text)
 
+    # Collect fields to remove from description
+    fields_to_remove = []
+    if degree_title:
+        fields_to_remove.append(degree_title)
+    if orgs:
+        fields_to_remove.append(orgs[0])
+    if locs:
+        fields_to_remove.append(locs[0])
+    if duration:
+        # Also add individual dates from the duration
+        fields_to_remove.append(duration)
+        # Split duration to get individual dates
+        # date_parts = re.split(r"\s*[-–]\s*", duration)
+        # fields_to_remove.extend(date_parts)
+
+    # Clean description and remove duplicate content
+    description = remove_duplicate_content(text, fields_to_remove)
+
     return {
         "title": degree_title,
         "institution": orgs[0] if orgs else None,
         "location": locs[0] if locs else None,
         "duration": duration,
-        "description": clean_description(text),
+        "description": description,
     }
 
 
@@ -125,7 +148,11 @@ def build_experience(groups: List[Dict]) -> List[Dict]:
 
         section_type = group.get("section_type")
         entities = group.get("entities", [])
+        heading = group.get("heading", "")
         text = group.get("text", "")
+
+        # Concatenate heading + text for better context
+        full_text = f"{heading}\n{text}" if heading and heading != "NO_HEADING" else text
 
         # Check for job title entities or experience section type
         title_entities = [e for e in entities if e["label"].lower() == "job title"]
@@ -136,13 +163,13 @@ def build_experience(groups: List[Dict]) -> List[Dict]:
 
         # If no title entities, create one record for the whole group
         if not title_entities:
-            exp_records.append(_build_experience_record(entities, text, None))
+            exp_records.append(_build_experience_record(entities, full_text, None))
             continue
 
         # Create records for each job title
         for title_entity in title_entities:
             window_text, w_start, w_end = make_text_window(
-                text,
+                full_text,
                 title_entity.get("start_char", -1),
                 title_entity.get("end_char", -1),
             )
@@ -152,19 +179,19 @@ def build_experience(groups: List[Dict]) -> List[Dict]:
             # Try to get date from local entities first, fallback to all entities
             duration = extract_date_range(local_entities, window_text)
             if not duration:
-                duration = extract_date_range(entities, text)
+                duration = extract_date_range(entities, full_text)
 
             exp_records.append(
                 _build_experience_record(
                     local_entities,
-                    window_text or text,
+                    window_text or full_text,
                     title_entity["text"].strip(),
                     duration,
                 )
             )
 
-    # Deduplicate by company, duration, and location
-    return deduplicate_records(exp_records, ("company", "duration", "location"))
+    # Deduplicate by position, company, duration, and location
+    return deduplicate_records(exp_records, ("position", "company", "duration", "location"))
 
 
 def _build_experience_record(
@@ -183,12 +210,30 @@ def _build_experience_record(
     if duration is None:
         duration = extract_date_range(entities, text)
 
+    # Collect fields to remove from description
+    fields_to_remove = []
+    if position:
+        fields_to_remove.append(position)
+    if orgs:
+        fields_to_remove.append(orgs[0])
+    if locs:
+        fields_to_remove.append(locs[0])
+    if duration:
+        # Also add individual dates from the duration
+        fields_to_remove.append(duration)
+        # Split duration to get individual dates
+        # date_parts = re.split(r"\s*[-–]\s*", duration)
+        # fields_to_remove.extend(date_parts)
+
+    # Clean description and remove duplicate content
+    description = remove_duplicate_content(text, fields_to_remove)
+
     return {
         "position": position,
         "company": orgs[0] if orgs else None,
         "location": locs[0] if locs else None,
         "duration": duration,
-        "description": clean_description(text),
+        "description": description,
     }
 
 

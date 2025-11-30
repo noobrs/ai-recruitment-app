@@ -111,6 +111,74 @@ def clean_description(text: str) -> str:
     return cleaned
 
 
+def remove_duplicate_content(text: str, fields_to_remove: List[str]) -> str:
+    """
+    Remove duplicate content from description text that appears in other extracted fields.
+
+    Args:
+        text: The description text to clean
+        fields_to_remove: List of strings (company name, dates, position, etc.) to remove
+
+    Returns:
+        Cleaned description text with duplicates removed
+    """
+    if not text:
+        return ""
+
+    if not fields_to_remove:
+        return clean_description(text)
+
+    # Split into lines for line-by-line processing
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    filtered_lines = []
+
+    for line in lines:
+        # Check if this line contains only field content (with possible separators)
+        line_normalized = normalize_text(line)
+        should_skip = False
+
+        # Check each field to remove
+        for field in fields_to_remove:
+            if not field:
+                continue
+
+            field_normalized = normalize_text(str(field))
+
+            # Skip if the line is exactly the field or contains only the field with separators
+            if field_normalized == line_normalized:
+                should_skip = True
+                break
+
+            # Skip if line starts with the field followed by separators (e.g., "Company | Date")
+            if line_normalized.startswith(field_normalized):
+                # Check if the rest is just separators and other fields
+                remaining = line_normalized[len(field_normalized):].strip()
+                if remaining.startswith("|") or remaining.startswith("-") or not remaining:
+                    should_skip = True
+                    break
+            
+            # Skip if the line ends with the field (e.g., "Duration: Jan 2020 - Dec 2023")
+            if line_normalized.endswith(field_normalized):
+                # Check if what comes before is just a label and separator
+                prefix = line_normalized[:-len(field_normalized)].strip()
+                if not prefix or prefix.endswith(":") or prefix.endswith("|"):
+                    should_skip = True
+                    break
+
+            # Skip if line is mostly just the field (high similarity)
+            # This catches cases like "Bachelor of Science in Computer Science" when field is "Bachelor of Science"
+            if len(field_normalized) > 10 and is_similar(line_normalized, field_normalized, threshold=85):
+                should_skip = True
+                break
+
+        if not should_skip:
+            filtered_lines.append(line)
+
+    # Rejoin and apply clean_description for final cleanup
+    result = " ".join(filtered_lines)
+    return clean_description(result)
+
+
 def make_text_window(text: str, start: int, end: int, radius: int = 250) -> Tuple[str, int, int]:
     """
     Create a text window around a specific position.
