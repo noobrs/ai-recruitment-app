@@ -9,14 +9,15 @@ from typing import Dict, List, Optional, Any
 
 from gliner import GLiNER
 
-from api.pdf_new.utils import (
+from api.pdf.utils import (
     normalize_key,
     update_best_score,
     clean_description,
     make_text_window,
     is_in_window,
 )
-from api.pdf_new.regexes import EMAIL_RE, PHONE_RE, DATE_RANGE_RE, extract_majors
+from api.pdf.regexes import EMAIL_RE, PHONE_RE, DATE_RANGE_RE, extract_majors
+from api.pdf.layout_parser import extract_bbox
 
 
 def extract_candidate_info(
@@ -124,7 +125,7 @@ def _extract_candidate_regions(
 
         # Extract bounding box
         layout_obj = getattr(span._, "layout", None)
-        bbox = _extract_bbox_from_layout(layout_obj)
+        bbox = extract_bbox(layout_obj)
         if bbox is None:
             continue
 
@@ -141,44 +142,6 @@ def _extract_candidate_regions(
         })
 
     return regions
-
-
-def _extract_bbox_from_layout(layout_obj: Any) -> Optional[Dict[str, float]]:
-    """Extract bounding box from layout object."""
-    if layout_obj is None:
-        return None
-
-    # Get page index
-    page_num = getattr(layout_obj, "page_number", None)
-    if page_num is None:
-        page_num = getattr(layout_obj, "page", None)
-    if page_num is None:
-        page_index = 0
-    else:
-        try:
-            page_index = max(0, int(page_num) - 1)
-        except Exception:
-            page_index = 0
-
-    # Get coordinates
-    x0 = getattr(layout_obj, "x", None)
-    y0 = getattr(layout_obj, "y", None)
-    width = getattr(layout_obj, "width", None)
-    height = getattr(layout_obj, "height", None)
-
-    x1 = x0 + width if x0 is not None and width is not None else None
-    y1 = y0 + height if y0 is not None and height is not None else None
-
-    if None in (x0, y0, x1, y1):
-        return None
-
-    return {
-        "page_index": float(page_index),
-        "x0": float(x0),
-        "y0": float(y0),
-        "x1": float(x1),
-        "y1": float(y1),
-    }
 
 
 def build_skills(groups: List[Dict]) -> List[str]:

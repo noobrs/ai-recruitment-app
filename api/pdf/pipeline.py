@@ -9,10 +9,10 @@ from pathlib import Path
 from typing import Dict
 
 from api.types.types import ApiResponse
-from api.pdf_new.layout_parser import load_pdf_with_layout, group_spans_by_heading
-from api.pdf_new.entity_extraction import load_gliner_model, extract_entities_from_group
-from api.pdf_new.section_classifier import classify_all_sections
-from api.pdf_new.resume_builder import (
+from api.pdf.layout_parser import load_pdf_with_layout, group_spans_by_heading
+from api.pdf.entity_extraction import load_gliner_model, extract_entities_from_group
+from api.pdf.section_classifier import classify_all_sections
+from api.pdf.resume_builder import (
     extract_candidate_info,
     build_skills,
     build_languages,
@@ -21,8 +21,8 @@ from api.pdf_new.resume_builder import (
     build_certifications,
     build_activities,
 )
-from api.pdf_new.redaction import redact_pdf
-from api.pdf_new.utils import convert_to_resume_data
+from api.pdf.redaction import redact_pdf
+from api.pdf.utils import convert_to_resume_data
 
 
 def process_pdf_resume(file_bytes: bytes) -> ApiResponse:

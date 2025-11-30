@@ -13,6 +13,6 @@ Main entry point:
     result = process_resume(pdf_bytes)
 """
 
-from api.pdf_new.pipeline import process_pdf_resume
+from api.pdf.pipeline import process_pdf_resume
 
 __all__ = ["process_pdf_resume"]

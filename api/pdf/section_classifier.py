@@ -6,7 +6,7 @@ Replaces hardcoded keyword matching with ML-based classification.
 from typing import Dict, Optional
 from gliner import GLiNER
 
-from api.pdf_new.config import SECTION_TYPE_LABELS, SECTION_TYPE_THRESHOLD
+from api.pdf.config import SECTION_TYPE_LABELS, SECTION_TYPE_THRESHOLD
 
 
 def classify_section_type(
@@ -17,8 +17,7 @@ def classify_section_type(
     """
     Classify the type of a resume section using GLiNER.
 
-    Instead of hardcoded keyword matching, this uses the GLiNER model
-    to understand the semantic meaning of the section.
+    This uses the GLiNER model to understand the semantic meaning of the section.
 
     Args:
         gliner: GLiNER model instance

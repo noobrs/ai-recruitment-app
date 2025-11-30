@@ -9,7 +9,7 @@ Regular expressions for extracting structured information from text:
 import re
 from typing import List
 
-from api.pdf_new.utils import is_similar
+from api.pdf.utils import is_similar
 
 
 # Contact information patterns

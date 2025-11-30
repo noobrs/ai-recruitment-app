@@ -260,7 +260,7 @@ async def api_process_pdf(file: UploadFile = File(...)) -> ApiResponse:
     """Full end-to-end pipeline for PDF: layout -> grouping -> GLiNER -> aggregate -> build json.
     Accepts a file upload via multipart form data.
     This endpoint only extracts data and does NOT save to database."""
-    from api.pdf_new.pipeline import process_pdf_resume
+    from api.pdf.pipeline import process_pdf_resume
     
     if not file:
         raise HTTPException(status_code=400, detail="File is required")

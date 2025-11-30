@@ -6,7 +6,7 @@ import re
 from typing import Dict, Optional, Tuple, List
 from rapidfuzz import fuzz
 
-from api.pdf_new.config import ENTITY_THRESHOLDS, DEFAULT_THRESHOLD
+from api.pdf.config import ENTITY_THRESHOLDS, DEFAULT_THRESHOLD
 from api.types.types import ResumeData, CandidateOut, EducationOut, ExperienceOut, CertificationOut, ActivityOut
 
 

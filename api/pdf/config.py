@@ -42,21 +42,21 @@ SECTION_TYPE_LABELS: List[str] = [
 
 # Confidence thresholds for entity extraction
 ENTITY_THRESHOLDS: Dict[str, float] = {
-    "skill": 0.50,
-    "language": 0.50,
-    "degree": 0.50,
-    "job title": 0.50,
-    "organization": 0.45,
-    "company": 0.45,
-    "school": 0.45,
-    "university": 0.45,
-    "location": 0.50,
-    "person": 0.55,
-    "certification": 0.50,
-    "award": 0.50,
-    "activity": 0.45,
-    "project": 0.45,
-    "date": 0.45,
+    "skill": 0.70,
+    "language": 0.70,
+    "degree": 0.70,
+    "job title": 0.70,
+    "organization": 0.60,
+    "company": 0.60,
+    "school": 0.60,
+    "university": 0.60,
+    "location": 0.60,
+    "person": 0.60,
+    "certification": 0.60,
+    "award": 0.60,
+    "activity": 0.60,
+    "project": 0.60,
+    "date": 0.60,
 }
 
 # Threshold for section type classification
@@ -66,4 +66,4 @@ SECTION_TYPE_THRESHOLD: float = 0.60
 SKIP_SPAN_LABELS: Set[str] = {"table", "picture", "equation"}
 
 # Default threshold for entities not explicitly listed
-DEFAULT_THRESHOLD: float = 0.50
+DEFAULT_THRESHOLD: float = 0.60

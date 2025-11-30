@@ -9,8 +9,8 @@ from typing import Dict, List, Optional, Any
 import spacy
 from spacy_layout import spaCyLayout
 
-from api.pdf_new.config import SKIP_SPAN_LABELS
-from api.pdf_new.utils import normalize_text
+from api.pdf.config import SKIP_SPAN_LABELS
+from api.pdf.utils import normalize_text
 
 
 # Lazy-loaded singletons
@@ -39,7 +39,7 @@ def load_pdf_with_layout(pdf_path: str) -> spacy.tokens.Doc:
 def extract_bbox(layout_obj: Any) -> Optional[Dict[str, float]]:
     """
     Extract bounding box coordinates from a layout object.
-    Returns dict with page, x0, y0, x1, y1 or None if not available.
+    Returns dict with page_index, x0, y0, x1, y1 or None if not available.
     """
     if layout_obj is None:
         return None
@@ -53,30 +53,53 @@ def extract_bbox(layout_obj: Any) -> Optional[Dict[str, float]]:
     else:
         page_index = max(0, int(page_num) - 1)
 
-    # Extract bounding box
+    # Try primary approach: x, y, width, height attributes
+    x = getattr(layout_obj, "x", None)
+    y = getattr(layout_obj, "y", None)
+    width = getattr(layout_obj, "width", None)
+    height = getattr(layout_obj, "height", None)
+
+    if all(v is not None for v in [x, y, width, height]):
+        return {
+            "page_index": float(page_index),
+            "x0": float(x),
+            "y0": float(y),
+            "x1": float(x + width),
+            "y1": float(y + height),
+        }
+
+    # Fallback 1: bbox or rect tuple
     bbox = getattr(layout_obj, "bbox", None)
     if bbox is None:
         bbox = getattr(layout_obj, "rect", None)
-    if bbox is None:
-        # Try individual coordinate attributes
-        x0 = getattr(layout_obj, "x0", None)
-        y0 = getattr(layout_obj, "y0", None)
-        x1 = getattr(layout_obj, "x1", None)
-        y1 = getattr(layout_obj, "y1", None)
-        if all(v is not None for v in [x0, y0, x1, y1]):
-            bbox = (x0, y0, x1, y1)
 
-    if bbox is None:
-        return None
+    if bbox is not None:
+        x0, y0, x1, y1 = bbox
+        return {
+            "page_index": float(page_index),
+            "x0": float(x0),
+            "y0": float(y0),
+            "x1": float(x1),
+            "y1": float(y1),
+        }
 
-    x0, y0, x1, y1 = bbox
-    return {
-        "page": float(page_index),
-        "x0": float(x0),
-        "y0": float(y0),
-        "x1": float(x1),
-        "y1": float(y1),
-    }
+    # Fallback 2: individual x0, y0, x1, y1 attributes
+    x0 = getattr(layout_obj, "x0", None)
+    y0 = getattr(layout_obj, "y0", None)
+    x1 = getattr(layout_obj, "x1", None)
+    y1 = getattr(layout_obj, "y1", None)
+
+    if all(v is not None for v in [x0, y0, x1, y1]):
+        return {
+            "page_index": float(page_index),
+            "x0": float(x0),
+            "y0": float(y0),
+            "x1": float(x1),
+            "y1": float(y1),
+        }
+
+    # No valid coordinates found
+    return None
 
 
 def group_spans_by_heading(doc: spacy.tokens.Doc) -> List[Dict]:

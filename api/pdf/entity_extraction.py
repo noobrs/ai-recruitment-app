@@ -8,8 +8,8 @@ from typing import Dict, List
 from gliner import GLiNER
 from gliner.model import GLiNERConfig
 
-from api.pdf_new.config import ENTITY_LABELS, GLINER_MODEL_NAME
-from api.pdf_new.utils import passes_threshold
+from api.pdf.config import ENTITY_LABELS, GLINER_MODEL_NAME
+from api.pdf.utils import passes_threshold
 
 
 def load_gliner_model(model_name: str = GLINER_MODEL_NAME) -> GLiNER:
