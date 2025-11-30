@@ -81,10 +81,13 @@ def process_pdf_resume(file_bytes: bytes) -> ApiResponse:
             entities = extract_entities_from_group(gliner, heading, text)
             group["entities"] = entities
 
-        # Step 5: Extract candidate information
+        # Step 5: Extract candidate information (returns list of candidates)
         print("[Pipeline] Extracting candidate info...")
         full_text = doc.text or ""
-        candidate = extract_candidate_info(full_text, gliner, doc)
+        candidates = extract_candidate_info(full_text, gliner, doc)
+
+        # Use first candidate for backward compatibility with existing API
+        primary_candidate = candidates[0] if candidates else {}
 
         # Step 6: Build structured resume sections
         print("[Pipeline] Building resume sections...")
@@ -97,9 +100,9 @@ def process_pdf_resume(file_bytes: bytes) -> ApiResponse:
         certifications = build_certifications(groups)
         activities = build_activities(groups)
 
-        # Convert to API response format
+        # Convert to API response format (using primary candidate)
         resume_data = convert_to_resume_data({
-            "candidate": candidate,
+            "candidate": primary_candidate,
             "education": education,
             "experience": experience,
             "skills": all_skills,
@@ -107,12 +110,17 @@ def process_pdf_resume(file_bytes: bytes) -> ApiResponse:
             "activities": activities,
         })
 
-        # Step 7: Redact sensitive information
+        # Step 7: Redact sensitive information for ALL candidates
         print("[Pipeline] Redacting sensitive information...")
-        candidate_regions = (
-            candidate.get("regions") if isinstance(candidate, dict) else None
-        )
-        redaction_result = redact_pdf(file_bytes, candidate_regions)
+        # Extract regions from all candidates
+        candidates_regions = [
+            candidate.get("regions")
+            for candidate in candidates
+            if candidate.get("regions")
+        ]
+        # Only pass if we have regions to redact
+        candidates_regions = candidates_regions if candidates_regions else None
+        redaction_result = redact_pdf(file_bytes, candidates_regions)
 
         # Step 8: Upload redacted resume to storage
         redacted_file_url = None

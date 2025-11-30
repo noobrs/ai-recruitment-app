@@ -143,14 +143,15 @@ def apply_face_removal(pdf_doc: fitz.Document, regions: List[Dict[str, Any]]) ->
 
 def redact_pdf(
     file_bytes: bytes,
-    candidate_regions: Optional[List[Dict[str, Any]]] = None,
+    candidates_regions: Optional[List[List[Dict[str, Any]]]] = None,
 ) -> Dict[str, Any]:
     """
     Redact candidate information and faces from a PDF.
 
     Args:
         file_bytes: PDF file as bytes
-        candidate_regions: List of regions to redact (candidate info)
+        candidates_regions: List of candidates, where each candidate is a list of regions to redact.
+                           Example: [[region1, region2], [region3, region4]] for 2 candidates
 
     Returns:
         Dict with status, redacted_resume_file (bytes), and message
@@ -170,8 +171,15 @@ def redact_pdf(
         # Detect faces
         face_regions = detect_face_regions(pdf_doc)
 
+        # Flatten candidates_regions into a single list of regions
+        all_candidate_regions = []
+        if candidates_regions:
+            for candidate_regions_list in candidates_regions:
+                if candidate_regions_list:
+                    all_candidate_regions.extend(candidate_regions_list)
+
         # Check if any redactions needed
-        if not candidate_regions and not face_regions:
+        if not all_candidate_regions and not face_regions:
             pdf_doc.close()
             return {
                 "status": "no_redaction_needed",
@@ -180,8 +188,8 @@ def redact_pdf(
             }
 
         # Apply redactions
-        if candidate_regions:
-            apply_text_redactions(pdf_doc, candidate_regions)
+        if all_candidate_regions:
+            apply_text_redactions(pdf_doc, all_candidate_regions)
 
         if face_regions:
             apply_face_removal(pdf_doc, face_regions)

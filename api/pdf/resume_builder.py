@@ -16,17 +16,19 @@ from api.pdf.utils import (
     make_text_window,
     is_in_window,
 )
-from api.pdf.regexes import EMAIL_RE, PHONE_RE, DATE_RANGE_RE, extract_majors
 from api.pdf.layout_parser import extract_bbox
 
+# Contact information patterns
+EMAIL_RE = re.compile(r"[\w\.-]+@[\w\.-]+\.\w+")
+PHONE_RE = re.compile(r"\+?\d[\d\s\-()]{7,}")
 
 def extract_candidate_info(
     full_text: str,
     gliner: GLiNER,
     doc: Optional[Any] = None,
-) -> Dict:
+) -> List[Dict]:
     """
-    Extract candidate information: name, email, phone, location.
+    Extract candidate information: name, email, phone, location for multiple candidates.
 
     Args:
         full_text: Full resume text
@@ -34,43 +36,118 @@ def extract_candidate_info(
         doc: Optional spaCy Doc with layout info (for coordinate extraction)
 
     Returns:
-        Dict with name, email, phone, location, and optionally coordinate regions
+        List of dicts, each with name, email, phone, location, and optionally coordinate regions
     """
-    # Extract email and phone using regex
-    email_match = EMAIL_RE.search(full_text)
-    phone_match = PHONE_RE.search(full_text)
+    # Extract all emails and phones using regex
+    emails = [match.group(0) for match in EMAIL_RE.finditer(full_text)]
+    phones = [match.group(0) for match in PHONE_RE.finditer(full_text)]
 
-    # Extract name and location using GLiNER (from first 2000 chars)
+    # Extract all names and locations using GLiNER (from first 5000 chars to capture more)
     entities = gliner.predict_entities(
-        full_text[:2000],
+        full_text[:5000],
         ["Person", "Location"],
         threshold=0.5,
     )
 
-    name = None
-    location = None
-    for entity in entities:
-        label = (entity.get("label") or "").lower()
-        if label == "person" and not name:
-            name = entity["text"].strip()
-        elif label == "location" and not location:
-            location = entity["text"].strip()
+    # Separate entities by type
+    names = [entity for entity in entities if (entity.get("label") or "").lower() == "person"]
+    locations = [entity for entity in entities if (entity.get("label") or "").lower() == "location"]
 
-    email_text = email_match.group(0) if email_match else None
-    phone_text = phone_match.group(0) if phone_match else None
+    # If no names found, create a single candidate with available info
+    if not names:
+        email_text = emails[0] if emails else None
+        phone_text = phones[0] if phones else None
+        location_text = locations[0]["text"].strip() if locations else None
 
-    # Extract coordinate regions if doc provided
-    regions = []
-    if doc is not None:
-        regions = _extract_candidate_regions(doc, name, email_text, phone_text)
+        regions = []
+        if doc is not None:
+            regions = _extract_candidate_regions(doc, None, email_text, phone_text)
 
-    return {
-        "name": name,
-        "email": email_text,
-        "phone": phone_text,
-        "location": location,
-        "regions": regions,
-    }
+        return [{
+            "name": None,
+            "email": email_text,
+            "phone": phone_text,
+            "location": location_text,
+            "regions": regions,
+        }]
+
+    # Build candidates by associating each name with nearest email/phone/location
+    candidates = []
+    used_emails = set()
+    used_phones = set()
+    used_locations = set()
+
+    for name_entity in names:
+        name_text = name_entity["text"].strip()
+        name_pos = name_entity.get("start", 0)
+
+        # Find closest email (not already used)
+        closest_email = None
+        min_email_dist = float('inf')
+        for i, email in enumerate(emails):
+            if i not in used_emails:
+                email_pos = full_text.find(email)
+                if email_pos != -1:
+                    dist = abs(email_pos - name_pos)
+                    if dist < min_email_dist:
+                        min_email_dist = dist
+                        closest_email = (i, email)
+
+        if closest_email:
+            used_emails.add(closest_email[0])
+            email_text = closest_email[1]
+        else:
+            email_text = None
+
+        # Find closest phone (not already used)
+        closest_phone = None
+        min_phone_dist = float('inf')
+        for i, phone in enumerate(phones):
+            if i not in used_phones:
+                phone_pos = full_text.find(phone)
+                if phone_pos != -1:
+                    dist = abs(phone_pos - name_pos)
+                    if dist < min_phone_dist:
+                        min_phone_dist = dist
+                        closest_phone = (i, phone)
+
+        if closest_phone:
+            used_phones.add(closest_phone[0])
+            phone_text = closest_phone[1]
+        else:
+            phone_text = None
+
+        # Find closest location (not already used)
+        closest_location = None
+        min_loc_dist = float('inf')
+        for i, loc_entity in enumerate(locations):
+            if i not in used_locations:
+                loc_pos = loc_entity.get("start", 0)
+                dist = abs(loc_pos - name_pos)
+                if dist < min_loc_dist:
+                    min_loc_dist = dist
+                    closest_location = (i, loc_entity["text"].strip())
+
+        if closest_location:
+            used_locations.add(closest_location[0])
+            location_text = closest_location[1]
+        else:
+            location_text = None
+
+        # Extract coordinate regions if doc provided
+        regions = []
+        if doc is not None:
+            regions = _extract_candidate_regions(doc, name_text, email_text, phone_text)
+
+        candidates.append({
+            "name": name_text,
+            "email": email_text,
+            "phone": phone_text,
+            "location": location_text,
+            "regions": regions,
+        })
+
+    return candidates
 
 
 def _extract_candidate_regions(
@@ -187,6 +264,46 @@ def build_languages(groups: List[Dict]) -> List[str]:
     return [text for text, _ in items]
 
 
+def _extract_degree_field(entities: List[Dict], text: str = "") -> Optional[str]:
+    """
+    Extract degree field/major from Degree entities.
+    Falls back to first degree entity if found.
+    """
+    degree_entities = [e for e in entities if e["label"].lower() == "degree"]
+    if degree_entities:
+        # Return the first degree text
+        return degree_entities[0]["text"].strip()
+    return None
+
+
+def _extract_date_range(entities: List[Dict], text: str = "") -> Optional[str]:
+    """
+    Extract date range from Date entities.
+    Tries to find two dates for a range, or a single date.
+    """
+    date_entities = [e for e in entities if e["label"].lower() == "date"]
+
+    if not date_entities:
+        return None
+
+    # If we have multiple dates, combine them as a range
+    if len(date_entities) >= 2:
+        start_date = date_entities[0]["text"].strip()
+        end_date = date_entities[1]["text"].strip()
+        return f"{start_date} - {end_date}"
+
+    # Single date entity
+    if len(date_entities) == 1:
+        date_text = date_entities[0]["text"].strip()
+        # Check if it already contains a range indicator
+        if any(sep in date_text for sep in ["-", "–", "to", "TO"]):
+            return date_text
+        # Otherwise return as single date
+        return date_text
+
+    return None
+
+
 def build_education(groups: List[Dict]) -> List[Dict]:
     """
     Build education records from classified education sections.
@@ -212,20 +329,19 @@ def build_education(groups: List[Dict]) -> List[Dict]:
 
         # If no degree entities, create one record for the whole group
         if not degree_entities:
-            majors = extract_majors(text)
+            degree_title = _extract_degree_field(entities, text)
             orgs = [
                 e["text"] for e in entities
                 if e["label"].lower() in ("school", "university", "organization", "company")
             ]
             locs = [e["text"] for e in entities if e["label"].lower() == "location"]
-            duration_match = DATE_RANGE_RE.search(text)
+            duration = _extract_date_range(entities, text)
 
             edu_records.append({
-                "level": None,
-                "field": majors[0] if majors else None,
+                "title": degree_title,
                 "institution": orgs[0] if orgs else None,
                 "location": locs[0] if locs else None,
-                "duration": duration_match.group(0) if duration_match else None,
+                "duration": duration,
                 "description": clean_description(text),
             })
             continue
@@ -248,28 +364,39 @@ def build_education(groups: List[Dict]) -> List[Dict]:
                 if e["label"].lower() == "location"
             ]
 
-            duration_match = DATE_RANGE_RE.search(window_text) or DATE_RANGE_RE.search(text)
-            majors = extract_majors(window_text or text)
+            # Try to get date from local entities first, fallback to all entities
+            duration = _extract_date_range(local_entities, window_text)
+            if not duration:
+                duration = _extract_date_range(entities, text)
+
+            # Extract the full degree title as is (no splitting into level and field)
+            degree_title = degree_entity["text"].strip()
 
             edu_records.append({
-                "level": degree_entity["text"].strip(),
-                "field": majors[0] if majors else None,
+                "title": degree_title,
                 "institution": local_orgs[0] if local_orgs else None,
                 "location": local_locs[0] if local_locs else None,
-                "duration": duration_match.group(0) if duration_match else None,
+                "duration": duration,
                 "description": clean_description(window_text or text),
             })
 
-    # De-duplicate
-    unique = []
-    seen = set()
+    # De-duplicate: keep only one entry if institution, duration, and location match
+    # Prefer the entry with the longest description
+    unique_map = {}
     for rec in edu_records:
-        key = (rec["level"], rec["field"], rec["institution"], rec["duration"])
-        if key not in seen:
-            seen.add(key)
-            unique.append(rec)
+        # Use institution, duration, location as the key (ignore title for deduplication)
+        key = (rec["institution"], rec["duration"], rec["location"])
 
-    return unique
+        if key not in unique_map:
+            unique_map[key] = rec
+        else:
+            # Keep the record with the longer description
+            existing_desc_len = len(unique_map[key].get("description") or "")
+            new_desc_len = len(rec.get("description") or "")
+            if new_desc_len > existing_desc_len:
+                unique_map[key] = rec
+
+    return list(unique_map.values())
 
 
 def build_experience(groups: List[Dict]) -> List[Dict]:
@@ -296,7 +423,7 @@ def build_experience(groups: List[Dict]) -> List[Dict]:
 
         # If no title entities, create one record for the whole group
         if not title_entities:
-            duration_match = DATE_RANGE_RE.search(text)
+            duration = _extract_date_range(entities, text)
             locs = [e["text"] for e in entities if e["label"].lower() == "location"]
             orgs = [
                 e["text"] for e in entities
@@ -307,7 +434,7 @@ def build_experience(groups: List[Dict]) -> List[Dict]:
                 "position": None,
                 "company": orgs[0] if orgs else None,
                 "location": locs[0] if locs else None,
-                "duration": duration_match.group(0) if duration_match else None,
+                "duration": duration,
                 "description": clean_description(text),
             })
             continue
@@ -330,26 +457,36 @@ def build_experience(groups: List[Dict]) -> List[Dict]:
                 if e["label"].lower() in ("organization", "company")
             ]
 
-            duration_match = DATE_RANGE_RE.search(window_text) or DATE_RANGE_RE.search(text)
+            # Try to get date from local entities first, fallback to all entities
+            duration = _extract_date_range(local_entities, window_text)
+            if not duration:
+                duration = _extract_date_range(entities, text)
 
             exp_records.append({
                 "position": title_entity["text"].strip(),
                 "company": local_orgs[0] if local_orgs else None,
                 "location": local_locs[0] if local_locs else None,
-                "duration": duration_match.group(0) if duration_match else None,
+                "duration": duration,
                 "description": clean_description(window_text or text),
             })
 
-    # De-duplicate
-    unique = []
-    seen = set()
+    # De-duplicate: keep only one entry if company, duration, and location match
+    # Prefer the entry with the longest description
+    unique_map = {}
     for rec in exp_records:
-        key = (rec["position"], rec["company"], rec["duration"])
-        if key not in seen:
-            seen.add(key)
-            unique.append(rec)
+        # Use company, duration, location as the key (ignore position for deduplication)
+        key = (rec["company"], rec["duration"], rec["location"])
 
-    return unique
+        if key not in unique_map:
+            unique_map[key] = rec
+        else:
+            # Keep the record with the longer description
+            existing_desc_len = len(unique_map[key].get("description") or "")
+            new_desc_len = len(rec.get("description") or "")
+            if new_desc_len > existing_desc_len:
+                unique_map[key] = rec
+
+    return list(unique_map.values())
 
 
 def build_certifications(groups: List[Dict]) -> List[Dict]:

@@ -151,16 +151,10 @@ def convert_to_resume_data(resume_dict: Dict) -> ResumeData:
         location=cand_src.get("location"),
     )
 
-    # Education: combine level + field -> degree, split duration
+    # Education: use title as degree, split duration
     edu_models: List[EducationOut] = []
     for e in resume_dict.get("education", []):
-        level = e.get("level")
-        field = e.get("field")
-        if level and field:
-            degree = f"{level} in {field}"
-        else:
-            degree = level or field
-
+        degree = e.get("title")
         start_date, end_date = split_duration(e.get("duration"))
 
         edu_models.append(
