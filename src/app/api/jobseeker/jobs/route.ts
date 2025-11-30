@@ -91,7 +91,7 @@ export async function GET() {
         Array.isArray(job.application) &&
         job.application.some(
           (a: Pick<Application, 'job_seeker_id' | 'is_bookmark' | 'status'>) =>
-            a.job_seeker_id === jobSeeker.job_seeker_id && a.status && a.status !== 'unknown'
+            a.job_seeker_id === jobSeeker.job_seeker_id && a.status && a.status !== 'unknown' && a.status !== 'withdrawn'
         );
 
       const recruiterData = Array.isArray(job.recruiter) ? job.recruiter[0] : job.recruiter;

@@ -100,12 +100,12 @@ export async function GET(
           a.job_seeker_id === jobSeeker.job_seeker_id && a.is_bookmark === true
       );
 
-    // Check if jobseeker has applied to this job
+    // Check if jobseeker has applied to this job (excluding withdrawn applications)
     const isApplied =
       Array.isArray(job.application) &&
       job.application.some(
         (a: Pick<Application, 'job_seeker_id' | 'is_bookmark' | 'status'>) =>
-          a.job_seeker_id === jobSeeker.job_seeker_id && a.status && a.status !== 'unknown'
+          a.job_seeker_id === jobSeeker.job_seeker_id && a.status && a.status !== 'unknown' && a.status !== 'withdrawn'
       );
 
     // 6️⃣ Format company logo + flatten job structure

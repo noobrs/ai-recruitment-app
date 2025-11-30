@@ -206,6 +206,46 @@ export async function updateApplicationStatus(applicationId: number, status: App
 }
 
 /**
+ * Withdraw an application (jobseeker can withdraw their own application)
+ */
+export async function withdrawApplication(applicationId: number, jobSeekerId: number): Promise<Application | null> {
+  const supabase = await createClient();
+
+  // Verify ownership and current status
+  const { data: existing, error: fetchError } = await supabase
+    .from('application')
+    .select('application_id, status, job_seeker_id')
+    .eq('application_id', applicationId)
+    .eq('job_seeker_id', jobSeekerId)
+    .single();
+
+  if (fetchError || !existing) {
+    console.error('Application not found or unauthorized:', fetchError);
+    return null;
+  }
+
+  // Don't allow withdrawing already rejected/withdrawn applications
+  if (existing.status === 'rejected' || existing.status === 'withdrawn') {
+    console.error('Cannot withdraw application with status:', existing.status);
+    return null;
+  }
+
+  // Update status to withdrawn
+  const { data, error } = await supabase
+    .from('application')
+    .update({ status: 'withdrawn', updated_at: new Date().toISOString() })
+    .eq('application_id', applicationId)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error withdrawing application:', error);
+    return null;
+  }
+  return data;
+}
+
+/**
  * Toggle bookmark status
  */
 export async function toggleBookmark(applicationId: number, isBookmark: boolean): Promise<Application | null> {
@@ -243,6 +283,7 @@ export async function deleteApplication(applicationId: number): Promise<boolean>
 
 /**
  * Get a single application by job seeker + job
+ * Returns the most recent application for the job-seeker pair
  */
 export async function getApplicationByJobAndSeeker(
   jobSeekerId: number,
@@ -254,6 +295,8 @@ export async function getApplicationByJobAndSeeker(
     .select("*")
     .eq("job_seeker_id", jobSeekerId)
     .eq("job_id", jobId)
+    .order("created_at", { ascending: false })
+    .limit(1)
     .maybeSingle();
 
   if (error) {

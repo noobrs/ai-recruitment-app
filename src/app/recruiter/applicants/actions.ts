@@ -53,17 +53,15 @@ export async function updateApplicantStatus(
             return { success: false, error: "Recruiter not found" };
         }
 
-        // Validate status value
+        // Validate status value - recruiters cannot set withdrawn status (only jobseekers can withdraw)
         const validStatuses: ApplicationStatus[] = [
             "received",
             "shortlisted",
             "rejected",
-            "withdrawn",
-            "unknown",
         ];
 
         if (!validStatuses.includes(status)) {
-            return { success: false, error: "Invalid status value" };
+            return { success: false, error: "Invalid status value. Recruiters cannot set withdrawn status." };
         }
 
         // Get application details before update

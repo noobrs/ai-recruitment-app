@@ -11,11 +11,11 @@ interface StatusDropdownProps {
     onStatusChange?: (newStatus: ApplicationStatus) => void;
 }
 
-const STATUS_OPTIONS: { value: ApplicationStatus; label: string; color: string }[] = [
-    { value: "received", label: "Received", color: "text-blue-600" },
-    { value: "shortlisted", label: "Shortlisted", color: "text-green-600" },
-    { value: "rejected", label: "Rejected", color: "text-red-600" },
-    { value: "withdrawn", label: "Withdrawn", color: "text-gray-600" },
+const STATUS_OPTIONS: { value: ApplicationStatus; label: string; color: string; recruiterCanSet?: boolean }[] = [
+    { value: "received", label: "Received", color: "text-blue-600", recruiterCanSet: true },
+    { value: "shortlisted", label: "Shortlisted", color: "text-green-600", recruiterCanSet: true },
+    { value: "rejected", label: "Rejected", color: "text-red-600", recruiterCanSet: true },
+    { value: "withdrawn", label: "Withdrawn", color: "text-gray-600", recruiterCanSet: false },
 ];
 
 export default function StatusDropdown({
@@ -75,13 +75,15 @@ export default function StatusDropdown({
         }
     };
 
+    const isWithdrawn = status === "withdrawn";
+
     return (
         <div className="relative inline-block" ref={dropdownRef}>
             <button
-                onClick={() => setIsOpen(!isOpen)}
-                disabled={isUpdating}
+                onClick={() => !isWithdrawn && setIsOpen(!isOpen)}
+                disabled={isUpdating || isWithdrawn}
                 className={`flex items-center gap-2 px-3 py-1.5 font-medium text-sm capitalize transition ${currentOption.color
-                    } ${isUpdating ? "opacity-50 cursor-not-allowed" : "hover:opacity-80 cursor-pointer"}`}
+                    } ${isUpdating || isWithdrawn ? "opacity-50 cursor-not-allowed" : "hover:opacity-80 cursor-pointer"}`}
             >
                 {isUpdating ? "Updating..." : currentOption.label}
                 <ChevronDown className={`text-gray-600 w-4 h-4 transition-transform ${isOpen ? "rotate-180" : ""}`} />
@@ -89,13 +91,16 @@ export default function StatusDropdown({
 
             {isOpen && (
                 <div className="absolute left-0 mt-2 w-40 bg-white border border-gray-200 rounded-lg shadow-lg z-50 overflow-hidden">
-                    {STATUS_OPTIONS.map((option) => (
+                    {STATUS_OPTIONS.filter(opt => opt.recruiterCanSet !== false || opt.value === status).map((option) => (
                         <button
                             key={option.value}
                             onClick={() => handleStatusChange(option.value)}
+                            disabled={option.recruiterCanSet === false}
                             className={`w-full text-left px-4 py-2 text-sm capitalize transition ${option.value === status
                                 ? "bg-gray-50 text-gray-800 font-semibold"
-                                : "hover:bg-gray-50 hover:text-gray-800 text-gray-700"
+                                : option.recruiterCanSet === false
+                                    ? "text-gray-400 cursor-not-allowed"
+                                    : "hover:bg-gray-50 hover:text-gray-800 text-gray-700"
                                 }`}
                         >
                             {option.label}

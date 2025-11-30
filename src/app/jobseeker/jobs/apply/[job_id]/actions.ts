@@ -77,8 +77,10 @@ export async function submitApplication(formData: FormData) {
 
   let application;
 
-  if (existingApp) {
-    // Update existing application (e.g., convert bookmark to real application)
+  // Only update if the existing application is a bookmark (status = 'unknown')
+  // For withdrawn or other statuses, create a new application to preserve history
+  if (existingApp && existingApp.status === 'unknown') {
+    // Update existing bookmark application (convert bookmark to real application)
     const { data, error: appError } = await supabase
       .from('application')
       .update({
@@ -97,7 +99,7 @@ export async function submitApplication(formData: FormData) {
     }
     application = data;
   } else {
-    // Insert new application record
+    // Insert new application record (either no existing app, or existing app was withdrawn/rejected)
     const { data, error: appError } = await supabase
       .from('application')
       .insert([
