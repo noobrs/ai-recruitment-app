@@ -353,9 +353,6 @@ export async function getApplicantsByRecruiter(
     .select("job_id")
     .eq("recruiter_id", recruiterId);
 
-  console.log("Jobs found:", jobs);
-  console.log("Job error:", jobError);
-
   if (jobError) {
     console.error("Error fetching jobs:", jobError);
     return [];
