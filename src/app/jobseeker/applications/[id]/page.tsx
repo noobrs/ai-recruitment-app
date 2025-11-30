@@ -6,6 +6,7 @@ import { ArrowLeft, Calendar, Briefcase, Building2, ExternalLink } from "lucide-
 import ApplicationStatusPipeline from "@/components/jobseeker/applications/ApplicationStatusPipeline";
 import { ApplicationStatus } from "@/types";
 import Image from "next/image";
+import ApplicationDetailLoading from "./loading";
 
 interface ApplicationDetail {
     applicationId: number;
@@ -58,14 +59,7 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
     }, [id]);
 
     if (loading) {
-        return (
-            <div className="min-h-screen flex items-center justify-center">
-                <div className="text-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto" />
-                    <p className="mt-4 text-gray-600">Loading application details...</p>
-                </div>
-            </div>
-        );
+        return <ApplicationDetailLoading />;
     }
 
     if (error || !application) {
