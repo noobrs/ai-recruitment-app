@@ -1,19 +1,22 @@
 """
-Regular expressions and helpers for:
-- Emails
+Regular expressions for extracting structured information from text:
+- Email addresses
 - Phone numbers
 - Date ranges
-- Degree / major extraction
+- Degree/major patterns
 """
 
 import re
 from typing import List
 
-from api.pdf.utils import similar
+from api.pdf_new.utils import is_similar
 
-# Regex for contact info & dates
+
+# Contact information patterns
 EMAIL_RE = re.compile(r"[\w\.-]+@[\w\.-]+\.\w+")
 PHONE_RE = re.compile(r"\+?\d[\d\s\-()]{7,}")
+
+# Date range pattern
 DATE_RANGE_RE = re.compile(
     r"((?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)[a-z]*\s+\d{4}"
     r"|\d{4})\s*[-–]\s*(Present|\d{4}|"
@@ -21,10 +24,7 @@ DATE_RANGE_RE = re.compile(
     re.IGNORECASE,
 )
 
-# ----------------------------
-# Degree / Major extraction (regex)
-# ----------------------------
-
+# Degree patterns for major extraction
 DEGREE_PATTERNS = [
     r"\bBachelor(?:'s)?\s+(?:of\s+)?([A-Z][\w &/().,-]{2,})(?=$|[.,;)\n])",
     r"\bBachelor(?:'s)?\s+in\s+([A-Z][\w &/().,-]{2,})(?=$|[.,;)\n])",
@@ -40,10 +40,9 @@ DEGREE_PATTERNS = [
 ]
 
 
-def _infer_degree_prefix(context: str) -> str:
+def infer_degree_prefix(context: str) -> str:
     """
-    Infer a degree prefix ('Bachelor of', 'Master of', etc.) from nearby text context.
-    Used to build nicer degree strings.
+    Infer degree prefix ('Bachelor of', 'Master of', etc.) from surrounding text.
     """
     ctx = context.lower()
     if "bachelor" in ctx or re.search(r"\bB\.?\s?(Sc|Eng|Tech|A|CS|IT)\b", ctx, re.I):
@@ -61,27 +60,27 @@ def _infer_degree_prefix(context: str) -> str:
     return ""
 
 
-def extract_majors_from_text(text: str) -> List[str]:
+def extract_majors(text: str) -> List[str]:
     """
-    Run degree/major regex patterns over text to identify possible majors,
-    then apply context-based prefix and de-duplicate via fuzzy similarity.
+    Extract degree majors from text using regex patterns.
+    Returns de-duplicated list of majors with inferred prefixes.
     """
     majors: List[str] = []
-    for pat in DEGREE_PATTERNS:
-        for m in re.finditer(pat, text, flags=re.IGNORECASE):
-            span_text = text[max(0, m.start() - 30) : m.end() + 30]
-            major_core = m.group(1) if m.lastindex else ""
+    for pattern in DEGREE_PATTERNS:
+        for match in re.finditer(pattern, text, flags=re.IGNORECASE):
+            # Get context around match for prefix inference
+            span_text = text[max(0, match.start() - 30) : match.end() + 30]
+
+            # Extract major field
+            major_core = match.group(1) if match.lastindex else ""
             major_core = re.sub(r"[\s,.;:)\]]+$", "", (major_core or "").strip())
-            prefix = _infer_degree_prefix(span_text)
+
+            # Add prefix based on context
+            prefix = infer_degree_prefix(span_text)
             pretty = f"{prefix}{major_core}" if prefix else major_core
-            if pretty and all(not similar(pretty, x) for x in majors):
+
+            # De-duplicate using fuzzy matching
+            if pretty and all(not is_similar(pretty, existing) for existing in majors):
                 majors.append(pretty)
+
     return majors
-
-
-__all__ = [
-    "EMAIL_RE",
-    "PHONE_RE",
-    "DATE_RANGE_RE",
-    "extract_majors_from_text",
-]
