@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import BrowseJobsAction from "@/components/jobseeker/jobs/JobsBrowseAction";
 import Link from "next/link";
 import { DashboardResponse } from "@/app/api/jobseeker/dashboard/route";
+import JobSeekerDashboardLoading from "./loading";
 
 interface DashboardClientProps {
     user: {
@@ -27,7 +28,7 @@ export default function DashboardClient({ }: DashboardClientProps) {
 
     if (!stats)
         return (
-            <div className="p-10 text-center text-gray-600">Loading dashboard…</div>
+            <JobSeekerDashboardLoading />
         );
 
     const recent = stats.recentApplications ?? [];
