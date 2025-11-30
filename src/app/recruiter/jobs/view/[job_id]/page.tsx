@@ -65,7 +65,7 @@ export default function RecruiterJobViewPage() {
         </div>
 
         <button
-          onClick={() => router.push("/recruiter/jobs")}
+          onClick={() => window.history.length > 1 ? router.back() : router.push("/recruiter/jobs")}
           className="px-4 py-2 border rounded-full hover:bg-gray-100"
         >
           ← Back to Jobs

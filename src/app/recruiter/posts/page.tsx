@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { MoreVertical, Search, Filter, Star, Plus } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { MoreVertical, Search, Filter, Star, Plus, Pencil, View } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 interface JobPost {
@@ -25,6 +25,23 @@ export default function RecruiterPostsPage() {
   const [visibleCount, setVisibleCount] = useState(10);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const toggleDropdown = (id: string) => {
+    setOpenDropdown(openDropdown === id ? null : id);
+  };
+
+  // Click outside to close
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setOpenDropdown(null);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   // Fetch recruiter jobs
   useEffect(() => {
@@ -94,7 +111,7 @@ export default function RecruiterPostsPage() {
 
         <button
           className="flex items-center px-4 py-2 border rounded-full font-medium hover:bg-gray-50"
-          onClick={() => router.push("/recruiter/jobs/create")}
+          onClick={() => router.push("/recruiter/posts/create")}
         >
           New Job Post <Plus className="ml-2 w-4 h-4" />
         </button>
@@ -127,8 +144,8 @@ export default function RecruiterPostsPage() {
               key={status}
               onClick={() => handleStatusToggle(status)}
               className={`px-4 py-2 rounded-full font-medium border transition ${isSelected
-                  ? "bg-purple-600 text-white border-purple-600"
-                  : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                ? "bg-purple-600 text-white border-purple-600"
+                : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
                 }`}
             >
               {label}
@@ -195,8 +212,38 @@ export default function RecruiterPostsPage() {
                       <span className="text-red-500">Deleted</span>
                     )}
                   </td>
-                  <td className="px-6 py-4">
-                    <MoreVertical className="w-5 h-5 text-gray-400 cursor-pointer hover:text-gray-600" />
+                  <td className="px-6 py-4 relative">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setOpenDropdown(openDropdown === post.job_id ? null : post.job_id);
+                      }}
+                      className="p-1 cursor-pointer"
+                    >
+                      <MoreVertical className="w-5 h-5 text-gray-500 hover:text-gray-700" />
+                    </button>
+
+                    {openDropdown === post.job_id && (
+                      <div
+                        ref={dropdownRef}
+                        onClick={(e) => e.stopPropagation()}
+                        className="absolute right-0 top-[80%] w-40 bg-white border border-gray-200 rounded-lg shadow-md z-30 animate-fade"
+                      >
+                        <button
+                          onClick={() => router.push(`/recruiter/posts/${post.job_id}/edit`)}
+                          className="w-full text-left px-4 py-2 hover:bg-gray-50 text-gray-700 flex items-center gap-2"
+                        >
+                          <Pencil size={16} /> Edit Job
+                        </button>
+
+                        <button
+                          onClick={() => router.push(`/recruiter/jobs/view/${post.job_id}`)}
+                          className="w-full text-left px-4 py-2 hover:bg-gray-50 text-gray-700 flex items-center gap-2"
+                        >
+                          <View size={16} /> Preview
+                        </button>
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))}
