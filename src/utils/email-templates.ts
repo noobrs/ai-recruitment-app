@@ -68,7 +68,7 @@ function emailWrapper(content: string, preheader?: string): string {
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
     .header {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: #00E676;
       color: #ffffff;
       padding: 30px 20px;
       text-align: center;
@@ -91,16 +91,19 @@ function emailWrapper(content: string, preheader?: string): string {
     .button {
       display: inline-block;
       padding: 12px 30px;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: #ffffff;
+      background: #00E676;
+      color: #ffffff !important;
       text-decoration: none;
       border-radius: 6px;
       margin: 20px 0;
       font-weight: 500;
     }
+    .button:hover {
+      background: #00C853;
+    }
     .info-box {
       background-color: #f8f9fa;
-      border-left: 4px solid #667eea;
+      border-left: 4px solid #00994F;
       padding: 15px;
       margin: 20px 0;
       border-radius: 4px;
@@ -127,7 +130,7 @@ function emailWrapper(content: string, preheader?: string): string {
   ${preheader ? `<div style="display:none;font-size:1px;line-height:1px;max-height:0px;max-width:0px;opacity:0;overflow:hidden;">${preheader}</div>` : ''}
   <div class="container">
     <div class="header">
-      <h1>🚀 AI Recruitment Platform</h1>
+      <h1>AI-Powered Recruitment</h1>
     </div>
     <div class="content">
       ${content}
@@ -166,7 +169,7 @@ export function jobApplicationSubmittedTemplate(data: JobApplicationData): { sub
   `;
 
   return {
-    subject: `✅ Application Submitted: ${data.jobTitle} at ${data.companyName}`,
+    subject: `Application Submitted: ${data.jobTitle} at ${data.companyName}`,
     html: emailWrapper(content, `Your application for ${data.jobTitle} has been submitted`),
   };
 }
@@ -175,12 +178,6 @@ export function jobApplicationSubmittedTemplate(data: JobApplicationData): { sub
  * Template: Application Status Updated
  */
 export function applicationStatusUpdatedTemplate(data: ApplicationStatusUpdateData): { subject: string; html: string } {
-  const statusEmoji: { [key: string]: string } = {
-    received: '📨',
-    shortlisted: '⭐',
-    rejected: '❌',
-    withdrawn: '🔙',
-  };
 
   const statusColor: { [key: string]: string } = {
     received: '#007bff',
@@ -189,11 +186,10 @@ export function applicationStatusUpdatedTemplate(data: ApplicationStatusUpdateDa
     withdrawn: '#6c757d',
   };
 
-  const emoji = statusEmoji[data.newStatus.toLowerCase()] || '📢';
   const color = statusColor[data.newStatus.toLowerCase()] || '#667eea';
 
   const content = `
-    <h2>Application Status Update ${emoji}</h2>
+    <h2>Application Status Update</h2>
     <p>Hi <strong>${data.userName}</strong>,</p>
     <p>There's an update on your job application:</p>
     
@@ -201,7 +197,7 @@ export function applicationStatusUpdatedTemplate(data: ApplicationStatusUpdateDa
       <p><strong>Position:</strong> ${data.jobTitle}</p>
       <p><strong>Company:</strong> ${data.companyName}</p>
       <p><strong>New Status:</strong></p>
-      <span class="success-badge" style="background-color: ${color};">${emoji} ${data.newStatus.toUpperCase()}</span>
+      <span class="success-badge" style="background-color: ${color};">${data.newStatus.toUpperCase()}</span>
     </div>
 
     ${data.message ? `
@@ -217,7 +213,7 @@ export function applicationStatusUpdatedTemplate(data: ApplicationStatusUpdateDa
   `;
 
   return {
-    subject: `${emoji} Application Update: ${data.jobTitle} - ${data.newStatus}`,
+    subject: `Application Update: ${data.jobTitle} - ${data.newStatus}`,
     html: emailWrapper(content, `Your application status has been updated to ${data.newStatus}`),
   };
 }
