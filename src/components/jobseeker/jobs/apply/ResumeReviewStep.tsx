@@ -5,9 +5,9 @@ import ButtonFilledBlack from '@/components/shared/buttons/ButtonFilledBlack';
 import { ResumeData } from '@/types/fastapi.types';
 import { submitApplication } from '../../../../app/jobseeker/jobs/apply/[job_id]/actions';
 import JobHeader from './JobHeader';
-import SkillsEditor from './SkillsEditor';
-import ExperienceEditor from './ExperienceEditor';
-import EducationEditor from './EducationEditor';
+import SkillsEditor from '../../shared/editors/SkillsEditor';
+import ExperienceEditor from '../../shared/editors/ExperienceEditor';
+import EducationEditor from '../../shared/editors/EducationEditor';
 import ResumeValidationWarning from './ResumeValidationWarning';
 import { JobDetails } from '@/types/job.types';
 

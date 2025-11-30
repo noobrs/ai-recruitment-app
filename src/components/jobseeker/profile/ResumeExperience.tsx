@@ -1,42 +1,97 @@
 'use client';
 
-export interface Experience {
-    title: string;
-    company: string;
-    duration: string;
-    description?: string;
-}
+import { useState } from 'react';
+import { updateResumeExperience } from '@/app/actions/resume.actions';
+import { toast } from 'react-hot-toast';
+import { ExperienceEditor } from '../shared/editors';
+import { ExperienceOut } from '@/types/fastapi.types';
+import { EditButton, SaveCancelButtons } from '@/components/shared/buttons';
 
 interface ResumeExperienceProps {
-    experiences: Experience[];
+    experiences: ExperienceOut[];
+    resumeId: number;
+    onUpdate?: () => void;
 }
 
 /**
  * ResumeExperience Component
- * 
- * Responsible for displaying the extracted work experience from resume in a card.
- * Single Responsibility: Experience display.
  */
-export default function ResumeExperience({ experiences }: ResumeExperienceProps) {
+export default function ResumeExperience({ experiences, resumeId, onUpdate }: ResumeExperienceProps) {
+    const [isEditing, setIsEditing] = useState(false);
+    const [editedExperiences, setEditedExperiences] = useState<ExperienceOut[]>(
+        experiences || []
+    );
+    const [isLoading, setIsLoading] = useState(false);
+
     if (!experiences || experiences.length === 0) return null;
+
+    const handleEdit = () => {
+        setEditedExperiences(experiences);
+        setIsEditing(true);
+    };
+
+    const handleSave = async () => {
+        setIsLoading(true);
+        try {
+            await updateResumeExperience(resumeId, editedExperiences);
+            toast.success('Experience updated successfully');
+            setIsEditing(false);
+            onUpdate?.();
+        } catch (error) {
+            toast.error('Failed to update experience');
+            console.error(error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleCancel = () => {
+        setEditedExperiences(experiences);
+        setIsEditing(false);
+    };
 
     return (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                Experience
-            </h3>
-            <div className="space-y-3">
-                {experiences.map((exp, index) => (
-                    <div key={index} className="bg-gray-50 rounded-lg border border-gray-200 p-4">
-                        <h4 className="font-semibold text-gray-900 text-base">{exp.title}</h4>
-                        <p className="text-sm text-gray-600 mt-1">{exp.company}</p>
-                        <p className="text-sm text-gray-500 mt-1">{exp.duration}</p>
-                        {exp.description && (
-                            <p className="text-sm text-gray-700 mt-2 leading-relaxed">{exp.description}</p>
-                        )}
-                    </div>
-                ))}
+            <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+                    Experience
+                </h3>
+                {!isEditing ? (
+                    <EditButton onClick={handleEdit} variant="primary" />
+                ) : (
+                    <SaveCancelButtons
+                        onSave={handleSave}
+                        onCancel={handleCancel}
+                        isLoading={isLoading}
+                        variant="primary"
+                    />
+                )}
             </div>
+
+            {isEditing ? (
+                <ExperienceEditor
+                    experiences={editedExperiences}
+                    onChange={setEditedExperiences}
+                />
+            ) : (
+                <div className="space-y-3">
+                    {experiences.map((exp, index) => (
+                        <div key={index} className="bg-gray-50 rounded-lg border border-gray-200 p-4">
+                            <h4 className="font-semibold text-gray-900 text-base">{exp.job_title}</h4>
+                            <p className="text-sm text-gray-600 mt-1">{exp.company}</p>
+                            {exp.location && (
+                                <p className="text-sm text-gray-500 mt-1">{exp.location}</p>
+                            )}
+                            {(exp.start_date || exp.end_date) && (
+                                <p className="text-sm text-gray-500 mt-1">{[exp.start_date, exp.end_date].filter(Boolean).join(' - ')}</p>
+                            )}
+                            {exp.description && (
+                                <p className="text-sm text-gray-700 mt-2 leading-relaxed whitespace-pre-wrap">{exp.description}</p>
+                            )}
+                        </div>
+                    ))}
+                </div>
+            )}
         </div>
     );
 }

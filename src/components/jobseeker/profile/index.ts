@@ -14,6 +14,5 @@ export { default as ResumeDropdown } from './ResumeDropdown';
 
 export { default as MyActivities } from './MyActivitiesCard';
 
-// Export types
-export type { Experience } from './ResumeExperience';
-export type { Education } from './ResumeEducation';
+// Export types from shared editors
+export type { Experience, Education } from '../shared/editors';

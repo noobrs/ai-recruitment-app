@@ -1,7 +1,7 @@
 'use server';
 
 import { createClient } from '@/utils/supabase/server';
-import { ResumeData } from '@/types/fastapi.types';
+import { ResumeData, EducationOut, ExperienceOut } from '@/types/fastapi.types';
 import { getAuthenticatedJobSeeker } from '@/services/auth.service';
 import {
     markResumeAsDeleted,
@@ -98,6 +98,126 @@ export async function saveResumeToDatabase(
             }
         }
         console.error('Error saving resume:', error);
+        throw error;
+    }
+}
+
+/**
+ * Update resume skills
+ * 
+ * @param resumeId - The resume ID to update
+ * @param skills - The updated skills array
+ * @returns Success status
+ */
+export async function updateResumeSkills(resumeId: number, skills: string[]) {
+    try {
+        const supabase = await createClient();
+        const jobSeekerId = await getAuthenticatedJobSeeker();
+
+        // Verify ownership
+        const { data: resume } = await supabase
+            .from('resume')
+            .select('job_seeker_id')
+            .eq('resume_id', resumeId)
+            .single();
+
+        if (!resume || resume.job_seeker_id !== jobSeekerId) {
+            throw new Error('Unauthorized');
+        }
+
+        const { error } = await supabase
+            .from('resume')
+            .update({ extracted_skills: JSON.stringify(skills) })
+            .eq('resume_id', resumeId);
+
+        if (error) throw error;
+
+        return {
+            success: true,
+            message: 'Skills updated successfully'
+        };
+    } catch (error) {
+        console.error('Error updating resume skills:', error);
+        throw error;
+    }
+}
+
+/**
+ * Update resume experience
+ * 
+ * @param resumeId - The resume ID to update
+ * @param experiences - The updated experiences array
+ * @returns Success status
+ */
+export async function updateResumeExperience(resumeId: number, experiences: ExperienceOut[]) {
+    try {
+        const supabase = await createClient();
+        const jobSeekerId = await getAuthenticatedJobSeeker();
+
+        // Verify ownership
+        const { data: resume } = await supabase
+            .from('resume')
+            .select('job_seeker_id')
+            .eq('resume_id', resumeId)
+            .single();
+
+        if (!resume || resume.job_seeker_id !== jobSeekerId) {
+            throw new Error('Unauthorized');
+        }
+
+        const { error } = await supabase
+            .from('resume')
+            .update({ extracted_experiences: JSON.stringify(experiences) })
+            .eq('resume_id', resumeId);
+
+        if (error) throw error;
+
+        return {
+            success: true,
+            message: 'Experience updated successfully'
+        };
+    } catch (error) {
+        console.error('Error updating resume experience:', error);
+        throw error;
+    }
+}
+
+/**
+ * Update resume education
+ * 
+ * @param resumeId - The resume ID to update
+ * @param education - The updated education array
+ * @returns Success status
+ */
+export async function updateResumeEducation(resumeId: number, education: EducationOut[]) {
+    try {
+        const supabase = await createClient();
+        const jobSeekerId = await getAuthenticatedJobSeeker();
+
+        // Verify ownership
+        const { data: resume } = await supabase
+            .from('resume')
+            .select('job_seeker_id')
+            .eq('resume_id', resumeId)
+            .single();
+
+        if (!resume || resume.job_seeker_id !== jobSeekerId) {
+            throw new Error('Unauthorized');
+        }
+
+        const { error } = await supabase
+            .from('resume')
+            .update({ extracted_education: JSON.stringify(education) })
+            .eq('resume_id', resumeId);
+
+        if (error) throw error;
+
+        return {
+            success: true,
+            message: 'Education updated successfully'
+        };
+    } catch (error) {
+        console.error('Error updating resume education:', error);
         throw error;
     }
 }

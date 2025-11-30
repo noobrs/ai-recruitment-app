@@ -13,6 +13,3 @@ export { default as ResumeUploadStep } from './apply/ResumeUploadStep';
 export { default as ResumeReviewStep } from './apply/ResumeReviewStep';
 export { default as SuccessConfirmation } from './apply/SuccessConfirmation';
 export { default as JobHeader } from './apply/JobHeader';
-export { default as SkillsEditor } from './apply/SkillsEditor';
-export { default as ExperienceEditor } from './apply/ExperienceEditor';
-export { default as EducationEditor } from './apply/EducationEditor';

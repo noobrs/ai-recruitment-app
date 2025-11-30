@@ -79,6 +79,7 @@ export default function ProfileHeader({
                 onEdit={onEdit}
                 onCancel={onCancel}
                 onSave={onSave}
+                variant="secondary"
             />
         </div>
     );

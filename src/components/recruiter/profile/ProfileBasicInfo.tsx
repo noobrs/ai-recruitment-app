@@ -52,14 +52,14 @@ export default function ProfileBasicInfo({
                             value={formData.first_name}
                             onChange={(e) => onFormChange('first_name', e.target.value)}
                             placeholder="First Name"
-                            className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                            className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-secondary"
                         />
                         <input
                             type="text"
                             value={formData.last_name}
                             onChange={(e) => onFormChange('last_name', e.target.value)}
                             placeholder="Last Name"
-                            className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                            className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-secondary"
                         />
                     </div>
                     {companyName && <p className="text-sm text-gray-500">Company: {companyName}</p>}

@@ -4,9 +4,9 @@ import { useState } from 'react';
 import { ResumeData } from '@/types/fastapi.types';
 import { uploadResumeToProfile } from '@/app/jobseeker/profile/actions';
 import { saveResumeToDatabase } from '@/app/actions/resume.actions';
-import SkillsEditor from '@/components/jobseeker/jobs/apply/SkillsEditor';
-import ExperienceEditor from '@/components/jobseeker/jobs/apply/ExperienceEditor';
-import EducationEditor from '@/components/jobseeker/jobs/apply/EducationEditor';
+import SkillsEditor from '../shared/editors/SkillsEditor';
+import ExperienceEditor from '../shared/editors/ExperienceEditor';
+import EducationEditor from '../shared/editors/EducationEditor';
 import ResumeValidationWarning from '@/components/jobseeker/jobs/apply/ResumeValidationWarning';
 
 interface ResumeUploadDialogProps {
