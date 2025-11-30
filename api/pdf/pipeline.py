@@ -12,8 +12,8 @@ from api.types.types import ApiResponse
 from api.pdf.layout_parser import load_pdf_with_layout, group_spans_by_heading
 from api.pdf.entity_extraction import load_gliner_model, extract_entities_from_group
 from api.pdf.section_classifier import classify_all_sections
+from api.pdf.contact_extractor import extract_candidate_info
 from api.pdf.resume_builder import (
-    extract_candidate_info,
     build_skills,
     build_languages,
     build_education,
