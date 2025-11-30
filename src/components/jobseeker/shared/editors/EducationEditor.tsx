@@ -6,11 +6,13 @@ import { EducationOut } from "@/types";
 interface EducationEditorProps {
     education: EducationOut[];
     onChange: (education: EducationOut[]) => void;
+    disabled?: boolean;
 }
 
 export default function EducationEditor({
     education,
-    onChange
+    onChange,
+    disabled = false
 }: EducationEditorProps) {
     const handleEducationChange = (
         index: number,
@@ -50,7 +52,8 @@ export default function EducationEditor({
                     <div className="flex justify-end mb-2">
                         <button
                             onClick={() => handleRemoveEducation(index)}
-                            className="text-red-500 hover:text-red-700 text-sm"
+                            disabled={disabled}
+                            className="text-red-500 hover:text-red-700 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             ✕ Remove
                         </button>
@@ -63,7 +66,8 @@ export default function EducationEditor({
                             onChange={(e) =>
                                 handleEducationChange(index, 'degree', e.target.value)
                             }
-                            className="border border-gray-300 rounded-md px-3 py-1 focus:ring focus:ring-blue-100"
+                            disabled={disabled}
+                            className="border border-gray-300 rounded-md px-3 py-1 focus:ring focus:ring-blue-100 disabled:opacity-50 disabled:cursor-not-allowed"
                         />
                         <input
                             type="text"
@@ -72,7 +76,8 @@ export default function EducationEditor({
                             onChange={(e) =>
                                 handleEducationChange(index, 'institution', e.target.value)
                             }
-                            className="border border-gray-300 rounded-md px-3 py-1 focus:ring focus:ring-blue-100"
+                            disabled={disabled}
+                            className="border border-gray-300 rounded-md px-3 py-1 focus:ring focus:ring-blue-100 disabled:opacity-50 disabled:cursor-not-allowed"
                         />
                         <input
                             type="text"
@@ -81,7 +86,8 @@ export default function EducationEditor({
                             onChange={(e) =>
                                 handleEducationChange(index, 'location', e.target.value)
                             }
-                            className="border border-gray-300 rounded-md px-3 py-1 focus:ring focus:ring-blue-100"
+                            disabled={disabled}
+                            className="border border-gray-300 rounded-md px-3 py-1 focus:ring focus:ring-blue-100 disabled:opacity-50 disabled:cursor-not-allowed"
                         />
                         <div className="grid grid-cols-2 gap-2">
                             <input
@@ -91,7 +97,8 @@ export default function EducationEditor({
                                 onChange={(e) =>
                                     handleEducationChange(index, 'start_date', e.target.value)
                                 }
-                                className="border border-gray-300 rounded-md px-3 py-1 focus:ring focus:ring-blue-100"
+                                disabled={disabled}
+                                className="border border-gray-300 rounded-md px-3 py-1 focus:ring focus:ring-blue-100 disabled:opacity-50 disabled:cursor-not-allowed"
                             />
                             <input
                                 type="text"
@@ -100,7 +107,8 @@ export default function EducationEditor({
                                 onChange={(e) =>
                                     handleEducationChange(index, 'end_date', e.target.value)
                                 }
-                                className="border border-gray-300 rounded-md px-3 py-1 focus:ring focus:ring-blue-100"
+                                disabled={disabled}
+                                className="border border-gray-300 rounded-md px-3 py-1 focus:ring focus:ring-blue-100 disabled:opacity-50 disabled:cursor-not-allowed"
                             />
                         </div>
                         <textarea
@@ -109,14 +117,16 @@ export default function EducationEditor({
                             onChange={(e) =>
                                 handleEducationChange(index, 'description', e.target.value)
                             }
-                            className="border border-gray-300 rounded-md px-3 py-1 h-20 resize-none focus:ring focus:ring-blue-100"
+                            disabled={disabled}
+                            className="border border-gray-300 rounded-md px-3 py-1 h-20 resize-none focus:ring focus:ring-blue-100 disabled:opacity-50 disabled:cursor-not-allowed"
                         />
                     </div>
                 </div>
             ))}
             <button
                 onClick={handleAddEducation}
-                className="text-blue-600 hover:text-blue-800 text-sm mt-1"
+                disabled={disabled}
+                className="text-blue-600 hover:text-blue-800 text-sm mt-1 disabled:opacity-50 disabled:cursor-not-allowed"
             >
                 + Add Education
             </button>

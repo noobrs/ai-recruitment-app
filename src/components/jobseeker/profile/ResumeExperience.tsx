@@ -72,6 +72,7 @@ export default function ResumeExperience({ experiences, resumeId, onUpdate }: Re
                 <ExperienceEditor
                     experiences={editedExperiences}
                     onChange={setEditedExperiences}
+                    disabled={isLoading}
                 />
             ) : (
                 <div className="space-y-3">

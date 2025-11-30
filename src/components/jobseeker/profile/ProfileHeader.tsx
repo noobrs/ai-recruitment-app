@@ -69,6 +69,7 @@ export default function ProfileHeader({
                     location={user.job_seeker.location || undefined}
                     memberSince={memberSince}
                     isEditing={isEditing}
+                    isSaving={isSaving}
                     formData={formData}
                     onFormChange={onFormChange}
                 />

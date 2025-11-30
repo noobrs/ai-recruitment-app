@@ -72,6 +72,7 @@ export default function ResumeSkills({ skills, resumeId, onUpdate }: ResumeSkill
                 <SkillsEditor
                     skills={editedSkills}
                     onChange={setEditedSkills}
+                    disabled={isLoading}
                 />
             ) : (
                 <div className="flex flex-wrap gap-2">

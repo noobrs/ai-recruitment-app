@@ -75,6 +75,7 @@ export default function ResumeEducation({ education, resumeId, onUpdate }: Resum
                 <EducationEditor
                     education={editedEducation}
                     onChange={setEditedEducation}
+                    disabled={isLoading}
                 />
             ) : (
                 <div className="space-y-3">

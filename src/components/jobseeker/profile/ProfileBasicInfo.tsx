@@ -6,6 +6,7 @@ interface ProfileBasicInfoProps {
     location?: string;
     memberSince: string;
     isEditing: boolean;
+    isSaving?: boolean;
     formData: {
         first_name: string;
         last_name: string;
@@ -26,6 +27,7 @@ export default function ProfileBasicInfo({
     location,
     memberSince,
     isEditing,
+    isSaving = false,
     formData,
     onFormChange,
 }: ProfileBasicInfoProps) {
@@ -74,14 +76,16 @@ export default function ProfileBasicInfo({
                     value={formData.first_name}
                     onChange={(e) => onFormChange('first_name', e.target.value)}
                     placeholder="First Name"
-                    className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                    disabled={isSaving}
+                    className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
                 />
                 <input
                     type="text"
                     value={formData.last_name}
                     onChange={(e) => onFormChange('last_name', e.target.value)}
                     placeholder="Last Name"
-                    className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                    disabled={isSaving}
+                    className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
                 />
             </div>
             <input
@@ -89,7 +93,8 @@ export default function ProfileBasicInfo({
                 value={formData.location}
                 onChange={(e) => onFormChange('location', e.target.value)}
                 placeholder="Location (e.g., San Francisco, CA)"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                disabled={isSaving}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
             />
         </div>
     );

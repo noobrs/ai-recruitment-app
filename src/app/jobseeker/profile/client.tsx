@@ -199,6 +199,7 @@ export default function ProfileClient({ user, profileResume, allResumes }: Profi
                 <ProfileAboutSection
                     aboutMe={formData.about_me}
                     isEditing={isEditing}
+                    isSaving={isSaving}
                     value={formData.about_me}
                     onChange={v => handleFormChange('about_me', v)}
                 />
