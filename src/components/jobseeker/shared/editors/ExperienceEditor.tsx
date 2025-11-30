@@ -3,6 +3,7 @@ import { ExperienceOut } from '@/types/fastapi.types';
 interface ExperienceEditorProps {
     experiences: ExperienceOut[];
     onChange: (experiences: ExperienceOut[]) => void;
+    disabled?: boolean;
 }
 
 /**
@@ -10,7 +11,8 @@ interface ExperienceEditorProps {
  */
 export default function ExperienceEditor({
     experiences,
-    onChange
+    onChange,
+    disabled = false
 }: ExperienceEditorProps) {
     const handleExperienceChange = (
         index: number,
@@ -50,7 +52,8 @@ export default function ExperienceEditor({
                     <div className="flex justify-end mb-2">
                         <button
                             onClick={() => handleRemoveExperience(index)}
-                            className="text-red-500 hover:text-red-700 text-sm"
+                            disabled={disabled}
+                            className="text-red-500 hover:text-red-700 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             ✕ Remove
                         </button>
@@ -63,7 +66,8 @@ export default function ExperienceEditor({
                             onChange={(e) =>
                                 handleExperienceChange(index, 'job_title', e.target.value)
                             }
-                            className="border border-gray-300 rounded-md px-3 py-1 focus:ring focus:ring-blue-100"
+                            disabled={disabled}
+                            className="border border-gray-300 rounded-md px-3 py-1 focus:ring focus:ring-blue-100 disabled:opacity-50 disabled:cursor-not-allowed"
                         />
                         <input
                             type="text"
@@ -72,7 +76,8 @@ export default function ExperienceEditor({
                             onChange={(e) =>
                                 handleExperienceChange(index, 'company', e.target.value)
                             }
-                            className="border border-gray-300 rounded-md px-3 py-1 focus:ring focus:ring-blue-100"
+                            disabled={disabled}
+                            className="border border-gray-300 rounded-md px-3 py-1 focus:ring focus:ring-blue-100 disabled:opacity-50 disabled:cursor-not-allowed"
                         />
                         <input
                             type="text"
@@ -81,7 +86,8 @@ export default function ExperienceEditor({
                             onChange={(e) =>
                                 handleExperienceChange(index, 'location', e.target.value)
                             }
-                            className="border border-gray-300 rounded-md px-3 py-1 focus:ring focus:ring-blue-100"
+                            disabled={disabled}
+                            className="border border-gray-300 rounded-md px-3 py-1 focus:ring focus:ring-blue-100 disabled:opacity-50 disabled:cursor-not-allowed"
                         />
                         <div className="grid grid-cols-2 gap-2">
                             <input
@@ -91,7 +97,8 @@ export default function ExperienceEditor({
                                 onChange={(e) =>
                                     handleExperienceChange(index, 'start_date', e.target.value)
                                 }
-                                className="border border-gray-300 rounded-md px-3 py-1 focus:ring focus:ring-blue-100"
+                                disabled={disabled}
+                                className="border border-gray-300 rounded-md px-3 py-1 focus:ring focus:ring-blue-100 disabled:opacity-50 disabled:cursor-not-allowed"
                             />
                             <input
                                 type="text"
@@ -100,7 +107,8 @@ export default function ExperienceEditor({
                                 onChange={(e) =>
                                     handleExperienceChange(index, 'end_date', e.target.value)
                                 }
-                                className="border border-gray-300 rounded-md px-3 py-1 focus:ring focus:ring-blue-100"
+                                disabled={disabled}
+                                className="border border-gray-300 rounded-md px-3 py-1 focus:ring focus:ring-blue-100 disabled:opacity-50 disabled:cursor-not-allowed"
                             />
                         </div>
                         <textarea
@@ -109,14 +117,16 @@ export default function ExperienceEditor({
                             onChange={(e) =>
                                 handleExperienceChange(index, 'description', e.target.value)
                             }
-                            className="border border-gray-300 rounded-md px-3 py-1 h-20 resize-none focus:ring focus:ring-blue-100"
+                            disabled={disabled}
+                            className="border border-gray-300 rounded-md px-3 py-1 h-20 resize-none focus:ring focus:ring-blue-100 disabled:opacity-50 disabled:cursor-not-allowed"
                         />
                     </div>
                 </div>
             ))}
             <button
                 onClick={handleAddExperience}
-                className="text-blue-600 hover:text-blue-800 text-sm mt-1"
+                disabled={disabled}
+                className="text-blue-600 hover:text-blue-800 text-sm mt-1 disabled:opacity-50 disabled:cursor-not-allowed"
             >
                 + Add Experience
             </button>

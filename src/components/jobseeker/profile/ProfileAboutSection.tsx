@@ -3,6 +3,7 @@
 interface ProfileAboutSectionProps {
     aboutMe?: string;
     isEditing: boolean;
+    isSaving?: boolean;
     value: string;
     onChange: (value: string) => void;
 }
@@ -16,6 +17,7 @@ interface ProfileAboutSectionProps {
 export default function ProfileAboutSection({
     aboutMe,
     isEditing,
+    isSaving = false,
     value,
     onChange,
 }: ProfileAboutSectionProps) {
@@ -32,7 +34,8 @@ export default function ProfileAboutSection({
                     onChange={(e) => onChange(e.target.value)}
                     placeholder="Tell employers about yourself, your experience, and what you're looking for..."
                     rows={6}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                    disabled={isSaving}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
                 />
             )}
         </div>

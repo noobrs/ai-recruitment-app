@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Search, Filter } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { ApplicationStatus } from "@/types";
+import ApplicationsLoading from "./loading";
 
 interface Application {
     applicationId: number;
@@ -81,6 +82,10 @@ export default function ApplicationsPage() {
     // Slice visible applications
     const displayedApplications = filteredApplications.slice(0, visibleCount);
 
+    if (loading) {
+        return <ApplicationsLoading />;
+    }
+
     return (
         <div className="max-w-8/10 p-10 justify-center mx-auto my-5 min-h-screen">
             {/* Header */}
@@ -128,9 +133,7 @@ export default function ApplicationsPage() {
 
             {/* Table */}
             <div className="overflow-x-auto bg-white rounded-xl shadow-sm">
-                {loading ? (
-                    <p className="text-center py-6 text-gray-500">Loading applications...</p>
-                ) : displayedApplications.length === 0 ? (
+                {displayedApplications.length === 0 ? (
                     <div className="text-center py-12">
                         <svg
                             className="mx-auto h-16 w-16 text-gray-400"
@@ -203,7 +206,7 @@ export default function ApplicationsPage() {
             </div>
 
             {/* Footer - See More */}
-            {!loading && filteredApplications.length > visibleCount && (
+            {filteredApplications.length > visibleCount && (
                 <div
                     className="text-center mt-6 text-sm text-primary font-medium cursor-pointer hover:underline"
                     onClick={handleSeeMore}

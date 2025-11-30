@@ -92,10 +92,10 @@ async def api_process_pdf(file: UploadFile = File(...)) -> ApiResponse:
     Accepts a file upload via multipart form data.
     This endpoint only extracts data and does NOT save to database."""
     from api.pdf.pipeline import process_pdf_resume
-    
+
     if not file:
         raise HTTPException(status_code=400, detail="File is required")
-    
+
     try:
         tmp_bytes = await file.read()
         result = process_pdf_resume(tmp_bytes)
@@ -104,6 +104,7 @@ async def api_process_pdf(file: UploadFile = File(...)) -> ApiResponse:
     except Exception as e:
         logger.error(f"PDF processing error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
 
 # ----------------------
 # Candidate Ranking API

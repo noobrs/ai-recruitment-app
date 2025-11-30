@@ -1,94 +1,79 @@
 """
-Common helper utilities used across modules:
-- Normalization helpers
-- Similarity checks
-- Threshold checks
-- Duration splitting
+Common utility functions for PDF resume extraction.
 """
 
+import re
 from typing import Dict, Optional, Tuple, List
-
 from rapidfuzz import fuzz
 
-from api.pdf.config import THRESHOLDS
+from api.pdf.config import ENTITY_THRESHOLDS, DEFAULT_THRESHOLD
 from api.types.types import ResumeData, CandidateOut, EducationOut, ExperienceOut, CertificationOut, ActivityOut
 
 
-def normalize_heading(text: Optional[str]) -> str:
-    """
-    Normalize a heading string by stripping whitespace and collapsing spaces.
-    Used to ensure consistent keys when grouping layout spans.
-    """
+def normalize_text(text: Optional[str]) -> str:
+    """Normalize text by stripping whitespace and collapsing spaces."""
     if not text:
-        return "NO_HEADING"
+        return ""
     return " ".join(text.strip().split())
 
 
-def similar(a: str, b: str, thresh: int = 92) -> bool:
-    """
-    Approximate string similarity based on token-sorted fuzzy ratio.
-    Used to de-duplicate similar items (e.g., similar degree strings).
-    """
-    return fuzz.token_sort_ratio(a, b) >= thresh
-
-
-def _norm(s: str) -> str:
+def normalize_key(s: str) -> str:
     """
     Normalize a string for use as a dictionary key:
-    - Strip whitespace
-    - Collapse spaces
-    - Lowercase
+    - Strip whitespace, collapse spaces, lowercase
     """
     return " ".join((s or "").strip().split()).lower()
 
 
-def _is_valid_item(text: str) -> bool:
+def is_similar(a: str, b: str, threshold: int = 92) -> bool:
     """
-    Basic sanity checks for extracted text items (skills, etc.):
+    Check if two strings are similar using fuzzy matching.
+    Used for de-duplication.
+    """
+    return fuzz.token_sort_ratio(a, b) >= threshold
+
+
+def is_valid_text(text: str, min_len: int = 3, max_len: int = 120) -> bool:
+    """
+    Basic validation for extracted text:
     - Non-empty
     - Reasonable length
-    - Avoid single all-caps tokens (often headings or noise)
+    - Avoid single all-caps tokens (often noise)
     """
     if not text:
         return False
     t = text.strip()
-    if len(t) < 3 or len(t) > 120:
+    if len(t) < min_len or len(t) > max_len:
         return False
     if t.isupper() and len(t.split()) == 1:
         return False
     return True
 
 
-def _update_best(best: Dict[str, float], text: str, score: float) -> None:
+def passes_threshold(label: str, score: float) -> bool:
+    """
+    Check if an entity score passes the configured threshold for its label.
+    """
+    threshold = ENTITY_THRESHOLDS.get(label.lower(), DEFAULT_THRESHOLD)
+    return score >= threshold
+
+
+def update_best_score(best: Dict[str, float], text: str, score: float) -> None:
     """
     Maintain a dict of best scores for normalized texts.
-    If the text is new or has a higher score, update the dict.
+    Updates if text is new or has a higher score.
     """
-    if not _is_valid_item(text):
+    if not is_valid_text(text):
         return
-    key = _norm(text)
+    key = normalize_key(text)
     if key not in best or score > best[key]:
         best[key] = float(score)
 
 
-def _pass_threshold(label: str, score: float) -> bool:
-    """
-    Check if an entity score passes the configured label threshold.
-    Falls back to 0.50 when label not explicitly listed.
-    """
-    need = THRESHOLDS.get(label.lower(), 0.50)
-    return score >= need
-
-
 def split_duration(duration: Optional[str]) -> Tuple[Optional[str], Optional[str]]:
     """
-    Convert a string like 'Jan 2020 - Present' or '2020 - 2023'
-    into (start_date, end_date) as plain strings.
-
-    Used when mapping "duration" into start_date/end_date in output models.
+    Split duration string like 'Jan 2020 - Present' into (start_date, end_date).
     """
-    import re
-
     if not duration:
         return None, None
     parts = re.split(r"\s*[-–]\s*", duration)
@@ -96,57 +81,148 @@ def split_duration(duration: Optional[str]) -> Tuple[Optional[str], Optional[str
         start = parts[0].strip() or None
         end = parts[1].strip() or None
         return start, end
-    # Fallback: whole string is start_date
     return duration.strip(), None
 
 
-__all__ = [
-    "normalize_heading",
-    "similar",
-    "_norm",
-    "_is_valid_item",
-    "_update_best",
-    "_pass_threshold",
-    "split_duration",
-]
+def clean_description(text: str) -> str:
+    """
+    Clean description text by:
+    - Removing bullet points
+    - Removing empty lines
+    - Collapsing multiple spaces
+    """
+    if not text:
+        return ""
 
-def convert_resume_dict_to_api_response(resume_dict: Dict) -> ResumeData:
+    bullet_re = re.compile(r"^[\s\u2022\u2023\u25E6\u2043\-\*•]+")
+    multi_space_re = re.compile(r"\s+")
+
+    lines = []
+    for line in text.splitlines():
+        line = bullet_re.sub("", line).strip()
+        if line:
+            lines.append(line)
+
+    if not lines:
+        return ""
+
+    cleaned = " ".join(lines)
+    cleaned = multi_space_re.sub(" ", cleaned).strip()
+    return cleaned
+
+
+def remove_duplicate_content(text: str, fields_to_remove: List[str]) -> str:
     """
-    Convert the internal resume dict (from resume_builder) into
-    a ResumeData Pydantic model, performing minor transformations:
-      - Combine level + field to degree string
-      - Split duration into start_date / end_date
-      - Map "position" to job_title for experience
-      - Derive activity name from first line of description
+    Remove duplicate content from description text that appears in other extracted fields.
+
+    Args:
+        text: The description text to clean
+        fields_to_remove: List of strings (company name, dates, position, etc.) to remove
+
+    Returns:
+        Cleaned description text with duplicates removed
     """
-    # candidate
-    # candidate_model = CandidateOut(**resume_dict["candidate"])
+    if not text:
+        return ""
+
+    if not fields_to_remove:
+        return clean_description(text)
+
+    # Split into lines for line-by-line processing
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    filtered_lines = []
+
+    for line in lines:
+        # Check if this line contains only field content (with possible separators)
+        line_normalized = normalize_text(line)
+        should_skip = False
+
+        # Check each field to remove
+        for field in fields_to_remove:
+            if not field:
+                continue
+
+            field_normalized = normalize_text(str(field))
+
+            # Skip if the line is exactly the field or contains only the field with separators
+            if field_normalized == line_normalized:
+                should_skip = True
+                break
+
+            # Skip if line starts with the field followed by separators (e.g., "Company | Date")
+            if line_normalized.startswith(field_normalized):
+                # Check if the rest is just separators and other fields
+                remaining = line_normalized[len(field_normalized):].strip()
+                if remaining.startswith("|") or remaining.startswith("-") or not remaining:
+                    should_skip = True
+                    break
+            
+            # Skip if the line ends with the field (e.g., "Duration: Jan 2020 - Dec 2023")
+            if line_normalized.endswith(field_normalized):
+                # Check if what comes before is just a label and separator
+                prefix = line_normalized[:-len(field_normalized)].strip()
+                if not prefix or prefix.endswith(":") or prefix.endswith("|"):
+                    should_skip = True
+                    break
+
+            # Skip if line is mostly just the field (high similarity)
+            # This catches cases like "Bachelor of Science in Computer Science" when field is "Bachelor of Science"
+            if len(field_normalized) > 10 and is_similar(line_normalized, field_normalized, threshold=85):
+                should_skip = True
+                break
+
+        if not should_skip:
+            filtered_lines.append(line)
+
+    # Rejoin and apply clean_description for final cleanup
+    result = " ".join(filtered_lines)
+    return clean_description(result)
+
+
+def make_text_window(text: str, start: int, end: int, radius: int = 250) -> Tuple[str, int, int]:
+    """
+    Create a text window around a specific position.
+    Returns (window_text, window_start, window_end).
+    """
+    if start < 0 or end < 0:
+        return text, 0, len(text)
+
+    window_start = max(0, start - radius)
+    window_end = min(len(text), end + radius)
+    return text[window_start:window_end], window_start, window_end
+
+
+def is_in_window(entity: Dict, window_start: int, window_end: int) -> bool:
+    """Check if entity position falls within a text window."""
+    pos = int(entity.get("start_char", -1))
+    if pos < 0:
+        return False
+    return window_start <= pos <= window_end
+
+
+def convert_to_resume_data(resume_dict: Dict) -> ResumeData:
+    """
+    Convert internal resume dict to ResumeData Pydantic model.
+    Performs necessary transformations for API response format.
+    """
+    # Candidate info
     cand_src = resume_dict.get("candidate") or {}
-    # Normalise to a plain dict and drop helper fields (e.g. coordinates)
     if hasattr(cand_src, "dict"):
         cand_src = cand_src.dict()
     else:
         cand_src = dict(cand_src)
 
-    candidate_payload = {
-        "name": cand_src.get("name"),
-        "email": cand_src.get("email"),
-        "phone": cand_src.get("phone"),
-        "location": cand_src.get("location"),
-    }
-    candidate_model = CandidateOut(**candidate_payload)
+    candidate_model = CandidateOut(
+        name=cand_src.get("name"),
+        email=cand_src.get("email"),
+        phone=cand_src.get("phone"),
+        location=cand_src.get("location"),
+    )
 
-
-    # education mapping: level + field -> degree, duration -> start/end
+    # Education: use title as degree, split duration
     edu_models: List[EducationOut] = []
-    for e in resume_dict["education"]:
-        level = e.get("level")
-        field = e.get("field")
-        if level and field:
-            degree = f"{level} in {field}"
-        else:
-            degree = level or field
-
+    for e in resume_dict.get("education", []):
+        degree = e.get("title")
         start_date, end_date = split_duration(e.get("duration"))
 
         edu_models.append(
@@ -160,9 +236,9 @@ def convert_resume_dict_to_api_response(resume_dict: Dict) -> ResumeData:
             )
         )
 
-    # experience mapping: position -> job_title, duration -> start/end
+    # Experience: position -> job_title, split duration
     exp_models: List[ExperienceOut] = []
-    for ex in resume_dict["experience"]:
+    for ex in resume_dict.get("experience", []):
         start_date, end_date = split_duration(ex.get("duration"))
         exp_models.append(
             ExperienceOut(
@@ -175,12 +251,14 @@ def convert_resume_dict_to_api_response(resume_dict: Dict) -> ResumeData:
             )
         )
 
-    # certifications already {name, description}
-    cert_models = [CertificationOut(**c) for c in resume_dict["certifications"]]
+    # Certifications
+    cert_models = [
+        CertificationOut(**c) for c in resume_dict.get("certifications", [])
+    ]
 
-    # activities: existing only description -> name + description
+    # Activities: derive name from first line of description
     act_models: List[ActivityOut] = []
-    for a in resume_dict["activities"]:
+    for a in resume_dict.get("activities", []):
         desc = a.get("description") or ""
         first_line = desc.splitlines()[0].strip() if desc else None
         act_models.append(
