@@ -3,11 +3,15 @@
 import { useRouter } from 'next/navigation';
 import JobCard, { JobCardProps } from '@/components/jobseeker/jobs/JobCard';
 
+interface AppliedJobProps extends JobCardProps {
+  applicationId?: number;
+}
+
 interface MyActivitiesProps {
   bookmarkedJobs: JobCardProps[];
-  appliedJobs: JobCardProps[];
+  appliedJobs: AppliedJobProps[];
   loading?: boolean; // overall profile activities loading
-  bookmarkLoadingId?: number | null; // 👈 NEW: which job’s bookmark is toggling
+  bookmarkLoadingId?: number | null; // 👈 NEW: which job's bookmark is toggling
   onToggleBookmark?: (jobId: number) => void;
 }
 
@@ -81,7 +85,7 @@ export default function MyActivities({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {appliedJobs.map((job) => (
               <div
-                key={`applied-${job.jobId}`}
+                key={`applied-${job.applicationId || job.jobId}`}
                 className="cursor-pointer transition-transform hover:scale-[1.02]"
               >
                 <JobCard

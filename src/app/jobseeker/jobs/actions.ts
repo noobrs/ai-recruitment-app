@@ -16,16 +16,17 @@ export async function toggleBookmark(jobSeekerId: number, jobId: number) {
     const existing = await getApplicationByJobAndSeeker(jobSeekerId, jobId);
 
     if (existing) {
-      // 2️⃣ Toggle is_bookmark
+      // 2️⃣ Toggle is_bookmark for ALL existing records
       const updated = await updateBookmarkState(
-        existing.application_id,
+        jobSeekerId,
+        jobId,
         !existing.is_bookmark
       );
 
       if (!updated) throw new Error('Failed to update existing bookmark.');
 
       revalidatePath('/jobseeker/jobs');
-      return { success: true, is_bookmark: updated.is_bookmark };
+      return { success: true, is_bookmark: !existing.is_bookmark };
     }
 
     // 3️⃣ Otherwise, create new bookmark-only record

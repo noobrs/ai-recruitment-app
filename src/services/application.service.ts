@@ -25,6 +25,7 @@ export async function getAppliedJobs(jobSeekerId: number) {
   const { data, error } = await supabase
     .from('application')
     .select(`
+      application_id,
       job_id,
       is_bookmark,
       status,
@@ -45,6 +46,7 @@ export async function getAppliedJobs(jobSeekerId: number) {
     `)
     .eq('job_seeker_id', jobSeekerId)
     .neq('status', 'unknown')
+    .neq('status', 'withdrawn')
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -54,6 +56,7 @@ export async function getAppliedJobs(jobSeekerId: number) {
 
   return (
     data?.map((a: any) => ({
+      applicationId: a.application_id,
       jobId: a.job?.job_id,
       compLogo: a.job?.recruiter?.company?.comp_logo || '/default-company.png',
       compName: a.job?.recruiter?.company?.comp_name || 'Unknown Company',
@@ -154,8 +157,16 @@ export async function getBookmarkedJobs(jobSeekerId: number) {
     return [];
   }
 
+  // Remove duplicates by job_id, keeping the most recent one
+  const uniqueJobs = new Map();
+  data?.forEach((a: any) => {
+    if (!uniqueJobs.has(a.job_id)) {
+      uniqueJobs.set(a.job_id, a);
+    }
+  });
+
   return (
-    data?.map((a: any) => ({
+    Array.from(uniqueJobs.values()).map((a: any) => ({
       jobId: a.job?.job_id,
       compLogo: a.job?.recruiter?.company?.comp_logo || '/default-company.png',
       compName: a.job?.recruiter?.company?.comp_name || 'Unknown Company',
@@ -246,22 +257,21 @@ export async function withdrawApplication(applicationId: number, jobSeekerId: nu
 }
 
 /**
- * Toggle bookmark status
+ * Toggle bookmark status for ALL existing records of a job-seeker combination
  */
-export async function toggleBookmark(applicationId: number, isBookmark: boolean): Promise<Application | null> {
+export async function toggleBookmark(jobSeekerId: number, jobId: number, isBookmark: boolean): Promise<boolean> {
   const supabase = await createClient();
-  const { data, error } = await supabase
+  const { error } = await supabase
     .from('application')
     .update({ is_bookmark: isBookmark })
-    .eq('application_id', applicationId)
-    .select()
-    .single();
+    .eq('job_seeker_id', jobSeekerId)
+    .eq('job_id', jobId);
 
   if (error) {
     console.error('Error toggling bookmark:', error);
-    return null;
+    return false;
   }
-  return data;
+  return true;
 }
 
 /**

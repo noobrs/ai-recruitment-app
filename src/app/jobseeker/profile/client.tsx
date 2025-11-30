@@ -28,6 +28,7 @@ interface BookmarkedJob {
 }
 
 interface AppliedJob {
+    applicationId: number;
     jobId: number;
     compLogo: string;
     compName: string;
@@ -159,17 +160,29 @@ export default function ProfileClient({ user, profileResume, allResumes }: Profi
         const result = await toggle(user.job_seeker.job_seeker_id, jobId);
 
         if (result.success) {
+            // Update bookmarkedJobs state
             setBookmarkedJobs((prev) =>
                 result.is_bookmark
                     ? prev
                     : prev.filter((job) => job.jobId !== jobId)
             );
 
+            // Update appliedJobs state to reflect the new bookmark status
+            setAppliedJobs((prev) =>
+                prev.map((job) =>
+                    job.jobId === jobId
+                        ? { ...job, bookmark: !!result.is_bookmark }
+                        : job
+                )
+            );
+
+            // Refresh from server to ensure sync
             setTimeout(async () => {
                 const res = await fetch('/api/jobseeker/profile/activities');
                 if (res.ok) {
                     const data = await res.json();
                     setBookmarkedJobs(data.bookmarkedJobs || []);
+                    setAppliedJobs(data.appliedJobs || []);
                 }
             }, 300);
         }
