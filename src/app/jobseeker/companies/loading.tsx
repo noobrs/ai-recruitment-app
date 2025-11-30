@@ -1,13 +1,9 @@
 export default function CompaniesLoading() {
   return (
-    <div className="max-w-8/10 mx-auto my-8 px-4 animate-pulse">
+    <div className="max-w-8/10 mx-auto animate-pulse">
 
       {/* ====================== SEARCH BAR ======================= */}
-      <div className="flex flex-col md:flex-row gap-4 mb-8">
-        <div className="h-12 bg-gray-200 w-full md:w-2/5 rounded-lg"></div>
-        <div className="h-12 bg-gray-200 w-full md:w-2/5 rounded-lg"></div>
-        <div className="h-12 bg-gray-200 w-full md:w-1/5 rounded-lg"></div>
-      </div>
+      <div className="h-16 bg-gray-200 max-w-3xl md:w-2/5 mx-auto my-8 rounded-full py-3"></div>
 
       <div className="flex">
 
@@ -18,22 +14,37 @@ export default function CompaniesLoading() {
           {[...Array(5)].map((_, i) => (
             <div
               key={i}
-              className="p-4 border border-gray-200 rounded-lg bg-white shadow-sm"
+              className="bg-white rounded-xl shadow-md border border-gray-200 p-5 w-full"
             >
-              {/* Logo + Name */}
-              <div className="flex items-center mb-3">
-                <div className="w-10 h-10 bg-gray-200 rounded-full mr-3"></div>
-                <div className="h-5 w-40 bg-gray-200 rounded"></div>
+              {/* ===== LOGO ===== */}
+              <div className="flex flex-col items-center">
+                <div className="w-14 h-14 bg-gray-200 rounded-lg mb-3"></div>
+
+                {/* Company Name */}
+                <div className="h-5 w-32 bg-gray-200 rounded mb-2"></div>
+
+                {/* Rating */}
+                <div className="flex items-center justify-center mt-1 gap-2">
+                  <div className="w-4 h-4 bg-gray-200 rounded"></div>
+                  <div className="h-4 w-8 bg-gray-200 rounded"></div>
+                </div>
               </div>
 
-              {/* Industry */}
-              <div className="h-4 w-32 bg-gray-200 rounded mb-2"></div>
+              {/* ===== INFO ===== */}
+              <div className="text-center mt-3 space-y-2">
+                <div className="h-4 w-28 bg-gray-200 rounded mx-auto"></div>
+                <div className="h-4 w-24 bg-gray-200 rounded mx-auto"></div>
+                <div className="h-4 w-20 bg-gray-200 rounded mx-auto"></div>
+              </div>
 
-              {/* Location */}
-              <div className="h-4 w-28 bg-gray-200 rounded mb-2"></div>
+              {/* ===== TAGS ===== */}
+              <div className="flex flex-wrap justify-center gap-2 mt-4">
+                {/* Jobs Tag */}
+                <div className="h-6 w-20 bg-gray-200 rounded-full"></div>
 
-              {/* Employee size */}
-              <div className="h-4 w-20 bg-gray-200 rounded"></div>
+                {/* Benefit Tag */}
+                <div className="h-6 w-24 bg-gray-200 border border-gray-300 rounded-full"></div>
+              </div>
             </div>
           ))}
 

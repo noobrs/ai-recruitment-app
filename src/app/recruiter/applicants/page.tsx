@@ -157,7 +157,7 @@ export default function RecruiterApplicantsPage() {
                         a.score
                       )}`}
                     >
-                      {a.score}%
+                      {a.score.toFixed(0)}%
                     </div>
                     {a.applicantName}
                   </td>

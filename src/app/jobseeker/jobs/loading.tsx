@@ -1,13 +1,9 @@
 export default function JobsLoading() {
   return (
-    <div className="max-w-8/10 mx-auto my-8 px-4 animate-pulse">
+    <div className="max-w-8/10 mx-auto animate-pulse">
 
       {/* ====================== SEARCH BAR ======================= */}
-      <div className="flex flex-col md:flex-row gap-4 mb-8">
-        <div className="h-12 bg-gray-200 w-full md:w-2/5 rounded-lg"></div>
-        <div className="h-12 bg-gray-200 w-full md:w-2/5 rounded-lg"></div>
-        <div className="h-12 bg-gray-200 w-full md:w-1/5 rounded-lg"></div>
-      </div>
+      <div className="h-16 bg-gray-200 max-w-3xl md:w-2/5 mx-auto my-8 rounded-full py-3"></div>
 
       <div className="flex">
 
