@@ -173,7 +173,7 @@ export default function RecruiterPostsPage() {
                   <td className="px-6 py-4 flex items-center gap-2">
                     {post.applicants}
                     <button
-                      className="px-3 py-1 border rounded-full text-xs font-medium hover:bg-gray-100"
+                      className="px-3 py-1 border rounded-full text-xs font-medium hover:bg-gray-100 cursor-pointer"
                       onClick={() => router.push(`/recruiter/posts/${post.job_id}/applicants`)}
                     >
                       View
