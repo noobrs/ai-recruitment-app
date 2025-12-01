@@ -30,11 +30,16 @@ export default function RecruiterOnboarding({
     const [isLoading, setIsLoading] = useState(false);
     const [profilePicture, setProfilePicture] = useState<File | null>(null);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-    
+
+    // Form fields state
+    const [firstName, setFirstName] = useState(defaultFirstName);
+    const [lastName, setLastName] = useState(defaultLastName);
+    const [position, setPosition] = useState('');
+
     // Company autocomplete state
     const [companyName, setCompanyName] = useState('');
     const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
-    
+
     // Company details state
     const [companyWebsite, setCompanyWebsite] = useState('');
     const [companyIndustry, setCompanyIndustry] = useState('');
@@ -43,14 +48,21 @@ export default function RecruiterOnboarding({
     const [companySize, setCompanySize] = useState('');
     const [companyFounded, setCompanyFounded] = useState('');
 
+    // Check if all required fields are filled
+    const isFormValid =
+        firstName.trim() !== '' &&
+        lastName.trim() !== '' &&
+        position.trim() !== '' &&
+        companyName.trim() !== '';
+
     const handleProfilePictureChange = (file: File | null, preview: string | null) => {
         setProfilePicture(file);
         setPreviewUrl(preview);
     };
-    
+
     const handleCompanySelect = (company: Company | null) => {
         setSelectedCompany(company);
-        
+
         if (company) {
             // Populate fields with existing company data
             setCompanyWebsite(company.comp_website || '');
@@ -78,14 +90,14 @@ export default function RecruiterOnboarding({
         setIsLoading(true);
 
         const formData = new FormData(e.currentTarget);
-        
+
         // Validate company name
         if (!companyName.trim()) {
             toast.error('Company name is required');
             setIsLoading(false);
             return;
         }
-        
+
         // Get position value
         const position = formData.get('position') as string;
         if (!position?.trim()) {
@@ -93,7 +105,7 @@ export default function RecruiterOnboarding({
             setIsLoading(false);
             return;
         }
-        
+
         const data = {
             role: 'recruiter' as const,
             firstName: formData.get('firstName') as string,
@@ -178,7 +190,8 @@ export default function RecruiterOnboarding({
                                 type="text"
                                 name="firstName"
                                 required
-                                defaultValue={defaultFirstName}
+                                value={firstName}
+                                onChange={(e) => setFirstName(e.target.value)}
                                 disabled={isLoading}
                                 placeholder="John"
                                 className="w-full rounded-lg border border-neutral-200 bg-white/70 pl-10 pr-3 py-2 outline-none focus:ring-2 focus:ring-secondary"
@@ -196,7 +209,8 @@ export default function RecruiterOnboarding({
                                 type="text"
                                 name="lastName"
                                 required
-                                defaultValue={defaultLastName}
+                                value={lastName}
+                                onChange={(e) => setLastName(e.target.value)}
                                 disabled={isLoading}
                                 placeholder="Doe"
                                 className="w-full rounded-lg border border-neutral-200 bg-white/70 pl-10 pr-3 py-2 outline-none focus:ring-2 focus:ring-secondary"
@@ -215,6 +229,8 @@ export default function RecruiterOnboarding({
                             type="text"
                             name="position"
                             required
+                            value={position}
+                            onChange={(e) => setPosition(e.target.value)}
                             disabled={isLoading}
                             placeholder="e.g., HR Manager, Talent Acquisition Specialist"
                             className="w-full rounded-lg border border-neutral-200 bg-white/70 pl-10 pr-3 py-2 outline-none focus:ring-2 focus:ring-secondary"
@@ -354,8 +370,8 @@ export default function RecruiterOnboarding({
 
                 <button
                     type="submit"
-                    disabled={isLoading}
-                    className="w-full rounded-lg bg-neutral-900 text-white py-3 font-medium flex items-center justify-center gap-2 hover:opacity-95 disabled:opacity-70 transition-opacity"
+                    disabled={isLoading || !isFormValid}
+                    className="w-full rounded-lg bg-neutral-900 text-white py-3 font-medium flex items-center justify-center gap-2 hover:opacity-95 disabled:opacity-70 disabled:cursor-not-allowed transition-opacity"
                 >
                     {isLoading ? (
                         <>
