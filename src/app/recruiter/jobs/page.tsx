@@ -79,7 +79,7 @@ export default function RecruiterJobsPage() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto p-10 min-h-screen">
+    <div className="max-w-8/10 p-10 justify-center mx-auto my-5 min-h-screen">
       <h1 className="text-3xl font-bold mb-4">All Job Listings</h1>
 
       {/* Search Bar */}
@@ -112,14 +112,14 @@ export default function RecruiterJobsPage() {
       </div>
 
       {/* Status Filters */}
-      <div className="flex gap-2 mb-8 flex-wrap">
+      <div className="flex gap-3 mb-6 flex-wrap">
         {STATUS_OPTIONS.map((status) => {
           const active = selectedStatuses.includes(status);
           return (
             <button
               key={status}
               onClick={() => toggleStatus(status)}
-              className={`px-4 py-2 capitalize rounded-full border text-sm font-medium ${active
+              className={`px-4 py-2 rounded-full font-medium border transition ${active
                 ? "bg-purple-600 text-white border-purple-600"
                 : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
                 }`}
@@ -131,7 +131,7 @@ export default function RecruiterJobsPage() {
       </div>
 
       {/* Job List */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-10">
         {!loading && filteredJobs.length === 0 && (
           <p className="text-gray-500 col-span-full text-center mt-10">
             No jobs match your filters.
