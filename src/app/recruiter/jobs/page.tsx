@@ -5,6 +5,7 @@ import JobCard from "@/components/jobseeker/jobs/JobCard"; // reuse card
 import { Search, Filter, ArrowUpDown } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { RecruiterJobItem } from "@/types/job.types";
+import JobCardsSkeleton from "@/components/recruiter/jobs/JobCardsSkeleton";
 
 const STATUS_OPTIONS = ["open", "closed", "draft", "deleted"];
 
@@ -17,6 +18,7 @@ export default function RecruiterJobsPage() {
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>(["open"]);
   const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
   const [loading, setLoading] = useState(true);
+  const [filtering, setFiltering] = useState(false);
 
   // Fetch
   useEffect(() => {
@@ -41,33 +43,44 @@ export default function RecruiterJobsPage() {
 
   // Search + Filter + Sort
   useEffect(() => {
-    let list = [...jobs];
-
-    // search
-    if (searchTerm.trim()) {
-      const term = searchTerm.toLowerCase();
-      list = list.filter(
-        (j) =>
-          j.title.toLowerCase().includes(term) ||
-          j.location.toLowerCase().includes(term)
-      );
+    // Only show filtering skeleton if data is already loaded
+    if (jobs.length > 0) {
+      setFiltering(true);
     }
 
-    // status filter
-    if (selectedStatuses.length > 0) {
-      list = list.filter((job) =>
-        selectedStatuses.includes(job.status.toLowerCase())
-      );
-    }
+    // Add a small delay to show skeleton during filtering
+    const timer = setTimeout(() => {
+      let list = [...jobs];
 
-    // sort
-    list.sort((a, b) => {
-      const d1 = new Date(a.date).getTime();
-      const d2 = new Date(b.date).getTime();
-      return sortOrder === "newest" ? d2 - d1 : d1 - d2;
-    });
+      // search
+      if (searchTerm.trim()) {
+        const term = searchTerm.toLowerCase();
+        list = list.filter(
+          (j) =>
+            j.title.toLowerCase().includes(term) ||
+            j.location.toLowerCase().includes(term)
+        );
+      }
 
-    setFilteredJobs(list);
+      // status filter
+      if (selectedStatuses.length > 0) {
+        list = list.filter((job) =>
+          selectedStatuses.includes(job.status.toLowerCase())
+        );
+      }
+
+      // sort
+      list.sort((a, b) => {
+        const d1 = new Date(a.date).getTime();
+        const d2 = new Date(b.date).getTime();
+        return sortOrder === "newest" ? d2 - d1 : d1 - d2;
+      });
+
+      setFilteredJobs(list);
+      setFiltering(false);
+    }, 300); // Small delay to show skeleton for filtering
+
+    return () => clearTimeout(timer);
   }, [jobs, searchTerm, selectedStatuses, sortOrder]);
 
   const toggleStatus = (status: string) => {
@@ -132,14 +145,14 @@ export default function RecruiterJobsPage() {
 
       {/* Job List */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-        {!loading && filteredJobs.length === 0 && (
+        {!loading && !filtering && filteredJobs.length === 0 && (
           <p className="text-gray-500 col-span-full text-center mt-10">
             No jobs match your filters.
           </p>
         )}
 
-        {loading ? (
-          <p className="text-center col-span-full">Loading...</p>
+        {loading || filtering ? (
+          <JobCardsSkeleton count={loading ? 6 : filteredJobs.length || 3} />
         ) : (
           filteredJobs.map((job) => (
             <div

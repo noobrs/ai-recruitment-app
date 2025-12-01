@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { MoreVertical, Search, Filter, Star, Plus, Pencil, View } from "lucide-react";
 import { useRouter } from "next/navigation";
+import PostsTableSkeleton from "@/components/recruiter/posts/PostsTableSkeleton";
 
 interface JobPost {
   job_id: string;
@@ -24,6 +25,7 @@ export default function RecruiterPostsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [visibleCount, setVisibleCount] = useState(10);
   const [loading, setLoading] = useState(true);
+  const [filterLoading, setFilterLoading] = useState(false);
   const router = useRouter();
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -67,25 +69,37 @@ export default function RecruiterPostsPage() {
 
   // 🔍 Handle search
   useEffect(() => {
-    const term = searchTerm.toLowerCase();
-    const filtered = posts.filter(
-      (p) =>
-        p.title.toLowerCase().includes(term) ||
-        p.type?.toLowerCase().includes(term) ||
-        p.location?.toLowerCase().includes(term)
-    );
+    // Skip filtering logic during initial load
+    if (loading) {
+      return;
+    }
 
-    // Apply selected status filters on top of search
-    const statusFiltered =
-      selectedStatuses.length > 0
-        ? filtered.filter((p) =>
-          selectedStatuses.includes(p.status.toLowerCase())
-        )
-        : filtered;
+    setFilterLoading(true);
 
-    setFilteredPosts(statusFiltered);
-    setVisibleCount(10); // reset pagination
-  }, [searchTerm, selectedStatuses, posts]);
+    const timer = setTimeout(() => {
+      const term = searchTerm.toLowerCase();
+      const filtered = posts.filter(
+        (p) =>
+          p.title.toLowerCase().includes(term) ||
+          p.type?.toLowerCase().includes(term) ||
+          p.location?.toLowerCase().includes(term)
+      );
+
+      // Apply selected status filters on top of search
+      const statusFiltered =
+        selectedStatuses.length > 0
+          ? filtered.filter((p) =>
+            selectedStatuses.includes(p.status.toLowerCase())
+          )
+          : filtered;
+
+      setFilteredPosts(statusFiltered);
+      setVisibleCount(10); // reset pagination
+      setFilterLoading(false);
+    }, 300); // Small delay to show skeleton for quick filters
+
+    return () => clearTimeout(timer);
+  }, [searchTerm, selectedStatuses, posts, loading]);
 
   // 🟣 Toggle multi-status filters
   const handleStatusToggle = (status: string) => {
@@ -155,12 +169,14 @@ export default function RecruiterPostsPage() {
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto bg-white rounded-xl shadow-sm">
-        {loading ? (
-          <p className="text-center py-6 text-gray-500">Loading jobs...</p>
-        ) : displayedPosts.length === 0 ? (
+      {loading || filterLoading ? (
+        <PostsTableSkeleton />
+      ) : displayedPosts.length === 0 ? (
+        <div className="overflow-x-auto bg-white rounded-xl shadow-sm">
           <p className="text-center py-6 text-gray-500">No job posts found.</p>
-        ) : (
+        </div>
+      ) : (
+        <div className="overflow-x-auto bg-white rounded-xl shadow-sm">
           <table className="min-w-full text-sm text-gray-700">
             <thead className="bg-gray-50 text-purple-600 text-left">
               <tr>
@@ -249,8 +265,8 @@ export default function RecruiterPostsPage() {
               ))}
             </tbody>
           </table>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Footer - See More */}
       {!loading && filteredPosts.length > visibleCount && (

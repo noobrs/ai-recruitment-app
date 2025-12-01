@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import CompanyProfileActions from "@/components/recruiter/company/CompanyProfileActions";
 import { getCompanyForRecruiter, updateCompany } from "./actions";
+import CompanyLoading from "./loading";
 
 export default function RecruiterCompanyPage() {
     const [company, setCompany] = useState<any>(null);
@@ -64,7 +65,7 @@ export default function RecruiterCompanyPage() {
     };
 
     if (loading)
-        return <div className="flex items-center justify-center p-20 text-gray-600 min-h-screen">Loading company…</div>;
+        return CompanyLoading();
 
     return (
         <div className="max-w-5xl mx-auto p-10 bg-white shadow-md rounded-xl border border-gray-200 my-10 min-h-screen">

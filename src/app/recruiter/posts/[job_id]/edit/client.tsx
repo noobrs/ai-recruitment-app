@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { updateJobAction } from "./actions";
 import { useRouter } from "next/navigation";
+import EditJobLoading from "./loading";
 
 export default function EditJobClient({ jobId }: { jobId: string }) {
   const router = useRouter();
@@ -63,8 +64,8 @@ export default function EditJobClient({ jobId }: { jobId: string }) {
     router.push("/recruiter/posts");
   }
 
-  if (loading) return <div className="text-center p-10">Loading...</div>;
   if (error) return <div className="text-center p-10 text-red-600">{error}</div>;
+  if (loading) return <EditJobLoading />;
 
   return (
     <div className="bg-white p-8 border border-gray-200 rounded-lg shadow">

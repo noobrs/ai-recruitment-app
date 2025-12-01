@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Search, Filter } from "lucide-react";
 import StatusDropdown from "@/components/recruiter/StatusDropdown";
 import { ApplicationStatus } from "@/types";
+import ApplicantsTableSkeleton from "@/components/recruiter/applicants/ApplicantsTableSkeleton";
 
 interface Applicant {
   id: number;
@@ -129,12 +130,14 @@ export default function RecruiterApplicantsPage() {
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-xl shadow-sm">
-        {loading ? (
-          <p className="text-center py-6 text-gray-500">Loading applicants...</p>
-        ) : displayedApplicants.length === 0 ? (
+      {loading ? (
+        <ApplicantsTableSkeleton />
+      ) : displayedApplicants.length === 0 ? (
+        <div className="bg-white rounded-xl shadow-sm">
           <p className="text-center py-6 text-gray-500">No applicants found.</p>
-        ) : (
+        </div>
+      ) : (
+        <div className="bg-white rounded-xl shadow-sm">
           <table className="min-w-full text-sm text-gray-700">
             <thead className="bg-gray-50 text-purple-600 text-left">
               <tr>
@@ -217,8 +220,8 @@ export default function RecruiterApplicantsPage() {
               ))}
             </tbody>
           </table>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Footer - See More */}
       {!loading && filteredApplicants.length > visibleCount && (
