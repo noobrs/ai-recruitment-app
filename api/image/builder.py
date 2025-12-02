@@ -3,6 +3,71 @@
 - build_final_response: final API JSON format
 """
 
+import re
+
+import re
+
+def clean_experience_description(text, job_titles=None, companies=None, dates=None, locations=None):
+    if not text:
+        return ""
+
+    original = text
+
+    # 1. Remove common section headers
+    text = re.sub(r"\b(EXPERIENCE|WORK EXPERIENCE|PROFESSIONAL EXPERIENCE|EMPLOYMENT HISTORY)\b",
+                  "", text, flags=re.I)
+
+    # 2. Remove repeated job titles
+    if job_titles:
+        for t in job_titles:
+            # Exact line removal
+            text = re.sub(rf"^\s*{re.escape(t)}\s*$", "", text, flags=re.I | re.M)
+            text = text.replace(t, "")
+
+    # 3. Remove repeated company names
+    if companies:
+        for c in companies:
+            text = re.sub(rf"^\s*{re.escape(c)}\s*$", "", text, flags=re.I | re.M)
+            text = text.replace(c, "")
+
+    # 4. Remove locations like "Miami, FL" or "New York"
+    if locations:
+        for loc in locations:
+            if loc:
+                text = text.replace(loc, "")
+
+    text = re.sub(r"\b[A-Z][a-z]+,\s*[A-Z]{2}\b", "", text)  # Miami, FL pattern
+
+    # 5. Remove all date formats
+    all_date_patterns = [
+        r"\b(19|20)\d{2}\b",                      # 2021
+        r"\b(19|20)\d{2}\s*[-–/]\s*(19|20)\d{2}\b", # 2021–2023, 2019/2021
+        r"\b(19|20)\d{2}\s*(present|current|now)\b", # 2021 present
+        r"\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)[a-z]*\s+(19|20)\d{2}\b",  # Feb 2014
+        r"\b(0[1-9]|[12][0-9]|3[01])\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+(19|20)\d{2}\b",  # 10 July 2022
+        r"\b(0[1-9]|1[0-2])[-/](19|20)\d{2}\b",     # 03/2020
+        r"(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec|January|February|March|April|June|July|August|September|October|November|December)",
+        r"Present|Current|Now"
+    ]
+    for p in all_date_patterns:
+        text = re.sub(p, "", text, flags=re.I)
+
+    # 6. Remove leading symbols
+    text = re.sub(r"^[&*#\s]+", "", text, flags=re.M)
+
+    # 7. Remove multiple blank lines
+    text = re.sub(r"\n{2,}", "\n\n", text)
+
+    # 8. Remove stray punctuation
+    text = re.sub(r"[•·►●]+", "", text)
+
+    # 9. Clean spaces
+    text = re.sub(r"[ \t]+", " ", text)
+    text = text.strip()
+
+    return text
+
+
 def normalize_output(all_segments):
     """
     This is same as your previous normalize_output but returns normalized dict.
@@ -38,13 +103,21 @@ def normalize_output(all_segments):
             if seg.get("locations"): pi_locations.extend(seg.get("locations"))
 
         if label in ["exp","experience","internships"]:
+            cleaned_desc = clean_experience_description(
+                seg.get("raw_text") or "",
+                job_titles=seg.get("job_titles", []),
+                companies=seg.get("companies", []),
+                dates=seg.get("dates", []),
+                locations=seg.get("locations", []),
+            )
+
             final["experience"].append({
                 "title": seg.get("job_titles")[0] if seg.get("job_titles") else "",
                 "company": seg.get("companies")[0] if seg.get("companies") else "",
                 "location": seg.get("locations")[0] if seg.get("locations") else "",
                 "start_date": seg.get("dates")[0] if seg.get("dates") else "",
                 "end_date": seg.get("dates")[1] if len(seg.get("dates", [])) > 1 else "",
-                "description": seg.get("raw_text")
+                "description": cleaned_desc
             })
 
         if label == "education":
