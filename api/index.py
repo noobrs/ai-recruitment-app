@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Request, UploadFile, File, Form, Body
+from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 
 import logging
@@ -67,17 +67,21 @@ async def test_supabase():
 
 @app.post("/api/py/process-image")
 async def api_process_image(file: UploadFile = File(...)):
-    """Full end-to-end pipeline: detect -> ocr -> classify -> ner -> build json.
-    Accepts a file upload via multipart form data.
-    This endpoint only extracts data and does NOT save to database."""
+    """
+    Full unified pipeline.
+    Save uploaded file to a temp path first, because underlying
+    image functions require a real file path (not bytes).
+    """
     
     if not file:
         raise HTTPException(status_code=400, detail="File is required")
-    
+
     try:
         tmp_bytes = await file.read()
         result = process_image_resume(tmp_bytes)
+
         return result
+
     except Exception as e:
         logger.error(f"Image processing error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
