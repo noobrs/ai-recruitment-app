@@ -32,9 +32,9 @@ def classify_section_type(
     # Prepare text for classification (prioritize heading, include some context)
     classification_text = heading
     if text:
-        # Add some context from the body (first 200 chars)
-        context = text[:200]
-        classification_text = f"{heading}\n{context}"
+        # Add some context from the body
+        context = text
+        classification_text = f"{heading}\n{' '.join(context.strip().split())}"
 
     if not classification_text or classification_text == "NO_HEADING":
         return None
@@ -51,7 +51,7 @@ def classify_section_type(
 
     # Get the highest confidence prediction
     best = max(predictions, key=lambda p: p.get("score", 0.0))
-    label = best.get("label", "").replace(" Section", "").lower()
+    label = best.get("label", "").lower()
 
     # Normalize label names
     label_map = {

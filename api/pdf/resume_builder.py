@@ -85,6 +85,9 @@ def build_education(groups: List[Dict]) -> List[Dict]:
                 )
             )
 
+    # Filter out records where degree (title) is null
+    edu_records = [record for record in edu_records if record.get("title")]
+
     # Deduplicate by title, institution, duration, and location
     return deduplicate_records(edu_records, ("title", "institution", "duration", "location"))
 
@@ -189,6 +192,9 @@ def build_experience(groups: List[Dict]) -> List[Dict]:
                     duration,
                 )
             )
+
+    # Filter out records where job_title (position) is null
+    exp_records = [record for record in exp_records if record.get("position")]
 
     # Deduplicate by position, company, duration, and location
     return deduplicate_records(exp_records, ("position", "company", "duration", "location"))

@@ -3,10 +3,13 @@ Main PDF resume extraction pipeline.
 Orchestrates layout parsing, entity extraction, section classification, and redaction.
 """
 
+import json
 import os
+import re
 import tempfile
+from collections import defaultdict
 from pathlib import Path
-from typing import Dict
+from typing import Dict, List
 
 from api.types.types import ApiResponse
 from api.pdf.layout_parser import load_pdf_with_layout, group_spans_by_heading
@@ -22,7 +25,132 @@ from api.pdf.resume_builder import (
     build_activities,
 )
 from api.pdf.redaction import redact_pdf
-from api.pdf.utils import convert_to_resume_data
+from api.pdf.utils import convert_to_resume_data, normalize_text
+
+
+def filter_duplicate_no_heading_groups(groups: List[Dict]) -> List[Dict]:
+    """
+    Filter NO_HEADING groups whose text appears as a heading in other groups.
+    This removes duplicate content that was already categorized under a proper heading.
+
+    Args:
+        groups: List of grouped spans
+
+    Returns:
+        Filtered list of groups with duplicate NO_HEADING groups removed
+    """
+    # Collect all non-NO_HEADING headings (normalized)
+    headings = set()
+    for group in groups:
+        heading = group.get("heading", "")
+        if heading and heading != "NO_HEADING":
+            normalized_heading = normalize_text(heading).lower()
+            headings.add(normalized_heading)
+
+    # Filter out NO_HEADING groups whose text appears as a heading
+    filtered_groups = []
+    for group in groups:
+        heading = group.get("heading", "")
+        text = group.get("text", "")
+
+        if heading == "NO_HEADING":
+            # Check if this NO_HEADING text appears as a heading elsewhere
+            normalized_text = normalize_text(text).lower()
+            
+            # Check if the entire text or first line matches any heading
+            first_line = text.split("\n")[0].strip() if text else ""
+            normalized_first_line = normalize_text(first_line).lower()
+            
+            is_duplicate = (
+                normalized_text in headings or
+                normalized_first_line in headings or
+                any(normalized_text.startswith(h) or h.startswith(normalized_text) 
+                    for h in headings if len(normalized_text) > 10 and len(h) > 10)
+            )
+            
+            if is_duplicate:
+                print(f"[Pipeline] Filtering duplicate NO_HEADING: {first_line[:50]}...")
+                continue
+
+        filtered_groups.append(group)
+
+    return filtered_groups
+
+
+# def group_by_section_type(groups: List[Dict]) -> List[Dict]:
+#     """
+#     Group sections with the same section_type together before NER extraction.
+#     This consolidates similar sections for more efficient processing.
+
+#     Args:
+#         groups: List of grouped spans with section_type classification
+
+#     Returns:
+#         List of groups with same section types merged together
+#     """
+#     # Group by section_type
+#     type_groups = defaultdict(list)
+    
+#     for group in groups:
+#         section_type = group.get("section_type")
+#         heading = group.get("heading", "")
+        
+#         # Keep NO_HEADING and unclassified sections separate
+#         if heading == "NO_HEADING" or not section_type:
+#             type_groups[f"_individual_{id(group)}"].append(group)
+#         else:
+#             type_groups[section_type].append(group)
+
+#     # Merge groups with same section_type
+#     merged_groups = []
+    
+#     for section_type, group_list in type_groups.items():
+#         # Skip individual groups (NO_HEADING or unclassified)
+#         if section_type.startswith("_individual_"):
+#             merged_groups.extend(group_list)
+#             continue
+        
+#         # If only one group of this type, keep as is
+#         if len(group_list) == 1:
+#             merged_groups.append(group_list[0])
+#             continue
+        
+#         # Merge multiple groups of the same type
+#         merged_heading = f"{section_type.upper()}"
+#         merged_text_parts = []
+#         merged_segments = []
+#         total_span_count = 0
+#         all_labels = []
+        
+#         for group in group_list:
+#             heading = group.get("heading", "")
+#             text = group.get("text", "")
+            
+#             # Add heading as a separator if it's meaningful
+#             if heading and heading != "NO_HEADING":
+#                 merged_text_parts.append(heading)
+            
+#             if text:
+#                 merged_text_parts.append(text)
+            
+#             merged_segments.extend(group.get("segments", []))
+#             total_span_count += group.get("span_count", 0)
+#             all_labels.extend(group.get("labels", []))
+        
+#         merged_group = {
+#             "heading": merged_heading,
+#             "text": "\n\n".join(merged_text_parts),
+#             "section_type": section_type,
+#             "span_count": total_span_count,
+#             "labels": all_labels,
+#             "segments": merged_segments,
+#             "merged_from": len(group_list),
+#         }
+        
+#         merged_groups.append(merged_group)
+#         print(f"[Pipeline] Merged {len(group_list)} groups of type '{section_type}'")
+
+#     return merged_groups
 
 
 def process_pdf_resume(file_bytes: bytes) -> ApiResponse:
@@ -65,6 +193,15 @@ def process_pdf_resume(file_bytes: bytes) -> ApiResponse:
         # Step 3: Classify section types (NEW: replaces hardcoded keyword matching)
         print("[Pipeline] Classifying section types...")
         groups = classify_all_sections(gliner, groups)
+
+        # Step 3.1: Filter NO_HEADING groups that appear as headings in other groups
+        print("[Pipeline] Filtering duplicate NO_HEADING texts...")
+        groups = filter_duplicate_no_heading_groups(groups)
+
+        # # Step 3.2: Group sections with same section_type together
+        # print("[Pipeline] Grouping same section types...")
+        # groups = group_by_section_type(groups)
+        # print(json.dumps(groups, indent=2))
 
         # Step 4: Extract entities from each section
         print("[Pipeline] Extracting entities...")
