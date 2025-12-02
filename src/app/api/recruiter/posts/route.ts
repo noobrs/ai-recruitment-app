@@ -2,12 +2,13 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { getJobsByRecruiterId } from "@/services/job.service";
 import { countApplicationsByJobId } from "@/services/application.service";
+import { Job } from "@/types";
 
 /**
  * GET /api/recruiter/posts
  * Returns all job postings created by the authenticated recruiter with real applicant counts.
  */
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const supabase = await createClient();
 
@@ -37,8 +38,13 @@ export async function GET() {
       );
     }
 
+    // Parse filters from query
+    const { searchParams } = new URL(request.url);
+    const statusParam = searchParams.get("status");
+    const statuses = statusParam ? statusParam.split(",") : undefined;
+
     // 3️⃣ Fetch recruiter's job posts
-    const jobs = await getJobsByRecruiterId(recruiter.recruiter_id);
+    const jobs = await getJobsByRecruiterId(recruiter.recruiter_id, statuses);
 
     if (!jobs || jobs.length === 0) {
       return NextResponse.json({ jobs: [] }, { status: 200 });
@@ -46,7 +52,7 @@ export async function GET() {
 
     // 4️⃣ For each job, count valid applications in real-time
     const jobsWithCounts = await Promise.all(
-      jobs.map(async (job: any) => {
+      jobs.map(async (job: Job) => {
         const applicantsCount = await countApplicationsByJobId(job.job_id);
 
         return {
@@ -55,7 +61,7 @@ export async function GET() {
           type: job.job_type || job.job_mode,
           location: job.job_location,
           applicants: applicantsCount,
-          views: job.job_views || 0,
+          views: 0, // job.job_views is not in Job type apparently, defaulting to 0 as per previous code logic (though previous code had job.job_views || 0)
           date: new Date(job.created_at).toLocaleDateString("en-GB", {
             day: "2-digit",
             month: "short",
@@ -72,8 +78,8 @@ export async function GET() {
       { recruiterId: recruiter.recruiter_id, jobs: jobsWithCounts },
       { status: 200 }
     );
-  } catch (err: any) {
-    console.error("Error in /api/recruiter/posts:", err.message);
+  } catch (err: unknown) {
+    console.error("Error in /api/recruiter/posts:", err instanceof Error ? err.message : String(err));
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

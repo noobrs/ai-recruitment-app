@@ -21,11 +21,10 @@ const STATUS_OPTIONS = ["draft", "open", "closed", "deleted"];
 export default function RecruiterPostsPage() {
   const [posts, setPosts] = useState<JobPost[]>([]);
   const [filteredPosts, setFilteredPosts] = useState<JobPost[]>([]);
-  const [selectedStatuses, setSelectedStatuses] = useState<string[]>(['open']);
+  const [selectedStatuses, setSelectedStatuses] = useState<string[]>(["open"]);
   const [searchTerm, setSearchTerm] = useState("");
   const [visibleCount, setVisibleCount] = useState(10);
   const [loading, setLoading] = useState(true);
-  const [filterLoading, setFilterLoading] = useState(false);
   const router = useRouter();
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -34,7 +33,7 @@ export default function RecruiterPostsPage() {
     setOpenDropdown(openDropdown === id ? null : id);
   };
 
-  // Click outside to close
+  // Click outside to close dropdown
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
@@ -50,11 +49,13 @@ export default function RecruiterPostsPage() {
     async function fetchRecruiterJobs() {
       try {
         setLoading(true);
-        const res = await fetch("/api/recruiter/posts");
+        const query = selectedStatuses.length > 0 ? `?status=${selectedStatuses.join(",")}` : "";
+        const res = await fetch(`/api/recruiter/posts${query}`);
         const data = await res.json();
         if (res.ok) {
-          setPosts(data.jobs || []);
-          setFilteredPosts(data.jobs || []);
+          const jobs: JobPost[] = data.jobs || [];
+          setPosts(jobs);
+          setFilteredPosts(jobs);
         } else {
           console.error("Error fetching recruiter posts:", data.error);
         }
@@ -65,56 +66,34 @@ export default function RecruiterPostsPage() {
       }
     }
     fetchRecruiterJobs();
-  }, []);
+  }, [selectedStatuses]);
 
-  // 🔍 Handle search
+  // Search filter
   useEffect(() => {
-    // Skip filtering logic during initial load
-    if (loading) {
-      return;
-    }
+    const term = searchTerm.toLowerCase();
 
-    setFilterLoading(true);
+    const searched = posts.filter((p) => {
+      const titleMatch = p.title.toLowerCase().includes(term);
+      const typeMatch = p.type?.toLowerCase().includes(term);
+      const locationMatch = p.location?.toLowerCase().includes(term);
+      return titleMatch || typeMatch || locationMatch;
+    });
 
-    const timer = setTimeout(() => {
-      const term = searchTerm.toLowerCase();
-      const filtered = posts.filter(
-        (p) =>
-          p.title.toLowerCase().includes(term) ||
-          p.type?.toLowerCase().includes(term) ||
-          p.location?.toLowerCase().includes(term)
-      );
+    setFilteredPosts(searched);
+    setVisibleCount(10); // reset pagination whenever filters change
+  }, [searchTerm, posts]);
 
-      // Apply selected status filters on top of search
-      const statusFiltered =
-        selectedStatuses.length > 0
-          ? filtered.filter((p) =>
-            selectedStatuses.includes(p.status.toLowerCase())
-          )
-          : filtered;
-
-      setFilteredPosts(statusFiltered);
-      setVisibleCount(10); // reset pagination
-      setFilterLoading(false);
-    }, 300); // Small delay to show skeleton for quick filters
-
-    return () => clearTimeout(timer);
-  }, [searchTerm, selectedStatuses, posts, loading]);
-
-  // 🟣 Toggle multi-status filters
-  const handleStatusToggle = (status: string) => {
+  const toggleStatus = (status: string) => {
     setSelectedStatuses((prev) =>
       prev.includes(status)
         ? prev.filter((s) => s !== status)
         : [...prev, status]
     );
-    setVisibleCount(10); // reset pagination
+    setVisibleCount(10);
   };
 
-  // 📈 See more handler
   const handleSeeMore = () => setVisibleCount((prev) => prev + 10);
 
-  // Slice visible items
   const displayedPosts = filteredPosts.slice(0, visibleCount);
 
   return (
@@ -156,7 +135,7 @@ export default function RecruiterPostsPage() {
           return (
             <button
               key={status}
-              onClick={() => handleStatusToggle(status)}
+              onClick={() => toggleStatus(status)}
               className={`px-4 py-2 rounded-full font-medium border transition ${isSelected
                 ? "bg-purple-600 text-white border-purple-600"
                 : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
@@ -169,7 +148,7 @@ export default function RecruiterPostsPage() {
       </div>
 
       {/* Table */}
-      {loading || filterLoading ? (
+      {loading ? (
         <PostsTableSkeleton />
       ) : displayedPosts.length === 0 ? (
         <div className="overflow-x-auto bg-white rounded-xl shadow-sm">
@@ -207,7 +186,9 @@ export default function RecruiterPostsPage() {
                     {post.applicants}
                     <button
                       className="px-3 py-1 border rounded-full text-xs font-medium hover:bg-gray-100 cursor-pointer"
-                      onClick={() => router.push(`/recruiter/posts/${post.job_id}/applicants`)}
+                      onClick={() =>
+                        router.push(`/recruiter/posts/${post.job_id}/applicants`)
+                      }
                     >
                       View
                     </button>
@@ -232,7 +213,7 @@ export default function RecruiterPostsPage() {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        setOpenDropdown(openDropdown === post.job_id ? null : post.job_id);
+                        toggleDropdown(post.job_id);
                       }}
                       className="p-1 cursor-pointer"
                     >
@@ -246,14 +227,18 @@ export default function RecruiterPostsPage() {
                         className="absolute right-0 top-[80%] w-40 bg-white border border-gray-200 rounded-lg shadow-md z-30 animate-fade"
                       >
                         <button
-                          onClick={() => router.push(`/recruiter/posts/${post.job_id}/edit`)}
+                          onClick={() =>
+                            router.push(`/recruiter/posts/${post.job_id}/edit`)
+                          }
                           className="w-full text-left px-4 py-2 hover:bg-gray-50 text-gray-700 flex items-center gap-2 cursor-pointer"
                         >
                           <Pencil size={16} /> Edit Job
                         </button>
 
                         <button
-                          onClick={() => router.push(`/recruiter/jobs/view/${post.job_id}`)}
+                          onClick={() =>
+                            router.push(`/recruiter/jobs/view/${post.job_id}`)
+                          }
                           className="w-full text-left px-4 py-2 hover:bg-gray-50 text-gray-700 flex items-center gap-2 cursor-pointer"
                         >
                           <View size={16} /> Preview
