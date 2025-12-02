@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { ResumeData } from '@/types/fastapi.types';
 import { uploadResumeToProfile } from '@/app/jobseeker/profile/actions';
+import { validateResumeFile } from '@/constants/resume.constants';
 import { saveResumeToDatabase } from '@/app/actions/resume.actions';
 import SkillsEditor from '../shared/editors/SkillsEditor';
 import ExperienceEditor from '../shared/editors/ExperienceEditor';
@@ -47,6 +48,13 @@ export default function ResumeUploadDialog({
     const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (file) {
+            const validationError = validateResumeFile(file);
+            if (validationError) {
+                setError(validationError);
+                setSelectedFile(null);
+                event.target.value = '';
+                return;
+            }
             setSelectedFile(file);
             setError(null);
         }
@@ -134,12 +142,12 @@ export default function ResumeUploadDialog({
                         <div>
                             <div className="mb-6">
                                 <label className="block text-sm font-medium text-gray-600 mb-2">
-                                    Select Resume (PDF or Image)
+                                    Select Resume (PDF, JPG, PNG only - max 20MB)
                                 </label>
                                 <input
                                     ref={fileInputRef}
                                     type="file"
-                                    accept=".pdf,image/*"
+                                    accept=".pdf,.jpg,.jpeg,.png"
                                     onChange={handleFileSelect}
                                     disabled={isExtracting}
                                     className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary hover:file:bg-primary/10 disabled:opacity-50 disabled:cursor-not-allowed"

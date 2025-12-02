@@ -7,6 +7,7 @@ import { setAsProfileResume } from '@/services/resume.service';
 import { createClient } from '@/utils/supabase/server';
 import { UserUpdate, JobSeekerUpdate, ApiResponse, ResumeData, isSuccessResponse } from '@/types';
 import { fetchFromFastAPI } from '@/utils/api';
+import { MAX_RESUME_FILE_SIZE, validateResumeFile } from '@/constants/resume.constants';
 
 /**
  * Update user profile (name, etc.)
@@ -86,6 +87,12 @@ export async function uploadResumeToProfile(formData: FormData) {
 
     if (!file || !jobSeekerId) {
         throw new Error('Missing required fields');
+    }
+
+    // Validate file before processing
+    const validationError = validateResumeFile(file);
+    if (validationError) {
+        throw new Error(validationError);
     }
 
     try {

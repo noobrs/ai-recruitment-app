@@ -71,10 +71,9 @@ def build_education(groups: List[Dict]) -> List[Dict]:
 
             local_entities = [e for e in entities if is_in_window(e, w_start, w_end)]
 
-            # Try to get date from local entities first, fallback to all entities
+            # Extract date only from local entities within the window
+            # Don't fallback to all entities to avoid assigning wrong dates to multiple records
             duration = extract_date_range(local_entities, window_text)
-            if not duration:
-                duration = extract_date_range(entities, full_text)
 
             edu_records.append(
                 _build_education_record(
@@ -183,10 +182,9 @@ def build_experience(groups: List[Dict]) -> List[Dict]:
 
             local_entities = [e for e in entities if is_in_window(e, w_start, w_end)]
 
-            # Try to get date from local entities first, fallback to all entities
+            # Extract date only from local entities within the window
+            # Don't fallback to all entities to avoid assigning wrong dates to multiple records
             duration = extract_date_range(local_entities, window_text)
-            if not duration:
-                duration = extract_date_range(entities, full_text)
 
             exp_records.append(
                 _build_experience_record(

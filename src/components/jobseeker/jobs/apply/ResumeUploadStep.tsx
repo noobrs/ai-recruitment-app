@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import InputUploadFile from '@/components/shared/inputs/InputUploadFile';
+import { MAX_RESUME_FILE_SIZE_MB, validateResumeFile } from '@/constants/resume.constants';
 import ButtonFilledBlack from '@/components/shared/buttons/ButtonFilledBlack';
 import { fetchFromFastAPI } from '@/utils/api';
 import { ApiResponse, ResumeData, isSuccessResponse } from '@/types/fastapi.types';
@@ -89,6 +90,13 @@ export default function ResumeUploadStep({
     const handleResumeUpload = async () => {
         if (!cvFile) {
             setErrorMessage('Please upload your resume to continue.');
+            return;
+        }
+
+        // Validate file before processing
+        const validationError = validateResumeFile(cvFile);
+        if (validationError) {
+            setErrorMessage(validationError);
             return;
         }
 
@@ -230,7 +238,8 @@ export default function ResumeUploadStep({
                         <InputUploadFile
                             label="Resume (PDF or Image)"
                             className="w-full"
-                            accept=".pdf,image/*"
+                            accept=".pdf,.jpg,.jpeg,.png"
+                            maxSizeMB={MAX_RESUME_FILE_SIZE_MB}
                             onChange={(file) => setCvFile(file)}
                         />
 
