@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { getRecruiterByUserId } from "@/services/recruiter.service";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const supabase = await createClient();
 
@@ -16,8 +16,13 @@ export async function GET() {
       return NextResponse.json({ error: "Recruiter profile not found" }, { status: 404 });
     }
 
+    // Parse filters from query
+    const { searchParams } = new URL(request.url);
+    const statusParam = searchParams.get("status");
+    const statuses = statusParam ? statusParam.split(",") : undefined;
+
     // Fetch ONLY jobs posted by this recruiter
-    const { data: jobs, error: jobError } = await supabase
+    let query = supabase
       .from("job")
       .select(`
         job_id,
@@ -36,8 +41,13 @@ export async function GET() {
           )
         )
       `)
-      .eq("recruiter_id", recruiter.recruiter_id)
-      .order("created_at", { ascending: false });
+      .eq("recruiter_id", recruiter.recruiter_id);
+
+    if (statuses && statuses.length > 0) {
+      query = query.in("job_status", statuses);
+    }
+
+    const { data: jobs, error: jobError } = await query.order("created_at", { ascending: false });
 
     if (jobError) {
       console.error("Supabase Error:", jobError);
@@ -62,6 +72,7 @@ export async function GET() {
         location: job.job_location,
         type: job.job_type || job.job_mode,
         date: new Date(job.created_at).toLocaleDateString(),
+        created_at: job.created_at,
         status: job.job_status,
         recruiter_id: recruiterObj?.recruiter_id || null,
         company: {

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import JobCard from "@/components/jobseeker/jobs/JobCard"; // reuse card
-import { Search, Filter, ArrowUpDown } from "lucide-react";
+import { Search, ArrowUpDown } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { RecruiterJobItem } from "@/types/job.types";
 import JobCardsSkeleton from "@/components/recruiter/jobs/JobCardsSkeleton";
@@ -18,14 +18,14 @@ export default function RecruiterJobsPage() {
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>(["open"]);
   const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
   const [loading, setLoading] = useState(true);
-  const [filtering, setFiltering] = useState(false);
 
-  // Fetch
+  // Fetch jobs when statuses change
   useEffect(() => {
     async function fetchJobs() {
       try {
         setLoading(true);
-        const res = await fetch("/api/recruiter/jobs");
+        const query = selectedStatuses.length > 0 ? `?status=${selectedStatuses.join(",")}` : "";
+        const res = await fetch(`/api/recruiter/jobs${query}`);
         const data = await res.json();
 
         if (res.ok) {
@@ -39,49 +39,29 @@ export default function RecruiterJobsPage() {
       }
     }
     fetchJobs();
-  }, []);
+  }, [selectedStatuses]);
 
-  // Search + Filter + Sort
+  // Search + Sort (Client-side)
   useEffect(() => {
-    // Only show filtering skeleton if data is already loaded
-    if (jobs.length > 0) {
-      setFiltering(true);
+    let list = [...jobs];
+
+    // search
+    if (searchTerm.trim()) {
+      const term = searchTerm.toLowerCase();
+      list = list.filter(
+        (j) =>
+          j.title.toLowerCase().includes(term) ||
+          j.location.toLowerCase().includes(term)
+      );
     }
 
-    // Add a small delay to show skeleton during filtering
-    const timer = setTimeout(() => {
-      let list = [...jobs];
-
-      // search
-      if (searchTerm.trim()) {
-        const term = searchTerm.toLowerCase();
-        list = list.filter(
-          (j) =>
-            j.title.toLowerCase().includes(term) ||
-            j.location.toLowerCase().includes(term)
-        );
-      }
-
-      // status filter
-      if (selectedStatuses.length > 0) {
-        list = list.filter((job) =>
-          selectedStatuses.includes(job.status.toLowerCase())
-        );
-      }
-
-      // sort
-      list.sort((a, b) => {
-        const d1 = new Date(a.date).getTime();
-        const d2 = new Date(b.date).getTime();
-        return sortOrder === "newest" ? d2 - d1 : d1 - d2;
-      });
-
-      setFilteredJobs(list);
-      setFiltering(false);
-    }, 300); // Small delay to show skeleton for filtering
-
-    return () => clearTimeout(timer);
-  }, [jobs, searchTerm, selectedStatuses, sortOrder]);
+    // sort
+    list.sort((a, b) => {
+      const d1 = new Date(a.created_at).getTime();
+      const d2 = new Date(b.created_at).getTime();
+      return sortOrder === "newest" ? d2 - d1 : d1 - d2;
+    }); setFilteredJobs(list);
+  }, [jobs, searchTerm, sortOrder]);
 
   const toggleStatus = (status: string) => {
     setSelectedStatuses((prev) =>
@@ -145,14 +125,14 @@ export default function RecruiterJobsPage() {
 
       {/* Job List */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-        {!loading && !filtering && filteredJobs.length === 0 && (
+        {!loading && filteredJobs.length === 0 && (
           <p className="text-gray-500 col-span-full text-center mt-10">
             No jobs match your filters.
           </p>
         )}
 
-        {loading || filtering ? (
-          <JobCardsSkeleton count={loading ? 6 : filteredJobs.length || 3} />
+        {loading ? (
+          <JobCardsSkeleton count={6} />
         ) : (
           filteredJobs.map((job) => (
             <div

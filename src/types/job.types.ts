@@ -38,6 +38,7 @@ export type RecruiterJobItem = {
   location: string;
   type: string;
   date: string;
+  created_at: string;
   status: string;
   recruiter_id: number | null;
   company: {
