@@ -42,10 +42,10 @@ SECTION_TYPE_LABELS: List[str] = [
 
 # Confidence thresholds for entity extraction
 ENTITY_THRESHOLDS: Dict[str, float] = {
-    "skill": 0.50,
-    "language": 0.50,
-    "degree": 0.50,
-    "job title": 0.50,
+    "skill": 0.60,
+    "language": 0.60,
+    "degree": 0.60,
+    "job title": 0.60,
     "organization": 0.50,
     "company": 0.50,
     "school": 0.50,
@@ -60,7 +60,7 @@ ENTITY_THRESHOLDS: Dict[str, float] = {
 }
 
 # Threshold for section type classification
-SECTION_TYPE_THRESHOLD: float = 0.00
+SECTION_TYPE_THRESHOLD: float = 0.10
 
 # spaCy-layout span labels to skip (tables, pictures, etc.)
 SKIP_SPAN_LABELS: Set[str] = {"table", "picture", "equation"}

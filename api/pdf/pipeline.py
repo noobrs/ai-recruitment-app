@@ -77,82 +77,6 @@ def filter_duplicate_no_heading_groups(groups: List[Dict]) -> List[Dict]:
     return filtered_groups
 
 
-# def group_by_section_type(groups: List[Dict]) -> List[Dict]:
-#     """
-#     Group sections with the same section_type together before NER extraction.
-#     This consolidates similar sections for more efficient processing.
-
-#     Args:
-#         groups: List of grouped spans with section_type classification
-
-#     Returns:
-#         List of groups with same section types merged together
-#     """
-#     # Group by section_type
-#     type_groups = defaultdict(list)
-    
-#     for group in groups:
-#         section_type = group.get("section_type")
-#         heading = group.get("heading", "")
-        
-#         # Keep NO_HEADING and unclassified sections separate
-#         if heading == "NO_HEADING" or not section_type:
-#             type_groups[f"_individual_{id(group)}"].append(group)
-#         else:
-#             type_groups[section_type].append(group)
-
-#     # Merge groups with same section_type
-#     merged_groups = []
-    
-#     for section_type, group_list in type_groups.items():
-#         # Skip individual groups (NO_HEADING or unclassified)
-#         if section_type.startswith("_individual_"):
-#             merged_groups.extend(group_list)
-#             continue
-        
-#         # If only one group of this type, keep as is
-#         if len(group_list) == 1:
-#             merged_groups.append(group_list[0])
-#             continue
-        
-#         # Merge multiple groups of the same type
-#         merged_heading = f"{section_type.upper()}"
-#         merged_text_parts = []
-#         merged_segments = []
-#         total_span_count = 0
-#         all_labels = []
-        
-#         for group in group_list:
-#             heading = group.get("heading", "")
-#             text = group.get("text", "")
-            
-#             # Add heading as a separator if it's meaningful
-#             if heading and heading != "NO_HEADING":
-#                 merged_text_parts.append(heading)
-            
-#             if text:
-#                 merged_text_parts.append(text)
-            
-#             merged_segments.extend(group.get("segments", []))
-#             total_span_count += group.get("span_count", 0)
-#             all_labels.extend(group.get("labels", []))
-        
-#         merged_group = {
-#             "heading": merged_heading,
-#             "text": "\n\n".join(merged_text_parts),
-#             "section_type": section_type,
-#             "span_count": total_span_count,
-#             "labels": all_labels,
-#             "segments": merged_segments,
-#             "merged_from": len(group_list),
-#         }
-        
-#         merged_groups.append(merged_group)
-#         print(f"[Pipeline] Merged {len(group_list)} groups of type '{section_type}'")
-
-#     return merged_groups
-
-
 def process_pdf_resume(file_bytes: bytes) -> ApiResponse:
     """
     Main pipeline for processing PDF resumes.
@@ -197,11 +121,6 @@ def process_pdf_resume(file_bytes: bytes) -> ApiResponse:
         # Step 3.1: Filter NO_HEADING groups that appear as headings in other groups
         print("[Pipeline] Filtering duplicate NO_HEADING texts...")
         groups = filter_duplicate_no_heading_groups(groups)
-
-        # # Step 3.2: Group sections with same section_type together
-        # print("[Pipeline] Grouping same section types...")
-        # groups = group_by_section_type(groups)
-        # print(json.dumps(groups, indent=2))
 
         # Step 4: Extract entities from each section
         print("[Pipeline] Extracting entities...")

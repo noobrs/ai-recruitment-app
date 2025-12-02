@@ -33,6 +33,7 @@ torch
 scikit-learn
 skillNer
 find-job-titles
+ipython
 
 # Computer Vision and Detection
 supervision
