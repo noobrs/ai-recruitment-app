@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { Search, Filter } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { ApplicationStatus } from "@/types";
-import ApplicationsLoading from "./loading";
 
 interface Application {
     applicationId: number;
@@ -82,10 +81,6 @@ export default function ApplicationsPage() {
     // Slice visible applications
     const displayedApplications = filteredApplications.slice(0, visibleCount);
 
-    if (loading) {
-        return <ApplicationsLoading />;
-    }
-
     return (
         <div className="max-w-8/10 p-10 justify-center mx-auto my-5 min-h-screen">
             {/* Header */}
@@ -133,7 +128,43 @@ export default function ApplicationsPage() {
 
             {/* Table */}
             <div className="overflow-x-auto bg-white rounded-xl shadow-sm">
-                {displayedApplications.length === 0 ? (
+                {loading ? (
+                    <table className="min-w-full text-sm text-gray-700">
+                        <thead className="bg-gray-50 text-primary text-left">
+                            <tr>
+                                <th className="px-6 py-3 font-semibold">Job Title</th>
+                                <th className="px-6 py-3 font-semibold">Company</th>
+                                <th className="px-6 py-3 font-semibold">Application Date</th>
+                                <th className="px-6 py-3 font-semibold">Status</th>
+                                <th className="px-6 py-3"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {[...Array(5)].map((_, index) => (
+                                <tr
+                                    key={index}
+                                    className={`${index % 2 === 0 ? "bg-white" : "bg-gray-50"}`}
+                                >
+                                    <td className="px-6 py-4">
+                                        <div className="h-4 w-40 bg-gray-200 rounded animate-pulse" />
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <div className="h-4 w-32 bg-gray-200 rounded animate-pulse" />
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <div className="h-4 w-24 bg-gray-200 rounded animate-pulse" />
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <div className="h-6 w-20 bg-gray-200 rounded-full animate-pulse" />
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <div className="h-4 w-20 bg-gray-200 rounded animate-pulse" />
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                ) : displayedApplications.length === 0 ? (
                     <div className="text-center py-12">
                         <svg
                             className="mx-auto h-16 w-16 text-gray-400"
