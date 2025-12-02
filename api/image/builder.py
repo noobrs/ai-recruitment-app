@@ -28,8 +28,8 @@ def normalize_output(all_segments):
         if label in ["sum","summary","about"]:
             final["summary"] += " " + (seg.get("raw_text") or "")
 
-        if label == "skills":
-            for sk in seg.get("skills", []):
+        for sk in seg.get("skills", []):
+            if sk and len(sk) > 1:
                 final["skills"].add(sk)
 
         if label == "pi":

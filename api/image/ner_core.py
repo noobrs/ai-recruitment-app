@@ -40,7 +40,7 @@ def extract_conll_entities(text):
 _nlp = spacy.load("en_core_web_sm")
 _skill_extractor = SkillExtractor(_nlp, SKILL_DB, PhraseMatcher)
 
-def extract_skills_skillner(text, score_threshold=0.55):
+def extract_skills_skillner(text, score_threshold=0.90):
     try:
         parsed = _skill_extractor.annotate(text)
         results = parsed.get("results", {})

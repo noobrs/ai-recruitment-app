@@ -60,57 +60,6 @@ async def test_supabase():
             "hint": "Ensure Supabase table exists"
         }
 
-# @app.post("/api/py/process-resume")
-# async def process_resume(request: Request, payload: ProcessResumeRequest):
-#     import traceback
-    
-#     logger.info(f"Received process-resume request for resume_id={payload.resume_id}")
-    
-#     body = await request.body()
-#     timestamp = request.headers.get("x-resume-timestamp")
-#     signature = request.headers.get("x-resume-signature")
-
-#     if not verify_signature(body, timestamp, signature):
-#         logger.warning(f"Invalid signature for resume_id={payload.resume_id}")
-#         raise HTTPException(status_code=401, detail="Invalid signature")
-
-#     try:
-#         result = await resume_pipeline.process(payload)
-#         logger.info(f"Successfully processed resume_id={payload.resume_id}")
-#     except Exception as exc:
-#         # Log the full traceback for debugging
-#         logger.error(f"ERROR: Resume processing failed for resume_id={payload.resume_id}")
-#         logger.error(f"Exception type: {type(exc).__name__}")
-#         logger.error(f"Exception message: {str(exc)}")
-#         logger.error(f"Full traceback:\n{traceback.format_exc()}")
-#         raise HTTPException(status_code=500, detail=f"Resume processing failed: {exc}") from exc
-
-#     return {
-#         "status": "processed",
-#         "resume_id": result.resume_id,
-#         "job_seeker_id": result.job_seeker_id,
-#         "redacted_file_path": result.redacted_file_path,
-#     }
-
-# route automatically in FastAPI:
-# @app.post("/api/py/process-resume")
-# async def process_resume(file: UploadFile = File(...)):
-#     filename = file.filename.lower()
-#     contents = await file.read()
-
-#     if filename.endswith((".jpg", ".jpeg", ".png")):
-#         return process_image_resume(contents)
-#     elif filename.endswith(".pdf"):
-#         return process_pdf_resume(contents)
-#     else:
-#         raise HTTPException(status_code=400, detail="Unsupported file type")
-
-# @app.post("/api/py/extract/image")
-# async def extract_image(file: UploadFile = File(...)):
-#     contents = await file.read()
-#     result = process_image_resume_pipeline(contents)
-#     return result
-
 # ----------------------
 # Image Part
 # ----------------------
