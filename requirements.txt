@@ -1,6 +1,6 @@
 # FastAPI and Web Framework
 fastapi
-uvicorn
+uvicorn[standard]
 python-multipart
 
 # Data Validation and Configuration
@@ -18,7 +18,6 @@ httpx
 spacy>=3.7.0
 spacy-layout
 gliner
-torch
 pymupdf
 rapidfuzz
 
@@ -32,6 +31,8 @@ pytesseract
 transformers
 torch
 scikit-learn
+skillNer
+find-job-titles
 
 # Computer Vision and Detection
 supervision
