@@ -4,68 +4,156 @@
 """
 
 import re
+import nltk
 
-import re
+# Download once (safe to keep)
+try:
+    nltk.data.find('tokenizers/punkt')
+except LookupError:
+    nltk.download('punkt')
 
-def clean_experience_description(text, job_titles=None, companies=None, dates=None, locations=None):
+def clean_experience_description(text, job_titles=None, companies=None, locations=None, dates=None):
+    """
+    1) Remove headers, job titles, companies, dates, locations.
+    2) Collapse newlines to spaces (OCR joins).
+    3) Split into sentence-like chunks by punctuation OR by capitalized sentence starts.
+    4) Capitalize and ensure trailing punctuation.
+    5) Return sentences joined with '\n' (one sentence per line).
+    """
     if not text:
         return ""
 
-    original = text
+    # --- 1) Pre-clean: headers, stray bullets, weird chars ---
+    t = text
 
-    # 1. Remove common section headers
-    text = re.sub(r"\b(EXPERIENCE|WORK EXPERIENCE|PROFESSIONAL EXPERIENCE|EMPLOYMENT HISTORY)\b",
-                  "", text, flags=re.I)
+    # remove section headers
+    t = re.sub(r"\b(EXPERIENCE|WORK EXPERIENCE|PROFESSIONAL EXPERIENCE|EMPLOYMENT HISTORY)\b", "", t, flags=re.I)
 
-    # 2. Remove repeated job titles
+    # remove leading bullet characters on lines
+    t = re.sub(r"^[\s•·\-*#&]+", "", t, flags=re.M)
+
+    # remove explicit job titles / companies if provided (exact-line and inline)
     if job_titles:
-        for t in job_titles:
-            # Exact line removal
-            text = re.sub(rf"^\s*{re.escape(t)}\s*$", "", text, flags=re.I | re.M)
-            text = text.replace(t, "")
+        for jt in job_titles:
+            if not jt: 
+                continue
+            # remove exact lines matching the job title
+            t = re.sub(rf"(?m)^\s*{re.escape(jt)}\s*$", " ", t, flags=re.I)
+            # remove inline occurrences (careful)
+            t = re.sub(rf"\b{re.escape(jt)}\b", " ", t, flags=re.I)
 
-    # 3. Remove repeated company names
     if companies:
         for c in companies:
-            text = re.sub(rf"^\s*{re.escape(c)}\s*$", "", text, flags=re.I | re.M)
-            text = text.replace(c, "")
+            if not c:
+                continue
+            t = re.sub(rf"(?m)^\s*{re.escape(c)}\s*$", " ", t, flags=re.I)
+            t = re.sub(rf"\b{re.escape(c)}\b", " ", t, flags=re.I)
 
-    # 4. Remove locations like "Miami, FL" or "New York"
     if locations:
         for loc in locations:
-            if loc:
-                text = text.replace(loc, "")
+            if not loc:
+                continue
+            t = t.replace(loc, " ")
 
-    text = re.sub(r"\b[A-Z][a-z]+,\s*[A-Z]{2}\b", "", text)  # Miami, FL pattern
+    # remove common "City, ST" patterns (Miami, FL)
+    t = re.sub(r"\b[A-Z][a-z]+,\s*[A-Z]{2}\b", " ", t)
 
-    # 5. Remove all date formats
-    all_date_patterns = [
-        r"\b(19|20)\d{2}\b",                      # 2021
-        r"\b(19|20)\d{2}\s*[-–/]\s*(19|20)\d{2}\b", # 2021–2023, 2019/2021
-        r"\b(19|20)\d{2}\s*(present|current|now)\b", # 2021 present
-        r"\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)[a-z]*\s+(19|20)\d{2}\b",  # Feb 2014
-        r"\b(0[1-9]|[12][0-9]|3[01])\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+(19|20)\d{2}\b",  # 10 July 2022
-        r"\b(0[1-9]|1[0-2])[-/](19|20)\d{2}\b",     # 03/2020
-        r"(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec|January|February|March|April|June|July|August|September|October|November|December)",
-        r"Present|Current|Now"
+    # --- 2) Remove dates (year, month-year, month-present, month-month) BEFORE joining lines ---
+    month = r"(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec|January|February|March|April|June|July|August|September|October|November|December)"
+    year = r"(19[5-9]\d|20[0-4]\d|2050)"
+
+    date_patterns = [
+        rf"\b{month}\s+{year}\b",                     # Feb 2014
+        rf"\b{month}\s*(?:[-–/]|to)\s*{month}\b",     # Feb–Oct, Feb to Oct (no years)
+        rf"\b{month}\s*(?:[-–/]|to)\s*{month}\s+{year}\b", # Feb–Oct 2014
+        rf"\b{year}\s*(?:[-–/\/to]+\s*{year})\b",     # 2011-2012, 2011/2012
+        rf"\b{month}\s*(Present|Current|Now)\b",     # Feb Present
+        rf"\b{month}\s*(?:[-–/]\s*)?(Present|Current|Now)\b", # Feb–Present
+        rf"\b(?:[0-3]?\d[-/])?(?:0[1-9]|1[0-2])[-/](?:19|20)\d{2}\b", # 03/2020 or 3/2020
+        rf"\b{year}\b",                                # lone years
+        rf"\b(Present|Current|Now)\b"                   # lone Present
     ]
-    for p in all_date_patterns:
-        text = re.sub(p, "", text, flags=re.I)
+    for p in date_patterns:
+        t = re.sub(p, " ", t, flags=re.I)
 
-    # 6. Remove leading symbols
-    text = re.sub(r"^[&*#\s]+", "", text, flags=re.M)
+    # remove stray repeated punctuation / odd chars
+    t = re.sub(r"[•·►●]+", " ", t)
+    t = re.sub(r"[^\x00-\x7F]+", " ", t)  # remove non-ascii junk
 
-    # 7. Remove multiple blank lines
-    text = re.sub(r"\n{2,}", "\n\n", text)
+    # --- 3) Collapse newlines into single spaces (preserve sentence continuity) ---
+    t = re.sub(r"[\r\n]+", " ", t)
+    t = re.sub(r"\s{2,}", " ", t).strip()
 
-    # 8. Remove stray punctuation
-    text = re.sub(r"[•·►●]+", "", text)
+    if not t:
+        return ""
 
-    # 9. Clean spaces
-    text = re.sub(r"[ \t]+", " ", text)
-    text = text.strip()
+    # --- 4) Split into sentence-like chunks ---
+    # Strategy:
+    #  - first capture real sentences that end with punctuation
+    #  - then capture long sequences that likely are sentences but missing punctuation
+    #  - split also at places where a capitalized word follows a space and previous char is lower-case (heuristic)
+    sentences = []
 
-    return text
+    # a) Grab segments that end with sentence punctuation
+    punct_sents = re.findall(r".+?[.!?](?:\s|$)", t)
+    remainder = t
+    if punct_sents:
+        # collect and remove from remainder
+        for s in punct_sents:
+            s = s.strip()
+            if s:
+                sentences.append(s)
+        # remove captured parts from remainder
+        last_punct_end = 0
+        for m in re.finditer(r".+?[.!?](?:\s|$)", t):
+            last_punct_end = m.end()
+        remainder = t[last_punct_end:].strip()
+
+    # b) Process remainder by heuristics (split where Capitalized word suggests new sentence)
+    if remainder:
+        # split on " <CapitalLetter><lower>" markers but avoid splitting acronyms
+        parts = re.split(r"(?<=\w)\s+(?=[A-Z][a-z]{2,})", remainder)
+        for p in parts:
+            p = p.strip()
+            if p:
+                sentences.append(p)
+
+    # If we didn't capture any punctuation-based sentences (common with OCR),
+    # fallback: split by length chunks separated by comma/semicolon then treat them as sentences.
+    if not sentences:
+        # split by common punctuation and " and " / " then "
+        fallback_parts = re.split(r"[;•\-–—\—]+|\band\b|\bthen\b", t, flags=re.I)
+        for p in fallback_parts:
+            p = p.strip()
+            if p:
+                sentences.append(p)
+
+    # --- 5) Clean & normalise sentences: capitalise first char, ensure final punctuation ---
+    clean_sents = []
+    for s in sentences:
+        # remove leading/trailing stray punctuation/spaces
+        s = s.strip(" \t\n\r\ufeff\u200b-–—:;,.")
+        if not s:
+            continue
+
+        # lower-case accidental ALL-CAPS words but keep proper nouns
+        # (simple heuristic: if most letters uppercase, lower them)
+        letters = re.sub(r"[^A-Za-z]", "", s)
+        if letters and sum(1 for ch in letters if ch.isupper()) / max(1, len(letters)) > 0.6:
+            s = s.lower()
+
+        # ensure first char capitalised
+        s = s[0].upper() + s[1:] if len(s) > 1 else s.upper()
+        
+        # ensure it ends with a period
+        if not s.endswith((".", "!", "?")):
+            s = s + "."
+
+        clean_sents.append(s)
+
+    # --- 6) Join with newline, one sentence per line as requested ---
+    result = "\n".join(clean_sents)
+    return result
 
 
 def normalize_output(all_segments):
@@ -119,6 +207,7 @@ def normalize_output(all_segments):
                 "end_date": seg.get("dates")[1] if len(seg.get("dates", [])) > 1 else "",
                 "description": cleaned_desc
             })
+
 
         if label == "education":
             final["education"].append({
