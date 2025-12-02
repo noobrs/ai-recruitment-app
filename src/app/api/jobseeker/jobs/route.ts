@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
+import type { Application } from "@/types";
 
 /**
  * GET /api/jobseeker/jobs
@@ -63,7 +64,8 @@ export async function GET() {
         job_requirement (*),
         application!left (
           job_seeker_id,
-          is_bookmark
+          is_bookmark,
+          status
         )
       `)
       .order("created_at", { ascending: false });
@@ -77,18 +79,33 @@ export async function GET() {
     }
 
     // 4️⃣ Fallback check: flatten company if nested relation didn't resolve
-    const formatted = (jobs || []).map((job: any) => {
+    const formatted = (jobs || []).map((job) => {
       const isBookmarked =
         Array.isArray(job.application) &&
         job.application.some(
-          (a: any) =>
+          (a: Pick<Application, 'job_seeker_id' | 'is_bookmark' | 'status'>) =>
             a.job_seeker_id === jobSeeker.job_seeker_id && a.is_bookmark === true
         );
 
+      const isApplied =
+        Array.isArray(job.application) &&
+        job.application.some(
+          (a: Pick<Application, 'job_seeker_id' | 'is_bookmark' | 'status'>) =>
+            a.job_seeker_id === jobSeeker.job_seeker_id && a.status && a.status !== 'unknown' && a.status !== 'withdrawn'
+        );
+
+      const recruiterData = Array.isArray(job.recruiter) ? job.recruiter[0] : job.recruiter;
+      const companyData = recruiterData?.company
+        ? Array.isArray(recruiterData.company)
+          ? recruiterData.company[0]
+          : recruiterData.company
+        : null;
+
       return {
         ...job,
-        company: job.recruiter?.company || null,
+        company: companyData,
         is_bookmark: !!isBookmarked,
+        is_applied: !!isApplied,
       };
     });
 
@@ -96,8 +113,9 @@ export async function GET() {
       { jobs: formatted, jobSeekerId: jobSeeker.job_seeker_id },
       { status: 200 }
     );
-  } catch (err: any) {
-    console.error("Error in /api/jobseeker/jobs:", err.message);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    console.error("Error in /api/jobseeker/jobs:", message);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

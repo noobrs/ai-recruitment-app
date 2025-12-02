@@ -5,9 +5,10 @@ import ButtonFilledBlack from '@/components/shared/buttons/ButtonFilledBlack';
 import { ResumeData } from '@/types/fastapi.types';
 import { submitApplication } from '../../../../app/jobseeker/jobs/apply/[job_id]/actions';
 import JobHeader from './JobHeader';
-import SkillsEditor from './SkillsEditor';
-import ExperienceEditor from './ExperienceEditor';
-import EducationEditor from './EducationEditor';
+import SkillsEditor from '../../shared/editors/SkillsEditor';
+import ExperienceEditor from '../../shared/editors/ExperienceEditor';
+import EducationEditor from '../../shared/editors/EducationEditor';
+import ResumeValidationWarning from './ResumeValidationWarning';
 import { JobDetails } from '@/types/job.types';
 
 interface ResumeReviewStepProps {
@@ -16,6 +17,7 @@ interface ResumeReviewStepProps {
     cvFile: File | null;
     jobId: string;
     existingResumeId?: number;
+    redactedFileUrl?: string | null;
     onBack: () => void;
     onSuccess: () => void;
 }
@@ -29,6 +31,7 @@ export default function ResumeReviewStep({
     cvFile,
     jobId,
     existingResumeId,
+    redactedFileUrl,
     onBack,
     onSuccess,
 }: ResumeReviewStepProps) {
@@ -61,6 +64,11 @@ export default function ResumeReviewStep({
             formData.append('extracted_experiences', JSON.stringify(resumeData.experience));
             formData.append('extracted_education', JSON.stringify(resumeData.education));
 
+            // Include redacted file URL if available
+            if (redactedFileUrl) {
+                formData.append('redacted_file_url', redactedFileUrl);
+            }
+
             const result = await submitApplication(formData);
             if (result?.success) {
                 onSuccess();
@@ -81,6 +89,8 @@ export default function ResumeReviewStep({
                 <h2 className="text-2xl font-bold mb-6">
                     Review & Edit Extracted Information
                 </h2>
+
+                <ResumeValidationWarning resumeData={resumeData} />
 
                 <div className="flex flex-col gap-8 text-gray-700">
                     <SkillsEditor

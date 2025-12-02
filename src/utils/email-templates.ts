@@ -2,48 +2,48 @@
  * Email template data interfaces
  */
 export interface ResumeUploadedData {
-    userName: string;
-    fileName: string;
-    extractedSkills?: string[];
-    extractedExperiences?: string[];
-    extractedEducation?: string[];
-    feedback?: string;
+  userName: string;
+  fileName: string;
+  extractedSkills?: string[];
+  extractedExperiences?: string[];
+  extractedEducation?: string[];
+  feedback?: string;
 }
 
 export interface JobApplicationData {
-    userName: string;
-    jobTitle: string;
-    companyName: string;
-    applicationDate: string;
+  userName: string;
+  jobTitle: string;
+  companyName: string;
+  applicationDate: string;
 }
 
 export interface ApplicationStatusUpdateData {
-    userName: string;
-    jobTitle: string;
-    companyName: string;
-    newStatus: string;
-    message?: string;
+  userName: string;
+  jobTitle: string;
+  companyName: string;
+  newStatus: string;
+  message?: string;
 }
 
 export interface NewApplicationData {
-    recruiterName: string;
-    jobTitle: string;
-    applicantName: string;
-    applicationDate: string;
+  recruiterName: string;
+  jobTitle: string;
+  applicantName: string;
+  applicationDate: string;
 }
 
 export interface ApplicationWithdrawnData {
-    recruiterName: string;
-    jobTitle: string;
-    applicantName: string;
-    withdrawnDate: string;
+  recruiterName: string;
+  jobTitle: string;
+  applicantName: string;
+  withdrawnDate: string;
 }
 
 /**
  * Base email template wrapper
  */
 function emailWrapper(content: string, preheader?: string): string {
-    return `
+  return `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -68,7 +68,7 @@ function emailWrapper(content: string, preheader?: string): string {
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
     .header {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: #00E676;
       color: #ffffff;
       padding: 30px 20px;
       text-align: center;
@@ -91,16 +91,19 @@ function emailWrapper(content: string, preheader?: string): string {
     .button {
       display: inline-block;
       padding: 12px 30px;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: #ffffff;
+      background: #00E676;
+      color: #ffffff !important;
       text-decoration: none;
       border-radius: 6px;
       margin: 20px 0;
       font-weight: 500;
     }
+    .button:hover {
+      background: #00C853;
+    }
     .info-box {
       background-color: #f8f9fa;
-      border-left: 4px solid #667eea;
+      border-left: 4px solid #00994F;
       padding: 15px;
       margin: 20px 0;
       border-radius: 4px;
@@ -127,7 +130,7 @@ function emailWrapper(content: string, preheader?: string): string {
   ${preheader ? `<div style="display:none;font-size:1px;line-height:1px;max-height:0px;max-width:0px;opacity:0;overflow:hidden;">${preheader}</div>` : ''}
   <div class="container">
     <div class="header">
-      <h1>🚀 AI Recruitment Platform</h1>
+      <h1>AI-Powered Recruitment</h1>
     </div>
     <div class="content">
       ${content}
@@ -143,63 +146,10 @@ function emailWrapper(content: string, preheader?: string): string {
 }
 
 /**
- * Template: Resume Uploaded and Parsed
- */
-export function resumeUploadedTemplate(data: ResumeUploadedData): { subject: string; html: string } {
-    const content = `
-    <h2>Resume Processing Complete! 📄</h2>
-    <p>Hi <strong>${data.userName}</strong>,</p>
-    <p>Your resume has been successfully uploaded and analyzed. Here's what we found:</p>
-    
-    <div class="info-box">
-      <p><strong>File:</strong> ${data.fileName}</p>
-      <span class="success-badge">✓ Successfully Processed</span>
-    </div>
-
-    ${data.extractedSkills && data.extractedSkills.length > 0 ? `
-    <h3>🎯 Extracted Skills:</h3>
-    <ul>
-      ${data.extractedSkills.map(skill => `<li>${skill}</li>`).join('')}
-    </ul>
-    ` : ''}
-
-    ${data.extractedExperiences && data.extractedExperiences.length > 0 ? `
-    <h3>💼 Work Experience:</h3>
-    <ul>
-      ${data.extractedExperiences.map(exp => `<li>${exp}</li>`).join('')}
-    </ul>
-    ` : ''}
-
-    ${data.extractedEducation && data.extractedEducation.length > 0 ? `
-    <h3>🎓 Education:</h3>
-    <ul>
-      ${data.extractedEducation.map(edu => `<li>${edu}</li>`).join('')}
-    </ul>
-    ` : ''}
-
-    ${data.feedback ? `
-    <div class="info-box">
-      <h3>💡 AI Feedback:</h3>
-      <p>${data.feedback}</p>
-    </div>
-    ` : ''}
-
-    <a href="${process.env.NEXT_PUBLIC_SITE_URL}/jobseeker/profile" class="button">View Your Profile</a>
-
-    <p>Your resume is now ready to be used for job applications!</p>
-  `;
-
-    return {
-        subject: '✅ Your Resume Has Been Processed Successfully',
-        html: emailWrapper(content, 'Your resume processing is complete'),
-    };
-}
-
-/**
  * Template: Job Application Submitted
  */
 export function jobApplicationSubmittedTemplate(data: JobApplicationData): { subject: string; html: string } {
-    const content = `
+  const content = `
     <h2>Application Submitted Successfully! 🎉</h2>
     <p>Hi <strong>${data.userName}</strong>,</p>
     <p>Your application has been successfully submitted!</p>
@@ -218,35 +168,28 @@ export function jobApplicationSubmittedTemplate(data: JobApplicationData): { sub
     <p>Good luck with your application! 🍀</p>
   `;
 
-    return {
-        subject: `✅ Application Submitted: ${data.jobTitle} at ${data.companyName}`,
-        html: emailWrapper(content, `Your application for ${data.jobTitle} has been submitted`),
-    };
+  return {
+    subject: `Application Submitted: ${data.jobTitle} at ${data.companyName}`,
+    html: emailWrapper(content, `Your application for ${data.jobTitle} has been submitted`),
+  };
 }
 
 /**
  * Template: Application Status Updated
  */
 export function applicationStatusUpdatedTemplate(data: ApplicationStatusUpdateData): { subject: string; html: string } {
-    const statusEmoji: { [key: string]: string } = {
-        received: '📨',
-        shortlisted: '⭐',
-        rejected: '❌',
-        withdrawn: '🔙',
-    };
 
-    const statusColor: { [key: string]: string } = {
-        received: '#007bff',
-        shortlisted: '#28a745',
-        rejected: '#dc3545',
-        withdrawn: '#6c757d',
-    };
+  const statusColor: { [key: string]: string } = {
+    received: '#007bff',
+    shortlisted: '#28a745',
+    rejected: '#dc3545',
+    withdrawn: '#6c757d',
+  };
 
-    const emoji = statusEmoji[data.newStatus.toLowerCase()] || '📢';
-    const color = statusColor[data.newStatus.toLowerCase()] || '#667eea';
+  const color = statusColor[data.newStatus.toLowerCase()] || '#667eea';
 
-    const content = `
-    <h2>Application Status Update ${emoji}</h2>
+  const content = `
+    <h2>Application Status Update</h2>
     <p>Hi <strong>${data.userName}</strong>,</p>
     <p>There's an update on your job application:</p>
     
@@ -254,7 +197,7 @@ export function applicationStatusUpdatedTemplate(data: ApplicationStatusUpdateDa
       <p><strong>Position:</strong> ${data.jobTitle}</p>
       <p><strong>Company:</strong> ${data.companyName}</p>
       <p><strong>New Status:</strong></p>
-      <span class="success-badge" style="background-color: ${color};">${emoji} ${data.newStatus.toUpperCase()}</span>
+      <span class="success-badge" style="background-color: ${color};">${data.newStatus.toUpperCase()}</span>
     </div>
 
     ${data.message ? `
@@ -269,17 +212,17 @@ export function applicationStatusUpdatedTemplate(data: ApplicationStatusUpdateDa
     ${data.newStatus.toLowerCase() === 'shortlisted' ? '<p><strong>Congratulations!</strong> You\'ve been shortlisted. The recruiter may contact you soon for the next steps.</p>' : ''}
   `;
 
-    return {
-        subject: `${emoji} Application Update: ${data.jobTitle} - ${data.newStatus}`,
-        html: emailWrapper(content, `Your application status has been updated to ${data.newStatus}`),
-    };
+  return {
+    subject: `Application Update: ${data.jobTitle} - ${data.newStatus}`,
+    html: emailWrapper(content, `Your application status has been updated to ${data.newStatus}`),
+  };
 }
 
 /**
  * Template: New Application Received (for Recruiters)
  */
 export function newApplicationReceivedTemplate(data: NewApplicationData): { subject: string; html: string } {
-    const content = `
+  const content = `
     <h2>New Application Received! 📬</h2>
     <p>Hi <strong>${data.recruiterName}</strong>,</p>
     <p>Great news! You have a new application for one of your job postings.</p>
@@ -298,17 +241,17 @@ export function newApplicationReceivedTemplate(data: NewApplicationData): { subj
     <p>Don't keep great candidates waiting! 🚀</p>
   `;
 
-    return {
-        subject: `📬 New Application: ${data.jobTitle} - ${data.applicantName}`,
-        html: emailWrapper(content, `New application received for ${data.jobTitle}`),
-    };
+  return {
+    subject: `📬 New Application: ${data.jobTitle} - ${data.applicantName}`,
+    html: emailWrapper(content, `New application received for ${data.jobTitle}`),
+  };
 }
 
 /**
  * Template: Application Withdrawn (for Recruiters)
  */
 export function applicationWithdrawnTemplate(data: ApplicationWithdrawnData): { subject: string; html: string } {
-    const content = `
+  const content = `
     <h2>Application Withdrawn 🔙</h2>
     <p>Hi <strong>${data.recruiterName}</strong>,</p>
     <p>This is to inform you that an applicant has withdrawn their application.</p>
@@ -325,17 +268,17 @@ export function applicationWithdrawnTemplate(data: ApplicationWithdrawnData): { 
     <a href="${process.env.NEXT_PUBLIC_SITE_URL}/recruiter/dashboard" class="button">View Dashboard</a>
   `;
 
-    return {
-        subject: `🔙 Application Withdrawn: ${data.jobTitle} - ${data.applicantName}`,
-        html: emailWrapper(content, `Application withdrawn for ${data.jobTitle}`),
-    };
+  return {
+    subject: `🔙 Application Withdrawn: ${data.jobTitle} - ${data.applicantName}`,
+    html: emailWrapper(content, `Application withdrawn for ${data.jobTitle}`),
+  };
 }
 
 /**
  * Template: Generic Notification
  */
 export function genericNotificationTemplate(data: { userName: string; title: string; message: string; actionUrl?: string; actionText?: string }): { subject: string; html: string } {
-    const content = `
+  const content = `
     <h2>${data.title}</h2>
     <p>Hi <strong>${data.userName}</strong>,</p>
     <p>${data.message}</p>
@@ -345,8 +288,8 @@ export function genericNotificationTemplate(data: { userName: string; title: str
     ` : ''}
   `;
 
-    return {
-        subject: data.title,
-        html: emailWrapper(content, data.message),
-    };
+  return {
+    subject: data.title,
+    html: emailWrapper(content, data.message),
+  };
 }

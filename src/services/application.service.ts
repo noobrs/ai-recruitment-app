@@ -1,22 +1,23 @@
 import { createClient } from '@/utils/supabase/server';
+import { createAdminClient } from '@/utils/supabase/admin';
 import { Application, ApplicationStatus, ApplicationInsert } from '@/types';
 
 /**
  * Get an application by ID
  */
 export async function getApplicationById(applicationId: number): Promise<Application | null> {
-    const supabase = await createClient();
-    const { data, error } = await supabase
-        .from('application')
-        .select('*')
-        .eq('application_id', applicationId)
-        .single();
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('application')
+    .select('*')
+    .eq('application_id', applicationId)
+    .single();
 
-    if (error) {
-        console.error('Error fetching application:', error);
-        return null;
-    }
-    return data;
+  if (error) {
+    console.error('Error fetching application:', error);
+    return null;
+  }
+  return data;
 }
 
 export async function getAppliedJobs(jobSeekerId: number) {
@@ -25,6 +26,7 @@ export async function getAppliedJobs(jobSeekerId: number) {
   const { data, error } = await supabase
     .from('application')
     .select(`
+      application_id,
       job_id,
       is_bookmark,
       status,
@@ -45,6 +47,7 @@ export async function getAppliedJobs(jobSeekerId: number) {
     `)
     .eq('job_seeker_id', jobSeekerId)
     .neq('status', 'unknown')
+    .neq('status', 'withdrawn')
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -54,6 +57,7 @@ export async function getAppliedJobs(jobSeekerId: number) {
 
   return (
     data?.map((a: any) => ({
+      applicationId: a.application_id,
       jobId: a.job?.job_id,
       compLogo: a.job?.recruiter?.company?.comp_logo || '/default-company.png',
       compName: a.job?.recruiter?.company?.comp_name || 'Unknown Company',
@@ -71,55 +75,55 @@ export async function getAppliedJobs(jobSeekerId: number) {
  * Get applications by job seeker ID
  */
 export async function getApplicationsByJobSeekerId(jobSeekerId: number): Promise<Application[]> {
-    const supabase = await createClient();
-    const { data, error } = await supabase
-        .from('application')
-        .select('*')
-        .eq('job_seeker_id', jobSeekerId)
-        .order('created_at', { ascending: false });
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('application')
+    .select('*')
+    .eq('job_seeker_id', jobSeekerId)
+    .order('created_at', { ascending: false });
 
-    if (error) {
-        console.error('Error fetching applications by job seeker:', error);
-        return [];
-    }
-    return data || [];
+  if (error) {
+    console.error('Error fetching applications by job seeker:', error);
+    return [];
+  }
+  return data || [];
 }
 
 /**
  * Get applications by job ID
  */
 export async function getApplicationsByJobId(jobId: number): Promise<Application[]> {
-    const supabase = await createClient();
-    const { data, error } = await supabase
-        .from('application')
-        .select('*')
-        .eq('job_id', jobId)
-        .order('created_at', { ascending: false });
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('application')
+    .select('*')
+    .eq('job_id', jobId)
+    .order('created_at', { ascending: false });
 
-    if (error) {
-        console.error('Error fetching applications by job:', error);
-        return [];
-    }
-    return data || [];
+  if (error) {
+    console.error('Error fetching applications by job:', error);
+    return [];
+  }
+  return data || [];
 }
 
 /**
  * Get bookmarked applications by job seeker
  */
 export async function getBookmarkedApplications(jobSeekerId: number): Promise<Application[]> {
-    const supabase = await createClient();
-    const { data, error } = await supabase
-        .from('application')
-        .select('*')
-        .eq('job_seeker_id', jobSeekerId)
-        .eq('is_bookmark', true)
-        .order('created_at', { ascending: false });
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('application')
+    .select('*')
+    .eq('job_seeker_id', jobSeekerId)
+    .eq('is_bookmark', true)
+    .order('created_at', { ascending: false });
 
-    if (error) {
-        console.error('Error fetching bookmarked applications:', error);
-        return [];
-    }
-    return data || [];
+  if (error) {
+    console.error('Error fetching bookmarked applications:', error);
+    return [];
+  }
+  return data || [];
 }
 
 export async function getBookmarkedJobs(jobSeekerId: number) {
@@ -154,8 +158,16 @@ export async function getBookmarkedJobs(jobSeekerId: number) {
     return [];
   }
 
+  // Remove duplicates by job_id, keeping the most recent one
+  const uniqueJobs = new Map();
+  data?.forEach((a: any) => {
+    if (!uniqueJobs.has(a.job_id)) {
+      uniqueJobs.set(a.job_id, a);
+    }
+  });
+
   return (
-    data?.map((a: any) => ({
+    Array.from(uniqueJobs.values()).map((a: any) => ({
       jobId: a.job?.job_id,
       compLogo: a.job?.recruiter?.company?.comp_logo || '/default-company.png',
       compName: a.job?.recruiter?.company?.comp_name || 'Unknown Company',
@@ -172,77 +184,117 @@ export async function getBookmarkedJobs(jobSeekerId: number) {
  * Create a new application
  */
 export async function createApplication(application: ApplicationInsert): Promise<Application | null> {
-    const supabase = await createClient();
-    const { data, error } = await supabase
-        .from('application')
-        .insert(application)
-        .select()
-        .single();
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('application')
+    .insert(application)
+    .select()
+    .single();
 
-    if (error) {
-        console.error('Error creating application:', error);
-        return null;
-    }
-    return data;
+  if (error) {
+    console.error('Error creating application:', error);
+    return null;
+  }
+  return data;
 }
 
 /**
  * Update application status
  */
 export async function updateApplicationStatus(applicationId: number, status: ApplicationStatus): Promise<Application | null> {
-    const supabase = await createClient();
-    const { data, error } = await supabase
-        .from('application')
-        .update({ status })
-        .eq('application_id', applicationId)
-        .select()
-        .single();
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('application')
+    .update({ status })
+    .eq('application_id', applicationId)
+    .select()
+    .single();
 
-    if (error) {
-        console.error('Error updating application status:', error);
-        return null;
-    }
-    return data;
+  if (error) {
+    console.error('Error updating application status:', error);
+    return null;
+  }
+  return data;
 }
 
 /**
- * Toggle bookmark status
+ * Withdraw an application (jobseeker can withdraw their own application)
  */
-export async function toggleBookmark(applicationId: number, isBookmark: boolean): Promise<Application | null> {
-    const supabase = await createClient();
-    const { data, error } = await supabase
-        .from('application')
-        .update({ is_bookmark: isBookmark })
-        .eq('application_id', applicationId)
-        .select()
-        .single();
+export async function withdrawApplication(applicationId: number, jobSeekerId: number): Promise<Application | null> {
+  const supabase = await createClient();
 
-    if (error) {
-        console.error('Error toggling bookmark:', error);
-        return null;
-    }
-    return data;
+  // Verify ownership and current status
+  const { data: existing, error: fetchError } = await supabase
+    .from('application')
+    .select('application_id, status, job_seeker_id')
+    .eq('application_id', applicationId)
+    .eq('job_seeker_id', jobSeekerId)
+    .single();
+
+  if (fetchError || !existing) {
+    console.error('Application not found or unauthorized:', fetchError);
+    return null;
+  }
+
+  // Don't allow withdrawing already rejected/withdrawn applications
+  if (existing.status === 'rejected' || existing.status === 'withdrawn') {
+    console.error('Cannot withdraw application with status:', existing.status);
+    return null;
+  }
+
+  // Update status to withdrawn
+  const { data, error } = await supabase
+    .from('application')
+    .update({ status: 'withdrawn', updated_at: new Date().toISOString() })
+    .eq('application_id', applicationId)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error withdrawing application:', error);
+    return null;
+  }
+  return data;
+}
+
+/**
+ * Toggle bookmark status for ALL existing records of a job-seeker combination
+ */
+export async function toggleBookmark(jobSeekerId: number, jobId: number, isBookmark: boolean): Promise<boolean> {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from('application')
+    .update({ is_bookmark: isBookmark })
+    .eq('job_seeker_id', jobSeekerId)
+    .eq('job_id', jobId);
+
+  if (error) {
+    console.error('Error toggling bookmark:', error);
+    return false;
+  }
+  return true;
 }
 
 /**
  * Delete an application
  */
 export async function deleteApplication(applicationId: number): Promise<boolean> {
-    const supabase = await createClient();
-    const { error } = await supabase
-        .from('application')
-        .delete()
-        .eq('application_id', applicationId);
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from('application')
+    .delete()
+    .eq('application_id', applicationId);
 
-    if (error) {
-        console.error('Error deleting application:', error);
-        return false;
-    }
-    return true;
+  if (error) {
+    console.error('Error deleting application:', error);
+    return false;
+  }
+  return true;
 }
 
 /**
  * Get a single application by job seeker + job
+ * Returns the most recent application for the job-seeker pair
  */
 export async function getApplicationByJobAndSeeker(
   jobSeekerId: number,
@@ -254,6 +306,8 @@ export async function getApplicationByJobAndSeeker(
     .select("*")
     .eq("job_seeker_id", jobSeekerId)
     .eq("job_id", jobId)
+    .order("created_at", { ascending: false })
+    .limit(1)
     .maybeSingle();
 
   if (error) {
@@ -346,11 +400,30 @@ export async function getApplicantsByRecruiter(
   statuses?: string[]
 ) {
   const supabase = await createClient();
+  const supabaseAdmin = createAdminClient();
 
+  // First, get all job IDs for this recruiter
+  const { data: jobs, error: jobError } = await supabase
+    .from("job")
+    .select("job_id")
+    .eq("recruiter_id", recruiterId);
+
+  if (jobError) {
+    console.error("Error fetching jobs:", jobError);
+    return [];
+  }
+
+  if (!jobs || jobs.length === 0) {
+    console.log("No jobs found for recruiter:", recruiterId);
+    return [];
+  }
+
+  const jobIds = jobs.map(j => j.job_id);
+
+  // Then query applications for those jobs
   let query = supabase
     .from("application")
-    .select(
-      `
+    .select(`
       application_id,
       job_id,
       job_seeker_id,
@@ -361,22 +434,21 @@ export async function getApplicantsByRecruiter(
       job_seeker:job_seeker_id (
         job_seeker_id,
         user: user_id (
+          id,
           first_name,
           last_name
         )
       ),
       resume:resume_id (
         resume_id,
-        extracted_skills
+        extracted_skills,
+        redacted_file_path
       )
-    `
-    )
+    `)
+    .in("job_id", jobIds)
     .order("created_at", { ascending: false });
 
-  // Filter by recruiter
-  query = query.eq("job.recruiter_id", recruiterId);
-
-  // Filter by multiple statuses (excluding unknown by default)
+  // Filter by statuses
   if (statuses && statuses.length > 0) {
     query = query.in("status", statuses);
   } else {
@@ -390,22 +462,45 @@ export async function getApplicantsByRecruiter(
     return [];
   }
 
-  // Map to frontend format
+  // Fetch emails for all job seekers
+  const userIds = data?.map((a: any) => a.job_seeker?.user?.id).filter(Boolean) || [];
+  const emailMap: Record<string, string> = {};
+
+  if (userIds.length > 0) {
+    try {
+      // Fetch emails in batches to avoid overwhelming the API
+      const { data: { users }, error: emailError } = await supabaseAdmin.auth.admin.listUsers();
+
+      if (!emailError && users) {
+        users.forEach(user => {
+          if (userIds.includes(user.id) && user.email) {
+            emailMap[user.id] = user.email;
+          }
+        });
+      }
+    } catch (emailError) {
+      console.error("Error fetching user emails:", emailError);
+    }
+  }
+
   return (
-    data?.map((a: any) => ({
-      id: a.application_id,
-      applicantName:
-        `${a.job_seeker?.user?.first_name || ""} ${a.job_seeker?.user?.last_name || ""}`.trim() ||
-        "Unknown",
-      jobTitle: a.job?.job_title || "Untitled Job",
-      date: new Date(a.created_at).toLocaleDateString("en-GB", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      }),
-      score: a.match_score ?? 0,
-      status: a.status || "received",
-    })) || []
+    data?.map((a: any) => {
+      const userId = a.job_seeker?.user?.id;
+      return {
+        id: a.application_id,
+        applicantName: `${a.job_seeker?.user?.first_name || ""} ${a.job_seeker?.user?.last_name || ""}`.trim() || "Unknown",
+        applicantEmail: userId ? (emailMap[userId] || null) : null,
+        jobTitle: a.job?.job_title || "Untitled Job",
+        date: new Date(a.created_at).toLocaleDateString("en-GB", {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+        }),
+        score: a.match_score ?? 0,
+        status: a.status || "received",
+        redactedResumeUrl: a.resume?.redacted_file_path || null,
+      };
+    }) || []
   );
 }
 
@@ -464,85 +559,4 @@ export async function getApplicantsByJobIdForRecruiter(
       status: a.status || "received",
     })) || []
   );
-}
-
-/**
- * Get dashboard counts for multiple jobs
- */
-export async function getDashboardCountsForJobs(jobIds: number[]) {
-  const supabase = await createClient();
-
-  let totalApplications = 0;
-  let applicationsThisWeek = 0;
-  let hiresThisMonth = 0;
-
-  const oneWeekAgo = new Date();
-  oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-
-  const now = new Date();
-  const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
-
-  for (const jobId of jobIds) {
-    // Count non-unknown applications
-    const { count } = await supabase
-      .from("application")
-      .select("application_id", { count: "exact", head: true })
-      .eq("job_id", jobId)
-      .neq("status", "unknown");
-
-    totalApplications += count || 0;
-
-    // Fetch app list for week/month checks
-    const { data: apps } = await supabase
-      .from("application")
-      .select("status, created_at, updated_at")
-      .eq("job_id", jobId);
-
-    if (apps) {
-      applicationsThisWeek += apps.filter(
-        (a) => new Date(a.created_at) >= oneWeekAgo
-      ).length;
-
-      hiresThisMonth += apps.filter(
-        (a) =>
-          a.status === "hired" && new Date(a.updated_at) >= firstDay
-      ).length;
-    }
-  }
-
-  return {
-    totalApplications,
-    applicationsThisWeek,
-    hiresThisMonth,
-  };
-}
-
-/**
- * Get recent applications for multiple jobs
- */
-export async function getRecentApplicationsForJobs(jobIds: number[]) {
-  const supabase = await createClient();
-
-  const { data, error } = await supabase
-    .from("application")
-    .select(`
-      application_id,
-      created_at,
-      status,
-      job:job_id(job_title),
-      job_seeker:job_seeker_id(job_seeker_id)
-    `)
-    .in("job_id", jobIds)
-    .order("created_at", { ascending: false })
-    .limit(5);
-
-  if (error || !data) return [];
-
-  return data.map((a: any) => ({
-    id: a.application_id,
-    alias: `Applicant #${String(a.job_seeker?.job_seeker_id).padStart(4, "0")}`,
-    jobTitle: a.job?.job_title || "Untitled",
-    date: new Date(a.created_at).toLocaleDateString("en-GB"),
-    status: a.status,
-  }));
 }

@@ -46,7 +46,6 @@ class ResumeData(BaseModel):
     education: List[EducationOut]
     experience: List[ExperienceOut]
     skills: List[str]
-    languages: List[str]
     certifications: List[CertificationOut]
     activities: List[ActivityOut]
 
@@ -55,3 +54,4 @@ class ApiResponse(BaseModel):
     status: str
     data: Optional[ResumeData] = None
     message: Optional[str] = None
+    redacted_file_url: Optional[str] = None

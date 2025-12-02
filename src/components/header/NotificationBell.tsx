@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { Notification } from '@/types';
 import { createRealtimeClient } from '@/utils/supabase/realtime';
 
@@ -20,6 +20,8 @@ export default function NotificationBell({
 }: Props) {
     const [unreadCount, setUnreadCount] = useState(initialUnreadCount);
     const router = useRouter();
+    const pathname = usePathname();
+    const isOnNotificationPage = pathname === '/notifications';
 
     // Set up real-time subscription for unread count only
     useEffect(() => {
@@ -84,7 +86,7 @@ export default function NotificationBell({
         >
             <svg
                 className={`w-6 h-6 ${iconClass}`}
-                fill="none"
+                fill={isOnNotificationPage ? "currentColor" : "none"}
                 stroke="currentColor"
                 viewBox="0 0 24 24"
             >

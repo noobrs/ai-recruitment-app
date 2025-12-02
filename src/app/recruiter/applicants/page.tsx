@@ -1,15 +1,20 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Search, Filter, ChevronDown } from "lucide-react";
+import { Search, Filter } from "lucide-react";
+import StatusDropdown from "@/components/recruiter/StatusDropdown";
+import { ApplicationStatus } from "@/types";
+import ApplicantsTableSkeleton from "@/components/recruiter/applicants/ApplicantsTableSkeleton";
 
 interface Applicant {
   id: number;
   applicantName: string;
+  applicantEmail: string | null;
   jobTitle: string;
   date: string;
   score: number;
-  status: string;
+  status: ApplicationStatus;
+  redactedResumeUrl: string | null;
 }
 
 const STATUS_OPTIONS = ["received", "shortlisted", "rejected", "withdrawn"];
@@ -114,11 +119,10 @@ export default function RecruiterApplicantsPage() {
           <button
             key={status}
             onClick={() => toggleStatus(status)}
-            className={`px-4 py-2 rounded-full font-medium capitalize border transition ${
-              selectedStatuses.includes(status)
-                ? "bg-purple-600 text-white border-purple-600"
-                : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
-            }`}
+            className={`px-4 py-2 rounded-full font-medium capitalize border transition ${selectedStatuses.includes(status)
+              ? "bg-purple-600 text-white border-purple-600"
+              : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+              }`}
           >
             {status}
           </button>
@@ -126,12 +130,14 @@ export default function RecruiterApplicantsPage() {
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto bg-white rounded-xl shadow-sm">
-        {loading ? (
-          <p className="text-center py-6 text-gray-500">Loading applicants...</p>
-        ) : displayedApplicants.length === 0 ? (
+      {loading ? (
+        <ApplicantsTableSkeleton />
+      ) : displayedApplicants.length === 0 ? (
+        <div className="bg-white rounded-xl shadow-sm">
           <p className="text-center py-6 text-gray-500">No applicants found.</p>
-        ) : (
+        </div>
+      ) : (
+        <div className="bg-white rounded-xl shadow-sm">
           <table className="min-w-full text-sm text-gray-700">
             <thead className="bg-gray-50 text-purple-600 text-left">
               <tr>
@@ -146,9 +152,8 @@ export default function RecruiterApplicantsPage() {
               {displayedApplicants.map((a, i) => (
                 <tr
                   key={a.id}
-                  className={`${
-                    i % 2 === 0 ? "bg-white" : "bg-gray-50"
-                  } hover:bg-gray-100 transition`}
+                  className={`${i % 2 === 0 ? "bg-white" : "bg-gray-50"
+                    } hover:bg-gray-100 transition`}
                 >
                   <td className="px-6 py-4 flex items-center gap-4 font-semibold capitalize">
                     <div
@@ -156,25 +161,67 @@ export default function RecruiterApplicantsPage() {
                         a.score
                       )}`}
                     >
-                      {a.score}%
+                      {a.score.toFixed(0)}%
                     </div>
-                    {a.applicantName}
+                    {a.applicantEmail ? (
+                      <a
+                        href={`mailto:${a.applicantEmail}`}
+                        className="hover:underline cursor-pointer"
+                        title={`Email ${a.applicantName}`}
+                      >
+                        {a.applicantName}
+                      </a>
+                    ) : (
+                      <span>{a.applicantName}</span>
+                    )}
                   </td>
                   <td className="px-6 py-4">{a.jobTitle}</td>
                   <td className="px-6 py-4">{a.date}</td>
-                  <td className="px-6 py-4 flex items-center gap-1 font-medium text-gray-700 capitalize">
-                    {a.status}
-                    <ChevronDown className="w-4 h-4 text-gray-400" />
+                  <td className="px-6 py-4">
+                    <StatusDropdown
+                      applicationId={a.id}
+                      currentStatus={a.status}
+                      onStatusChange={(newStatus) => {
+                        // Update local state when status changes
+                        setApplicants((prev) =>
+                          prev.map((applicant) =>
+                            applicant.id === a.id
+                              ? { ...applicant, status: newStatus }
+                              : applicant
+                          )
+                        );
+                        setFilteredApplicants((prev) =>
+                          prev.map((applicant) =>
+                            applicant.id === a.id
+                              ? { ...applicant, status: newStatus }
+                              : applicant
+                          )
+                        );
+                      }}
+                    />
                   </td>
-                  <td className="px-6 py-4 text-purple-600 font-medium cursor-pointer hover:underline">
-                    View Details
+                  <td className="px-6 py-4">
+                    {a.redactedResumeUrl ? (
+                      <a
+                        href={a.redactedResumeUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-purple-600 font-medium cursor-pointer hover:underline"
+                      >
+                        View Details
+                      </a>
+                    ) : (
+                      <span className="text-gray-400 font-medium">
+                        No Resume
+                      </span>
+                    )}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Footer - See More */}
       {!loading && filteredApplicants.length > visibleCount && (

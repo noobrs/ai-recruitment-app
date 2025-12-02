@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
+import type { Application } from "@/types";
 
 /**
  * GET /api/jobseeker/jobs/[job_id]
@@ -67,7 +68,8 @@ export async function GET(
         job_requirement (*),
         application!left (
           job_seeker_id,
-          is_bookmark
+          is_bookmark,
+          status
         )
       `
       )
@@ -94,8 +96,16 @@ export async function GET(
     const isBookmarked =
       Array.isArray(job.application) &&
       job.application.some(
-        (a: any) =>
+        (a: Pick<Application, 'job_seeker_id' | 'is_bookmark' | 'status'>) =>
           a.job_seeker_id === jobSeeker.job_seeker_id && a.is_bookmark === true
+      );
+
+    // Check if jobseeker has applied to this job (excluding withdrawn applications)
+    const isApplied =
+      Array.isArray(job.application) &&
+      job.application.some(
+        (a: Pick<Application, 'job_seeker_id' | 'is_bookmark' | 'status'>) =>
+          a.job_seeker_id === jobSeeker.job_seeker_id && a.status && a.status !== 'unknown' && a.status !== 'withdrawn'
       );
 
     // 6️⃣ Format company logo + flatten job structure
@@ -103,21 +113,23 @@ export async function GET(
       ...job,
       company: company
         ? {
-            ...company,
-            comp_logo: company.comp_logo_path
-              ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${company.comp_logo_path}`
-              : "/default-company.png",
-          }
+          ...company,
+          comp_logo: company.comp_logo_path
+            ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${company.comp_logo_path}`
+            : "/default-company.png",
+        }
         : null,
       is_bookmark: !!isBookmarked,
+      is_applied: !!isApplied,
     };
 
     return NextResponse.json(
       { job: formattedJob, jobSeekerId: jobSeeker.job_seeker_id },
       { status: 200 }
     );
-  } catch (err: any) {
-    console.error("Error in /api/jobseeker/jobs/[job_id]:", err.message);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    console.error("Error in /api/jobseeker/jobs/[job_id]:", message);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

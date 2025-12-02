@@ -24,7 +24,7 @@ export default async function Home() {
   const health = await getHealth()
 
   return (
-    <main className="min-h-screen from-blue-50 via-indigo-50 to-purple-50">
+    <main className="min-h-screen from-blue-50 via-green-50 to-purple-50">
       <div className="max-w-7xl mx-auto px-6 lg:px-8 py-24">
 
         {/* ======================= */}
@@ -43,14 +43,14 @@ export default async function Home() {
           <div className="mt-12 flex flex-col sm:flex-row gap-4 justify-center">
             <a
               href="/auth/login"
-              className="px-10 py-4 bg-indigo-600 text-white font-medium rounded-xl shadow-lg hover:bg-indigo-700 transition"
+              className="px-10 py-4 bg-primary text-white font-medium rounded-xl shadow-lg hover:bg-primary/90 transition"
             >
               Login
             </a>
 
             <a
               href="/auth/register"
-              className="px-10 py-4 bg-white text-indigo-600 border-2 border-indigo-600 font-medium rounded-xl shadow-lg hover:bg-indigo-50 transition"
+              className="px-10 py-4 bg-white text-primary border-2 border-primary font-medium rounded-xl shadow-lg hover:bg-primary-soft transition"
             >
               Register
             </a>
@@ -148,7 +148,7 @@ export default async function Home() {
                 key={index}
                 className="bg-white p-8 rounded-2xl shadow-md hover:shadow-xl transition"
               >
-                <div className="w-14 h-14 bg-indigo-600 text-white flex items-center justify-center rounded-full mx-auto text-2xl font-bold mb-6">
+                <div className="w-14 h-14 bg-primary text-white flex items-center justify-center rounded-full mx-auto text-2xl font-bold mb-6">
                   {item.step}
                 </div>
                 <h3 className="text-xl font-semibold text-gray-800 mb-3">{item.title}</h3>

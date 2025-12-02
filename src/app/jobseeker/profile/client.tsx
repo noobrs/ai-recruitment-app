@@ -2,18 +2,43 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Resume, UserWithJobSeeker } from '@/types';
+import { Resume, UserWithJobSeeker, ApplicationStatus } from '@/types';
 import { updateJobSeekerProfile, updateUserProfile, setProfileResume } from './actions';
 import {
     ProfileHeader,
     ProfileAboutSection,
     ProfileResumeCard,
-    ResumesList,
     MyActivities,
 } from '@/components/jobseeker/profile';
+import ResumeDropdown from '@/components/jobseeker/profile/ResumeDropdown';
 import { uploadProfilePictureAction } from '@/app/actions/profile-picture.actions';
+import { deleteResume } from '@/app/actions/resume.actions';
 import toast from 'react-hot-toast';
 import { useBookmark } from "@/hooks/useBookmark";
+
+interface BookmarkedJob {
+    jobId: number;
+    compLogo: string;
+    compName: string;
+    jobTitle: string;
+    jobLocation: string;
+    jobType: string;
+    createdAt: string;
+    bookmark: boolean;
+}
+
+interface AppliedJob {
+    applicationId: number;
+    jobId: number;
+    compLogo: string;
+    compName: string;
+    jobTitle: string;
+    jobLocation: string;
+    jobType: string;
+    createdAt: string;
+    bookmark: boolean;
+    status: ApplicationStatus;
+}
 
 interface ProfileClientProps {
     user: UserWithJobSeeker;
@@ -27,9 +52,10 @@ export default function ProfileClient({ user, profileResume, allResumes }: Profi
     const [isEditing, setIsEditing] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [settingProfile, setSettingProfile] = useState<number | null>(null);
+    const [deletingResume, setDeletingResume] = useState<number | null>(null);
     const [activitiesLoading, setActivitiesLoading] = useState(true);
-    const [bookmarkedJobs, setBookmarkedJobs] = useState<any[]>([]);
-    const [appliedJobs, setAppliedJobs] = useState<any[]>([]);
+    const [bookmarkedJobs, setBookmarkedJobs] = useState<BookmarkedJob[]>([]);
+    const [appliedJobs, setAppliedJobs] = useState<AppliedJob[]>([]);
     const [profilePicture, setProfilePicture] = useState<File | null>(null);
     const [profilePicturePreview, setProfilePicturePreview] = useState<string | null>(null);
     const [formData, setFormData] = useState({
@@ -108,11 +134,25 @@ export default function ProfileClient({ user, profileResume, allResumes }: Profi
         setSettingProfile(resumeId);
         try {
             await setProfileResume(user.job_seeker.job_seeker_id, resumeId);
+            toast.success('Profile resume updated successfully!');
             router.refresh();
         } catch (error) {
-            alert('Failed to set profile resume.');
+            toast.error('Failed to set profile resume. Please try again.');
         } finally {
             setSettingProfile(null);
+        }
+    };
+
+    const handleDeleteResume = async (resumeId: number) => {
+        setDeletingResume(resumeId);
+        try {
+            await deleteResume(resumeId);
+            toast.success('Resume deleted successfully!');
+            router.refresh();
+        } catch (error) {
+            toast.error('Failed to delete resume. Please try again.');
+        } finally {
+            setDeletingResume(null);
         }
     };
 
@@ -120,17 +160,29 @@ export default function ProfileClient({ user, profileResume, allResumes }: Profi
         const result = await toggle(user.job_seeker.job_seeker_id, jobId);
 
         if (result.success) {
+            // Update bookmarkedJobs state
             setBookmarkedJobs((prev) =>
                 result.is_bookmark
                     ? prev
                     : prev.filter((job) => job.jobId !== jobId)
             );
 
+            // Update appliedJobs state to reflect the new bookmark status
+            setAppliedJobs((prev) =>
+                prev.map((job) =>
+                    job.jobId === jobId
+                        ? { ...job, bookmark: !!result.is_bookmark }
+                        : job
+                )
+            );
+
+            // Refresh from server to ensure sync
             setTimeout(async () => {
                 const res = await fetch('/api/jobseeker/profile/activities');
                 if (res.ok) {
                     const data = await res.json();
                     setBookmarkedJobs(data.bookmarkedJobs || []);
+                    setAppliedJobs(data.appliedJobs || []);
                 }
             }, 300);
         }
@@ -160,21 +212,25 @@ export default function ProfileClient({ user, profileResume, allResumes }: Profi
                 <ProfileAboutSection
                     aboutMe={formData.about_me}
                     isEditing={isEditing}
+                    isSaving={isSaving}
                     value={formData.about_me}
                     onChange={v => handleFormChange('about_me', v)}
                 />
             </div>
 
-            {/* Resume Info */}
-            {profileResume && <ProfileResumeCard resume={profileResume} />}
-
-            {/* All Resumes */}
-            <ResumesList
+            {/* Resume Dropdown */}
+            <ResumeDropdown
                 resumes={allResumes}
+                profileResume={profileResume}
                 settingProfileId={settingProfile}
                 onSetAsProfile={handleSetAsProfile}
+                onDeleteResume={handleDeleteResume}
                 jobSeekerId={user.job_seeker.job_seeker_id}
+                deletingResumeId={deletingResume}
             />
+
+            {/* Resume Info */}
+            {profileResume && <ProfileResumeCard resume={profileResume} />}
 
             {/* Dynamic My Activities */}
             <MyActivities

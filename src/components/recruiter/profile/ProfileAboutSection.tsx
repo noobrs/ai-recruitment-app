@@ -31,7 +31,7 @@ export default function ProfileAboutSection({
                     value={value}
                     onChange={(e) => onChange(e.target.value)}
                     placeholder="e.g., Senior Talent Acquisition Specialist, HR Manager, etc."
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-secondary"
                 />
             )}
         </div>

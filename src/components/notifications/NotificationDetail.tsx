@@ -50,7 +50,7 @@ export default function NotificationDetail({ notification }: Props) {
               {notification.type.charAt(0).toUpperCase() + notification.type.slice(1)}
             </span>
           )}
-          
+
           {/* Status indicator */}
           <div className="flex items-center gap-2 mb-2">
             {notification.opened_at ? (
@@ -87,22 +87,6 @@ export default function NotificationDetail({ notification }: Props) {
             {notification.message}
           </p>
         </div>
-
-        {/* Application link if applicable */}
-        {notification.application_id && (
-          <div className="mt-8 p-4 bg-gray-50 rounded-lg border border-gray-200">
-            <p className="text-sm text-gray-600 mb-2">Related Application</p>
-            <a
-              href={`/applications/${notification.application_id}`}
-              className="text-primary hover:text-primary/80 font-medium text-sm flex items-center gap-1"
-            >
-              View Application Details
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </a>
-          </div>
-        )}
       </div>
     </div>
   );

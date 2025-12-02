@@ -1,19 +1,21 @@
 """
-Global constants for models, labels, thresholds, and spaCy-layout options.
+Configuration for PDF resume extraction pipeline.
+Simplified and focused on essential entity types and thresholds.
 """
 
 from typing import Dict, List, Set
 
+# GLiNER model for entity extraction
 GLINER_MODEL_NAME: str = "urchade/gliner_small-v2.1"
 
-# Work-related labels for extraction
-WORK_LABELS: List[str] = ["Skill", "Language", "Degree", "Job Title"]
-
-# Bias-related labels that we want to detect and gate
-BIAS_LABELS: List[str] = ["Race", "Ethnicity", "Gender", "Sex"]
-
-# Extra labels to help build relationships for education / experience
-EXTRA_LABELS: List[str] = [
+# Entity labels for resume extraction
+ENTITY_LABELS: List[str] = [
+    # Core resume entities
+    "Skill",
+    "Language",
+    "Degree",
+    "Job Title",
+    # Supporting entities for relationships
     "Organization",
     "Company",
     "School",
@@ -27,26 +29,41 @@ EXTRA_LABELS: List[str] = [
     "Date",
 ]
 
-# Combined label list passed to GLiNER
-GLINER_LABELS: List[str] = list({*WORK_LABELS, *BIAS_LABELS, *EXTRA_LABELS})
+# Section type labels for classification
+SECTION_TYPE_LABELS: List[str] = [
+    "Education Section",
+    "Experience Section",
+    "Skills Section",
+    "Certifications Section",
+    "Projects Section",
+    "Activities Section",
+    "Summary Section",
+]
 
-# Confidence thresholds for each label
-THRESHOLDS: Dict[str, float] = {
-    # work
-    "skill": 0.50,
-    "language": 0.50,
-    "degree": 0.50,
-    "job title": 0.50,
-    # bias (stricter)
-    "race": 0.50,
-    "ethnicity": 0.50,
-    "gender": 0.50,
-    "sex": 0.50,
-    # extras: default 0.50 if not found in dict
+# Confidence thresholds for entity extraction
+ENTITY_THRESHOLDS: Dict[str, float] = {
+    "skill": 0.70,
+    "language": 0.70,
+    "degree": 0.70,
+    "job title": 0.70,
+    "organization": 0.60,
+    "company": 0.60,
+    "school": 0.60,
+    "university": 0.60,
+    "location": 0.60,
+    "person": 0.60,
+    "certification": 0.60,
+    "award": 0.60,
+    "activity": 0.60,
+    "project": 0.60,
+    "date": 0.60,
 }
 
-# Minimum score for regex-based education extraction (not used directly but kept for clarity)
-REGEX_EDU_SCORE: float = 0.50
+# Threshold for section type classification
+SECTION_TYPE_THRESHOLD: float = 0.60
 
 # spaCy-layout span labels to skip (tables, pictures, etc.)
 SKIP_SPAN_LABELS: Set[str] = {"table", "picture", "equation"}
+
+# Default threshold for entities not explicitly listed
+DEFAULT_THRESHOLD: float = 0.60

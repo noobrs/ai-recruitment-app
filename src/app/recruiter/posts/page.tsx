@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { MoreVertical, Search, Filter, ChevronDown, Star, Plus } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { MoreVertical, Search, Filter, Star, Plus, Pencil, View } from "lucide-react";
 import { useRouter } from "next/navigation";
+import PostsTableSkeleton from "@/components/recruiter/posts/PostsTableSkeleton";
 
 interface JobPost {
   job_id: string;
@@ -24,7 +25,25 @@ export default function RecruiterPostsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [visibleCount, setVisibleCount] = useState(10);
   const [loading, setLoading] = useState(true);
+  const [filterLoading, setFilterLoading] = useState(false);
   const router = useRouter();
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const toggleDropdown = (id: string) => {
+    setOpenDropdown(openDropdown === id ? null : id);
+  };
+
+  // Click outside to close
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setOpenDropdown(null);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   // Fetch recruiter jobs
   useEffect(() => {
@@ -50,25 +69,37 @@ export default function RecruiterPostsPage() {
 
   // 🔍 Handle search
   useEffect(() => {
-    const term = searchTerm.toLowerCase();
-    const filtered = posts.filter(
-      (p) =>
-        p.title.toLowerCase().includes(term) ||
-        p.type?.toLowerCase().includes(term) ||
-        p.location?.toLowerCase().includes(term)
-    );
+    // Skip filtering logic during initial load
+    if (loading) {
+      return;
+    }
 
-    // Apply selected status filters on top of search
-    const statusFiltered =
-      selectedStatuses.length > 0
-        ? filtered.filter((p) =>
-          selectedStatuses.includes(p.status.toLowerCase())
-        )
-        : filtered;
+    setFilterLoading(true);
 
-    setFilteredPosts(statusFiltered);
-    setVisibleCount(10); // reset pagination
-  }, [searchTerm, selectedStatuses, posts]);
+    const timer = setTimeout(() => {
+      const term = searchTerm.toLowerCase();
+      const filtered = posts.filter(
+        (p) =>
+          p.title.toLowerCase().includes(term) ||
+          p.type?.toLowerCase().includes(term) ||
+          p.location?.toLowerCase().includes(term)
+      );
+
+      // Apply selected status filters on top of search
+      const statusFiltered =
+        selectedStatuses.length > 0
+          ? filtered.filter((p) =>
+            selectedStatuses.includes(p.status.toLowerCase())
+          )
+          : filtered;
+
+      setFilteredPosts(statusFiltered);
+      setVisibleCount(10); // reset pagination
+      setFilterLoading(false);
+    }, 300); // Small delay to show skeleton for quick filters
+
+    return () => clearTimeout(timer);
+  }, [searchTerm, selectedStatuses, posts, loading]);
 
   // 🟣 Toggle multi-status filters
   const handleStatusToggle = (status: string) => {
@@ -94,7 +125,7 @@ export default function RecruiterPostsPage() {
 
         <button
           className="flex items-center px-4 py-2 border rounded-full font-medium hover:bg-gray-50"
-          onClick={() => router.push("/recruiter/jobs/create")}
+          onClick={() => router.push("/recruiter/posts/create")}
         >
           New Job Post <Plus className="ml-2 w-4 h-4" />
         </button>
@@ -127,8 +158,8 @@ export default function RecruiterPostsPage() {
               key={status}
               onClick={() => handleStatusToggle(status)}
               className={`px-4 py-2 rounded-full font-medium border transition ${isSelected
-                  ? "bg-purple-600 text-white border-purple-600"
-                  : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                ? "bg-purple-600 text-white border-purple-600"
+                : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
                 }`}
             >
               {label}
@@ -138,12 +169,14 @@ export default function RecruiterPostsPage() {
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto bg-white rounded-xl shadow-sm">
-        {loading ? (
-          <p className="text-center py-6 text-gray-500">Loading jobs...</p>
-        ) : displayedPosts.length === 0 ? (
+      {loading || filterLoading ? (
+        <PostsTableSkeleton />
+      ) : displayedPosts.length === 0 ? (
+        <div className="overflow-x-auto bg-white rounded-xl shadow-sm">
           <p className="text-center py-6 text-gray-500">No job posts found.</p>
-        ) : (
+        </div>
+      ) : (
+        <div className="overflow-x-auto bg-white rounded-xl shadow-sm">
           <table className="min-w-full text-sm text-gray-700">
             <thead className="bg-gray-50 text-purple-600 text-left">
               <tr>
@@ -151,7 +184,7 @@ export default function RecruiterPostsPage() {
                 <th className="px-6 py-5 font-semibold">Type</th>
                 <th className="px-6 py-5 font-semibold">Location</th>
                 <th className="px-6 py-5 font-semibold">Applicants</th>
-                <th className="px-6 py-5 font-semibold">Views</th>
+                {/* <th className="px-6 py-5 font-semibold">Views</th> */}
                 <th className="px-6 py-5 font-semibold">Date Posted</th>
                 <th className="px-6 py-5 font-semibold">Status</th>
                 <th className="px-6 py-5"></th>
@@ -173,13 +206,13 @@ export default function RecruiterPostsPage() {
                   <td className="px-6 py-4 flex items-center gap-2">
                     {post.applicants}
                     <button
-                      className="px-3 py-1 border rounded-full text-xs font-medium hover:bg-gray-100"
+                      className="px-3 py-1 border rounded-full text-xs font-medium hover:bg-gray-100 cursor-pointer"
                       onClick={() => router.push(`/recruiter/posts/${post.job_id}/applicants`)}
                     >
                       View
                     </button>
                   </td>
-                  <td className="px-6 py-4">{post.views}</td>
+                  {/* <td className="px-6 py-4">{post.views}</td> */}
                   <td className="px-6 py-4">{post.date}</td>
                   <td className="px-6 py-4 font-medium">
                     {post.status === "draft" && (
@@ -195,15 +228,45 @@ export default function RecruiterPostsPage() {
                       <span className="text-red-500">Deleted</span>
                     )}
                   </td>
-                  <td className="px-6 py-4">
-                    <MoreVertical className="w-5 h-5 text-gray-400 cursor-pointer hover:text-gray-600" />
+                  <td className="px-6 py-4 relative">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setOpenDropdown(openDropdown === post.job_id ? null : post.job_id);
+                      }}
+                      className="p-1 cursor-pointer"
+                    >
+                      <MoreVertical className="w-5 h-5 text-gray-500 hover:text-gray-700" />
+                    </button>
+
+                    {openDropdown === post.job_id && (
+                      <div
+                        ref={dropdownRef}
+                        onClick={(e) => e.stopPropagation()}
+                        className="absolute right-0 top-[80%] w-40 bg-white border border-gray-200 rounded-lg shadow-md z-30 animate-fade"
+                      >
+                        <button
+                          onClick={() => router.push(`/recruiter/posts/${post.job_id}/edit`)}
+                          className="w-full text-left px-4 py-2 hover:bg-gray-50 text-gray-700 flex items-center gap-2 cursor-pointer"
+                        >
+                          <Pencil size={16} /> Edit Job
+                        </button>
+
+                        <button
+                          onClick={() => router.push(`/recruiter/jobs/view/${post.job_id}`)}
+                          className="w-full text-left px-4 py-2 hover:bg-gray-50 text-gray-700 flex items-center gap-2 cursor-pointer"
+                        >
+                          <View size={16} /> Preview
+                        </button>
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Footer - See More */}
       {!loading && filteredPosts.length > visibleCount && (

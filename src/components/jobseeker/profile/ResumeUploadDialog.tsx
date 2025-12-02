@@ -1,12 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ResumeData } from '@/types/fastapi.types';
 import { uploadResumeToProfile } from '@/app/jobseeker/profile/actions';
 import { saveResumeToDatabase } from '@/app/actions/resume.actions';
-import SkillsEditor from '@/components/jobseeker/jobs/apply/SkillsEditor';
-import ExperienceEditor from '@/components/jobseeker/jobs/apply/ExperienceEditor';
-import EducationEditor from '@/components/jobseeker/jobs/apply/EducationEditor';
+import SkillsEditor from '../shared/editors/SkillsEditor';
+import ExperienceEditor from '../shared/editors/ExperienceEditor';
+import EducationEditor from '../shared/editors/EducationEditor';
+import ResumeValidationWarning from '@/components/jobseeker/jobs/apply/ResumeValidationWarning';
 
 interface ResumeUploadDialogProps {
     jobSeekerId: number;
@@ -29,9 +30,19 @@ export default function ResumeUploadDialog({
     const [step, setStep] = useState<'upload' | 'review'>('upload');
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [extractedData, setExtractedData] = useState<ResumeData | null>(null);
+    const [redactedFileUrl, setRedactedFileUrl] = useState<string | null>(null);
     const [isExtracting, setIsExtracting] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // Prevent background scroll when modal is open
+    useEffect(() => {
+        document.body.style.overflow = 'hidden';
+        return () => {
+            document.body.style.overflow = 'unset';
+        };
+    }, []);
 
     const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
@@ -56,9 +67,10 @@ export default function ResumeUploadDialog({
             formData.append('job_seeker_id', jobSeekerId.toString());
 
             const result = await uploadResumeToProfile(formData);
-            
+
             if (result.success && result.extractedData) {
                 setExtractedData(result.extractedData);
+                setRedactedFileUrl(result.redactedFileUrl || null);
                 setStep('review');
             } else {
                 throw new Error('Failed to extract resume data');
@@ -71,7 +83,7 @@ export default function ResumeUploadDialog({
         }
     };
 
-    const handleSave = async (setAsProfile: boolean) => {
+    const handleSave = async () => {
         if (!selectedFile || !extractedData) {
             setError('Missing file or extracted data');
             return;
@@ -81,7 +93,7 @@ export default function ResumeUploadDialog({
         setError(null);
 
         try {
-            await saveResumeToDatabase(selectedFile, extractedData, setAsProfile);
+            await saveResumeToDatabase(selectedFile, extractedData, false, redactedFileUrl);
             onSuccess();
         } catch (err) {
             console.error('Save error:', err);
@@ -103,7 +115,6 @@ export default function ResumeUploadDialog({
                         <button
                             onClick={onCancel}
                             className="text-gray-400 hover:text-gray-600"
-                            disabled={isExtracting || isSaving}
                         >
                             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -122,15 +133,16 @@ export default function ResumeUploadDialog({
                     {step === 'upload' && (
                         <div>
                             <div className="mb-6">
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                <label className="block text-sm font-medium text-gray-600 mb-2">
                                     Select Resume (PDF or Image)
                                 </label>
                                 <input
+                                    ref={fileInputRef}
                                     type="file"
                                     accept=".pdf,image/*"
                                     onChange={handleFileSelect}
                                     disabled={isExtracting}
-                                    className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+                                    className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary hover:file:bg-primary/10 disabled:opacity-50 disabled:cursor-not-allowed"
                                 />
                                 {selectedFile && (
                                     <p className="mt-2 text-sm text-gray-600">
@@ -142,17 +154,16 @@ export default function ResumeUploadDialog({
                             <div className="flex gap-3">
                                 <button
                                     onClick={onCancel}
-                                    disabled={isExtracting}
-                                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+                                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     onClick={handleExtract}
                                     disabled={!selectedFile || isExtracting}
-                                    className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+                                    className="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
-                                    {isExtracting ? 'Extracting...' : 'Extract Data'}
+                                    {isExtracting ? 'Uploading...' : 'Upload'}
                                 </button>
                             </div>
                         </div>
@@ -164,48 +175,52 @@ export default function ResumeUploadDialog({
                             <p className="text-sm text-gray-600 mb-6">
                                 Review and edit the extracted information before saving your resume.
                             </p>
-                            
-                            <div className="mb-6 space-y-6 max-h-[50vh] overflow-y-auto pr-2">
+
+                            <ResumeValidationWarning resumeData={extractedData} />
+
+                            <div className="mb-6 space-y-6 max-h-[40vh] overflow-y-auto pr-2">
                                 {/* Skills Editor */}
                                 <SkillsEditor
                                     skills={extractedData.skills}
                                     onChange={(skills) => setExtractedData({ ...extractedData, skills })}
+                                    disabled={isSaving}
                                 />
 
                                 {/* Experience Editor */}
                                 <ExperienceEditor
                                     experiences={extractedData.experience}
                                     onChange={(experience) => setExtractedData({ ...extractedData, experience })}
+                                    disabled={isSaving}
                                 />
 
                                 {/* Education Editor */}
                                 <EducationEditor
                                     education={extractedData.education}
                                     onChange={(education) => setExtractedData({ ...extractedData, education })}
+                                    disabled={isSaving}
                                 />
                             </div>
 
-                            <div className="flex gap-3 border-t pt-4">
+                            <div className="flex justify-center gap-3 border-t pt-4">
                                 <button
-                                    onClick={() => setStep('upload')}
+                                    onClick={() => {
+                                        setStep('upload');
+                                        setSelectedFile(null);
+                                        if (fileInputRef.current) {
+                                            fileInputRef.current.value = '';
+                                        }
+                                    }}
                                     disabled={isSaving}
-                                    className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+                                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50"
                                 >
                                     Back
                                 </button>
                                 <button
-                                    onClick={() => handleSave(false)}
+                                    onClick={() => handleSave()}
                                     disabled={isSaving}
-                                    className="flex-1 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 disabled:opacity-50"
+                                    className="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50"
                                 >
-                                    {isSaving ? 'Saving...' : 'Save Resume'}
-                                </button>
-                                <button
-                                    onClick={() => handleSave(true)}
-                                    disabled={isSaving}
-                                    className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50"
-                                >
-                                    {isSaving ? 'Saving...' : 'Save as Profile Resume'}
+                                    {isSaving ? 'Saving...' : 'Save'}
                                 </button>
                             </div>
                         </div>

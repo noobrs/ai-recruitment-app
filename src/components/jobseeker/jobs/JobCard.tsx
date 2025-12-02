@@ -1,4 +1,5 @@
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 
 export type JobCardProps = {
   jobId?: number;
@@ -36,27 +37,30 @@ export default function JobCard(props: JobCardProps) {
     >
       <div className="flex flex-row items-center justify-between">
         <div className="flex items-center">
-          <img
-            src={props.compLogo}
+          <Image
+            src={props.compLogo || "/default-company.png"}
             alt={`${props.compName} Logo`}
+            width={32}
+            height={32}
             className="w-8 h-8 mr-2"
           />
-          <p className="text-lg text-gray-600 grow-1">{props.compName}</p>
+          <p className="text-lg text-gray-600 grow">{props.compName}</p>
         </div>
 
         {/* Bookmark icon */}
         <div
-          className={`relative w-7 h-7 flex items-center justify-center ${
-            props.loading ? "opacity-70" : ""
-          }`}
+          className={`relative w-7 h-7 flex items-center justify-center ${props.loading ? "opacity-70" : ""
+            }`}
           onClick={(e) => e.stopPropagation()} // prevent navigating when toggling bookmark
         >
           {props.loading ? (
             <div className="w-4 h-4 border-2 border-gray-300 border-t-primary rounded-full animate-spin" />
           ) : (
-            <img
+            <Image
               src={props.bookmark ? "/bookmark-solid.svg" : "/bookmark.svg"}
               alt="Bookmark"
+              width={28}
+              height={28}
               className="w-7 h-7 cursor-pointer hover:scale-110 transition-transform"
               onClick={() => {
                 if (props.jobId && props.onToggleBookmark) {

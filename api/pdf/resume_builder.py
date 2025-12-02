@@ -1,259 +1,289 @@
 """
-Logic for building structured resume information from layout + GLiNER groups:
-- Candidate info (name, email, phone, location)
-- Skills list
-- Education entries
-- Experience entries
-- Certifications and activities
+Build structured resume data from classified sections and extracted entities.
+Uses ML-based section classification instead of hardcoded keywords.
 """
 
-from collections import defaultdict
+import re
 from typing import Dict, List
 
-from gliner import GLiNER
-
-from api.pdf.utils import _norm, _update_best
-from api.pdf.regexes import (
-    DATE_RANGE_RE,
-    EMAIL_RE,
-    PHONE_RE,
-    extract_majors_from_text,
+from api.pdf.utils import clean_description, make_text_window, is_in_window, remove_duplicate_content
+from api.pdf.extraction_helpers import (
+    extract_entities_by_label,
+    extract_date_range,
+    extract_degree_field,
+    deduplicate_records,
+    deduplicate_by_name,
 )
-
-
-def extract_candidate_info(full_text: str, gliner: GLiNER) -> Dict:
-    """
-    Extract candidate-level info: name, email, phone, location.
-
-    Email & phone: regex.
-    Name & location: GLiNER on first ~2000 chars of text.
-    """
-    email_match = EMAIL_RE.search(full_text)
-    phone_match = PHONE_RE.search(full_text)
-
-    ents = gliner.predict_entities(
-        full_text[:2000], ["Person", "Location"], threshold=0.5
-    )
-    name = None
-    location = None
-    for e in ents:
-        if e["label"].lower() == "person" and not name:
-            name = e["text"].strip()
-        elif e["label"].lower() == "location" and not location:
-            location = e["text"].strip()
-
-    return {
-        "name": name,
-        "email": email_match.group(0) if email_match else None,
-        "phone": phone_match.group(0) if phone_match else None,
-        "location": location,
-    }
 
 
 def build_skills(groups: List[Dict]) -> List[str]:
     """
-    Aggregate Skill entities across all groups and de-duplicate
-    based on best scores.
+    Extract and aggregate skill entities from groups.
+    Uses section_type classification instead of hardcoded keywords.
     """
-    best: Dict[str, float] = {}
-    for g in groups:
-        ents = g.get("entities", [])
-        for e in ents:
-            lbl = e["label"].lower()
-            if lbl == "skill":
-                _update_best(best, e["text"], e["score"])
-    items = sorted(best.items(), key=lambda kv: kv[1], reverse=True)
-    return [k for k, _ in items]
+    return extract_entities_by_label(groups, "skill")
 
 
 def build_languages(groups: List[Dict]) -> List[str]:
-    """
-    Aggregate Language entities across all groups and de-duplicate
-    based on best scores.
-    """
-    best: Dict[str, float] = {}
-    for g in groups:
-        ents = g.get("entities", [])
-        for e in ents:
-            lbl = e["label"].lower()
-            if lbl == "language":
-                _update_best(best, e["text"], e["score"])
-    items = sorted(best.items(), key=lambda kv: kv[1], reverse=True)
-    return [k for k, _ in items]
+    """Extract and aggregate language entities from groups."""
+    return extract_entities_by_label(groups, "language")
 
 
 def build_education(groups: List[Dict]) -> List[Dict]:
     """
-    Build education records from groups having an education-like heading
-    or containing Degree entities.
-
-    Each record:
-      - level
-      - field
-      - institution
-      - location
-      - duration (raw text, e.g. '2019 - 2023')
-      - description (full text of the group)
+    Build education records from classified education sections.
+    Uses section_type='education' instead of hardcoded keywords.
     """
-    edu_records: List[Dict] = []
-    for g in groups:
-        head = (g.get("heading") or "").lower()
-        is_edu_group = any(
-            k in head for k in ["education", "academic", "qualification", "study"]
-        )
-        ents = g.get("entities", [])
-        if not is_edu_group and not any(
-            e["label"].lower() == "degree" for e in ents
-        ):
+    edu_records = []
+
+    for group in groups:
+        if group.get("heading") == "NO_HEADING":
             continue
 
-        text = g.get("text", "") or ""
-        majors = extract_majors_from_text(text)
-        orgs = [
-            e["text"]
-            for e in ents
-            if e["label"].lower()
-            in ("school", "university", "organization", "company")
-        ]
-        locs = [e["text"] for e in ents if e["label"].lower() == "location"]
-        degrees = [e["text"] for e in ents if e["label"].lower() == "degree"]
-        duration_match = DATE_RANGE_RE.search(text)
+        # Use ML-based classification
+        section_type = group.get("section_type")
+        entities = group.get("entities", [])
+        heading = group.get("heading", "")
+        text = group.get("text", "")
 
-        level = degrees[0] if degrees else None
-        field = majors[0] if majors else None
-        institution = orgs[0] if orgs else None
-        location = locs[0] if locs else None
-        duration = duration_match.group(0) if duration_match else None
+        # Concatenate heading + text for better context
+        full_text = f"{heading}\n{text}" if heading and heading != "NO_HEADING" else text
 
-        if any([level, field, institution, duration]):
-            edu_records.append(
-                {
-                    "level": level,
-                    "field": field,
-                    "institution": institution,
-                    "location": location,
-                    "duration": duration,
-                    "description": text.strip(),
-                }
+        # Check for degree entities or education section type
+        degree_entities = [e for e in entities if e["label"].lower() == "degree"]
+        is_education = section_type == "education"
+
+        if not degree_entities and not is_education:
+            continue
+
+        # If no degree entities, create one record for the whole group
+        if not degree_entities:
+            edu_records.append(_build_education_record(entities, full_text, None))
+            continue
+
+        # Create records for each degree entity
+        for degree_entity in degree_entities:
+            window_text, w_start, w_end = make_text_window(
+                full_text,
+                degree_entity.get("start_char", -1),
+                degree_entity.get("end_char", -1),
             )
 
-    # De-duplicate roughly by a key tuple
-    unique: List[Dict] = []
-    seen = set()
-    for rec in edu_records:
-        key = (rec["level"], rec["field"], rec["institution"], rec["duration"])
-        if key not in seen:
-            seen.add(key)
-            unique.append(rec)
-    return unique
+            local_entities = [e for e in entities if is_in_window(e, w_start, w_end)]
+
+            # Try to get date from local entities first, fallback to all entities
+            duration = extract_date_range(local_entities, window_text)
+            if not duration:
+                duration = extract_date_range(entities, full_text)
+
+            edu_records.append(
+                _build_education_record(
+                    local_entities,
+                    window_text or full_text,
+                    degree_entity["text"].strip(),
+                    duration,
+                )
+            )
+
+    # Deduplicate by title, institution, duration, and location
+    return deduplicate_records(edu_records, ("title", "institution", "duration", "location"))
+
+
+def _build_education_record(
+    entities: List[Dict],
+    text: str,
+    degree_title: str = None,
+    duration: str = None,
+) -> Dict:
+    """Helper to build a single education record from entities."""
+    if degree_title is None:
+        degree_title = extract_degree_field(entities, text)
+
+    orgs = [
+        e["text"] for e in entities
+        if e["label"].lower() in ("school", "university", "organization", "company")
+    ]
+    locs = [e["text"] for e in entities if e["label"].lower() == "location"]
+
+    if duration is None:
+        duration = extract_date_range(entities, text)
+
+    # Collect fields to remove from description
+    fields_to_remove = []
+    if degree_title:
+        fields_to_remove.append(degree_title)
+    if orgs:
+        fields_to_remove.append(orgs[0])
+    if locs:
+        fields_to_remove.append(locs[0])
+    if duration:
+        # Also add individual dates from the duration
+        fields_to_remove.append(duration)
+        # Split duration to get individual dates
+        # date_parts = re.split(r"\s*[-–]\s*", duration)
+        # fields_to_remove.extend(date_parts)
+
+    # Clean description and remove duplicate content
+    description = remove_duplicate_content(text, fields_to_remove)
+
+    return {
+        "title": degree_title,
+        "institution": orgs[0] if orgs else None,
+        "location": locs[0] if locs else None,
+        "duration": duration,
+        "description": description,
+    }
 
 
 def build_experience(groups: List[Dict]) -> List[Dict]:
     """
-    Build experience records from groups that look like work experience sections
-    or contain Job Title entities.
-
-    Each record:
-      - position
-      - company
-      - location
-      - duration
-      - description
+    Build experience records from classified experience sections.
+    Uses section_type='experience' instead of hardcoded keywords.
     """
-    exp_records: List[Dict] = []
+    exp_records = []
 
-    for g in groups:
-        head = (g.get("heading") or "").lower()
-        is_exp_group = any(
-            k in head for k in ["experience", "employment", "work", "career", "professional"]
-        )
-        ents = g.get("entities", [])
-        if not is_exp_group and not any(
-            e["label"].lower() == "job title" for e in ents
-        ):
+    for group in groups:
+        if group.get("heading") == "NO_HEADING":
             continue
 
-        text = g.get("text", "") or ""
-        duration_match = DATE_RANGE_RE.search(text)
-        locs = [e["text"] for e in ents if e["label"].lower() == "location"]
-        orgs = [
-            e["text"] for e in ents if e["label"].lower() in ("organization", "company")
-        ]
-        titles = [e for e in ents if e["label"].lower() == "job title"]
+        section_type = group.get("section_type")
+        entities = group.get("entities", [])
+        heading = group.get("heading", "")
+        text = group.get("text", "")
 
-        for t in titles:
-            position = t["text"].strip()
-            company = orgs[0] if orgs else None
-            location = locs[0] if locs else None
-            duration = duration_match.group(0) if duration_match else None
+        # Concatenate heading + text for better context
+        full_text = f"{heading}\n{text}" if heading and heading != "NO_HEADING" else text
 
-            exp_records.append(
-                {
-                    "position": position,
-                    "company": company,
-                    "location": location,
-                    "duration": duration,
-                    "description": text.strip(),
-                }
+        # Check for job title entities or experience section type
+        title_entities = [e for e in entities if e["label"].lower() == "job title"]
+        is_experience = section_type == "experience"
+
+        if not title_entities and not is_experience:
+            continue
+
+        # If no title entities, create one record for the whole group
+        if not title_entities:
+            exp_records.append(_build_experience_record(entities, full_text, None))
+            continue
+
+        # Create records for each job title
+        for title_entity in title_entities:
+            window_text, w_start, w_end = make_text_window(
+                full_text,
+                title_entity.get("start_char", -1),
+                title_entity.get("end_char", -1),
             )
 
-    # De-duplicate by position + company + duration
-    unique: List[Dict] = []
-    seen = set()
-    for rec in exp_records:
-        key = (rec["position"], rec["company"], rec["duration"])
-        if key not in seen:
-            seen.add(key)
-            unique.append(rec)
-    return unique
+            local_entities = [e for e in entities if is_in_window(e, w_start, w_end)]
+
+            # Try to get date from local entities first, fallback to all entities
+            duration = extract_date_range(local_entities, window_text)
+            if not duration:
+                duration = extract_date_range(entities, full_text)
+
+            exp_records.append(
+                _build_experience_record(
+                    local_entities,
+                    window_text or full_text,
+                    title_entity["text"].strip(),
+                    duration,
+                )
+            )
+
+    # Deduplicate by position, company, duration, and location
+    return deduplicate_records(exp_records, ("position", "company", "duration", "location"))
+
+
+def _build_experience_record(
+    entities: List[Dict],
+    text: str,
+    position: str = None,
+    duration: str = None,
+) -> Dict:
+    """Helper to build a single experience record from entities."""
+    locs = [e["text"] for e in entities if e["label"].lower() == "location"]
+    orgs = [
+        e["text"] for e in entities
+        if e["label"].lower() in ("organization", "company")
+    ]
+
+    if duration is None:
+        duration = extract_date_range(entities, text)
+
+    # Collect fields to remove from description
+    fields_to_remove = []
+    if position:
+        fields_to_remove.append(position)
+    if orgs:
+        fields_to_remove.append(orgs[0])
+    if locs:
+        fields_to_remove.append(locs[0])
+    if duration:
+        # Also add individual dates from the duration
+        fields_to_remove.append(duration)
+        # Split duration to get individual dates
+        # date_parts = re.split(r"\s*[-–]\s*", duration)
+        # fields_to_remove.extend(date_parts)
+
+    # Clean description and remove duplicate content
+    description = remove_duplicate_content(text, fields_to_remove)
+
+    return {
+        "position": position,
+        "company": orgs[0] if orgs else None,
+        "location": locs[0] if locs else None,
+        "duration": duration,
+        "description": description,
+    }
 
 
 def build_certifications(groups: List[Dict]) -> List[Dict]:
     """
-    Build certification records from groups whose heading suggests
-    certifications / licenses / awards.
-
-    Each line in the group text is treated as a potential certification.
+    Build certifications from classified certification sections.
+    Uses section_type='certifications' instead of hardcoded keywords.
     """
-    certs: List[Dict] = []
-    for g in groups:
-        head = (g.get("heading") or "").lower()
-        is_cert_group = any(
-            k in head for k in ["certification", "license", "licence", "award"]
-        )
-        if not is_cert_group:
+    certs = []
+
+    for group in groups:
+        if group.get("heading") == "NO_HEADING":
             continue
-        text = g.get("text", "") or ""
+
+        section_type = group.get("section_type")
+        if section_type != "certifications":
+            continue
+
+        text = group.get("text", "")
         for line in text.splitlines():
             line = line.strip()
-            if len(line) < 4:
-                continue
-            certs.append({"name": line, "description": line})
+            if len(line) >= 4:
+                certs.append({
+                    "name": line,
+                    "description": line,
+                })
 
-    # De-duplicate by normalized name
-    seen = set()
-    unique: List[Dict] = []
-    for c in certs:
-        k = _norm(c["name"])
-        if k not in seen:
-            seen.add(k)
-            unique.append(c)
-    return unique
+    # Deduplicate by name
+    return deduplicate_by_name(certs, "name")
 
 
 def build_activities(groups: List[Dict]) -> List[Dict]:
     """
-    Build activity/project/volunteer records from relevant sections.
-    Each group becomes one activity with the full description text.
+    Build activities from classified activity/project sections.
+    Uses section_type in ('activities', 'projects') instead of hardcoded keywords.
     """
-    acts: List[Dict] = []
-    for g in groups:
-        head = (g.get("heading") or "").lower()
-        if any(
-            k in head
-            for k in ["activity", "activities", "project", "volunteer", "extracurricular"]
-        ):
-            txt = (g.get("text") or "").strip()
-            if txt:
-                acts.append({"description": txt})
-    return acts
+    activities = []
+
+    for group in groups:
+        if group.get("heading") == "NO_HEADING":
+            continue
+
+        section_type = group.get("section_type")
+        if section_type not in ("activities", "projects"):
+            continue
+
+        text = (group.get("text") or "").strip()
+        if text:
+            activities.append({
+                "description": text,
+            })
+
+    return activities

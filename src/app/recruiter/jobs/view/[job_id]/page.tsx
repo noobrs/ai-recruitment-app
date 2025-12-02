@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import Image from "next/image";
+import RecruiterJobViewLoading from "./loading";
 
 export default function RecruiterJobViewPage() {
   const router = useRouter();
@@ -33,11 +35,7 @@ export default function RecruiterJobViewPage() {
 
   // Loading
   if (loading)
-    return (
-      <div className="flex items-center justify-center h-screen text-gray-600">
-        Loading job details...
-      </div>
-    );
+    return <RecruiterJobViewLoading />;
 
   // Error
   if (error || !job)
@@ -54,21 +52,22 @@ export default function RecruiterJobViewPage() {
       {/* Header */}
       <div className="flex flex-row items-center justify-between pb-3">
         <div className="flex items-center">
-          <img
+          <Image
             src={job.company?.comp_logo || "/default-company.png"}
             alt="Company Logo"
+            width={40}
+            height={40}
             className="w-10 h-10 mr-3"
           />
           <p className="text-lg font-semibold text-gray-700">
             {job.company?.comp_name || "Unknown Company"}
           </p>
         </div>
-
         <button
-          onClick={() => router.push("/recruiter/jobs")}
+          onClick={() => window.history.length > 1 ? router.back() : router.push("/recruiter/jobs")}
           className="px-4 py-2 border rounded-full hover:bg-gray-100"
         >
-          ← Back to Jobs
+          ← Back
         </button>
       </div>
 

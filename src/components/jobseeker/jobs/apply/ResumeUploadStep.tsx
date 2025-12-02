@@ -11,7 +11,7 @@ import { Resume } from '@/types';
 
 interface ResumeUploadStepProps {
     job: JobDetails;
-    onUploadSuccess: (data: ResumeData, file: File | null, existingResumeId?: number) => void;
+    onUploadSuccess: (data: ResumeData, file: File | null, resumeId?: number, redactedUrl?: string | null) => void;
     onBack: () => void;
 }
 
@@ -73,7 +73,6 @@ export default function ResumeUploadStep({
                 skills: selectedResume.extracted_skills ? JSON.parse(selectedResume.extracted_skills) : [],
                 experience: selectedResume.extracted_experiences ? JSON.parse(selectedResume.extracted_experiences) : [],
                 education: selectedResume.extracted_education ? JSON.parse(selectedResume.extracted_education) : [],
-                languages: [],
                 certifications: [],
                 activities: [],
             };
@@ -121,8 +120,9 @@ export default function ResumeUploadStep({
             }
 
             console.log('Extracted resume data:', result.data);
-            // Pass extracted data and file to parent - resume will be saved when application is submitted
-            onUploadSuccess(result.data, cvFile);
+            console.log('Redacted file URL:', result.redacted_file_url);
+            // Pass extracted data, file, and redacted URL to parent - resume will be saved when application is submitted
+            onUploadSuccess(result.data, cvFile, undefined, result.redacted_file_url);
         } catch (err) {
             console.error(err);
             setErrorMessage('Resume processing failed. Please try again.');
@@ -132,7 +132,7 @@ export default function ResumeUploadStep({
     };
 
     return (
-        <div className="flex flex-col items-center justify-center bg-gray-50 py-25">
+        <div className="flex flex-col items-center justify-center bg-gray-50 py-10">
             <div className="bg-white shadow-md rounded-2xl p-10 w-full max-w-2xl">
                 <JobHeader job={job} onBack={onBack} />
 
@@ -141,13 +141,22 @@ export default function ResumeUploadStep({
                     Select an existing resume or upload a new one.
                 </p>
 
-                {/* Upload New Resume Button */}
+                {/* Mode Toggle Buttons */}
                 <div className="flex gap-2 mb-6">
+                    <button
+                        onClick={() => setMode('select')}
+                        className={`flex-1 py-2 px-4 rounded-lg border transition-colors ${mode === 'select'
+                            ? 'bg-primary text-white border-primary'
+                            : 'bg-white text-gray-700 border-gray-300 hover:border-primary'
+                            }`}
+                    >
+                        Choose Existing
+                    </button>
                     <button
                         onClick={() => setMode('upload')}
                         className={`flex-1 py-2 px-4 rounded-lg border transition-colors ${mode === 'upload'
-                            ? 'bg-indigo-600 text-white border-indigo-600'
-                            : 'bg-white text-gray-700 border-gray-300 hover:border-indigo-600'
+                            ? 'bg-primary text-white border-primary'
+                            : 'bg-white text-gray-700 border-gray-300 hover:border-primary'
                             }`}
                     >
                         Upload New
@@ -163,14 +172,14 @@ export default function ResumeUploadStep({
                 {mode === 'select' ? (
                     <>
                         {existingResumes.length > 0 ? (
-                            <div className="space-y-3 mb-6">
+                            <div className="space-y-3 mb-6 max-h-[300px] overflow-y-auto pr-2">
                                 {existingResumes.map((resume) => (
                                     <div
                                         key={resume.resume_id}
                                         onClick={() => setSelectedResumeId(resume.resume_id)}
                                         className={`p-4 border rounded-lg cursor-pointer transition-colors ${selectedResumeId === resume.resume_id
-                                            ? 'border-indigo-600 bg-indigo-50'
-                                            : 'border-gray-300 hover:border-indigo-400'
+                                            ? 'border-primary bg-primary-soft'
+                                            : 'border-gray-300 hover:border-primary/60'
                                             }`}
                                     >
                                         <div className="flex items-center justify-between">
@@ -179,7 +188,7 @@ export default function ResumeUploadStep({
                                                     Resume {resume.resume_id}
                                                     {resume.is_profile && (
                                                         <span className="ml-2 text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
-                                                            Profile
+                                                            Your Default Resume
                                                         </span>
                                                     )}
                                                 </p>
@@ -188,7 +197,7 @@ export default function ResumeUploadStep({
                                                 </p>
                                             </div>
                                             <div className={`w-5 h-5 rounded-full border-2 ${selectedResumeId === resume.resume_id
-                                                ? 'border-indigo-600 bg-indigo-600'
+                                                ? 'border-primary bg-primary'
                                                 : 'border-gray-300'
                                                 }`}>
                                                 {selectedResumeId === resume.resume_id && (
@@ -209,7 +218,7 @@ export default function ResumeUploadStep({
 
                         {existingResumes.length > 0 && (
                             <ButtonFilledBlack
-                                text={isLoading ? 'Loading...' : 'Continue with Selected Resume'}
+                                text={isLoading ? 'Loading...' : 'Continue'}
                                 className="w-full py-3"
                                 disabled={isLoading || !selectedResumeId}
                                 onClick={handleSelectExisting}
@@ -228,7 +237,7 @@ export default function ResumeUploadStep({
                         <ButtonFilledBlack
                             text={isExtracting ? 'Processing...' : 'Continue'}
                             className="w-full py-3 mt-6"
-                            disabled={isExtracting}
+                            disabled={isExtracting || cvFile === null}
                             onClick={handleResumeUpload}
                         />
                     </>

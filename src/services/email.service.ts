@@ -21,12 +21,26 @@ function createTransporter() {
         throw new Error('Gmail credentials are not configured. Please set GMAIL_USERNAME and GMAIL_APP_PASSWORD in .env.local');
     }
 
+    // Use explicit SMTP settings with port 587 (TLS) which is more reliable than port 465 (SSL)
+    // and works better with firewalls and network restrictions
     return nodemailer.createTransport({
-        service: 'gmail',
+        host: 'smtp.gmail.com',
+        port: 587,
+        secure: false, // Use STARTTLS
         auth: {
             user: gmailUsername,
             pass: gmailAppPassword,
         },
+        tls: {
+            // Do not fail on invalid certificates (useful for development)
+            rejectUnauthorized: false,
+        },
+        // Connection timeout (30 seconds)
+        connectionTimeout: 30000,
+        // Socket timeout (30 seconds)
+        socketTimeout: 30000,
+        // Enable debug output
+        debug: process.env.NODE_ENV === 'development',
     });
 }
 
@@ -56,6 +70,19 @@ export async function sendEmail(config: EmailConfig): Promise<{ success: boolean
         };
     } catch (error) {
         console.error('Error sending email:', error);
+        
+        // Log detailed error information for troubleshooting
+        if (error && typeof error === 'object' && 'code' in error) {
+            console.error('Email error details:', {
+                code: error.code,
+                errno: 'errno' in error ? error.errno : undefined,
+                syscall: 'syscall' in error ? error.syscall : undefined,
+                address: 'address' in error ? error.address : undefined,
+                port: 'port' in error ? error.port : undefined,
+                command: 'command' in error ? error.command : undefined,
+            });
+        }
+        
         return {
             success: false,
             error: error instanceof Error ? error.message : 'Unknown error occurred',

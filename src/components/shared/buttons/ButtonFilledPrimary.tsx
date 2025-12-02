@@ -1,11 +1,11 @@
 export default function ButtonFilledPrimary(
-    { text, icon, className = "", onClick }: { text: string, icon?: React.ReactNode, className?: string, onClick?: () => void }) {
+    { text, icon, className = "", onClick, disabled = false }: { text: string, icon?: React.ReactNode, className?: string, onClick?: () => void, disabled?: boolean }) {
     return (
         <button onClick={onClick}
-            className={`px-2 py-1 rounded-3xl border-1 border-primary-200 text-black bg-primary hover:bg-white hover:text-primary transition-all duration-300 cursor-pointer ${className}`}>
-            
+            disabled={disabled}
+            className={`px-2 py-1 rounded-3xl border border-primary text-black bg-primary transition-all duration-300 ${disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:bg-white hover:text-primary'} ${className}`}>
             <div className="flex flex-row items-center justify-center gap-2">
-                {icon ? <span className={"fill-black hover:fill-primary transition-all duration-300"}>{icon}</span> : null}
+                {icon ? <span className={`transition-all duration-300 ${!disabled && 'group-hover:fill-primary'}`}>{icon}</span> : null}
                 <span className={"font-bold transition-all duration-300"}>{text}</span>
             </div>
         </button>

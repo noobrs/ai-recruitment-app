@@ -6,9 +6,10 @@ import logging
 from api.types.types import ApiResponse
 from .supabase_client import supabase
 
-# import image pipeline stage functions
-import tempfile, os
+# import pipeline stage functions
 from api.image.pipeline import process_image_resume
+
+from api.services.ranking_service import rank_application
 
 # Logging setup
 logging.basicConfig(
@@ -95,10 +96,10 @@ async def api_process_pdf(file: UploadFile = File(...)) -> ApiResponse:
     Accepts a file upload via multipart form data.
     This endpoint only extracts data and does NOT save to database."""
     from api.pdf.pipeline import process_pdf_resume
-    
+
     if not file:
         raise HTTPException(status_code=400, detail="File is required")
-    
+
     try:
         tmp_bytes = await file.read()
         result = process_pdf_resume(tmp_bytes)
@@ -106,4 +107,17 @@ async def api_process_pdf(file: UploadFile = File(...)) -> ApiResponse:
         return result
     except Exception as e:
         logger.error(f"PDF processing error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ----------------------
+# Candidate Ranking API
+# ----------------------
+
+@app.post("/api/py/rank/application/{application_id}")
+async def api_rank_application(application_id: int):
+    try:
+        result = await rank_application(application_id)
+        return result
+    except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

@@ -1,12 +1,23 @@
 import { createClient } from '@/utils/supabase/server';
 import { logError } from '@/utils/logger';
-import type { Job, Recruiter, Company, JobRequirement } from '@/types';
+import type { Job, Recruiter, Company, JobRequirement, Application } from '@/types';
 
 export type JobWithRelations = Job & {
   recruiter?: Recruiter & {
     company?: Company | null;
   };
   job_requirement?: JobRequirement[];
+};
+
+export type JobWithApplicationStatus = Job & {
+  recruiter?: Recruiter & {
+    company?: Company | null;
+  };
+  job_requirement?: JobRequirement[];
+  application?: Application[];
+  company?: Company & { comp_logo?: string } | null;
+  is_bookmark?: boolean;
+  is_applied?: boolean;
 };
 
 export interface JobDetails {

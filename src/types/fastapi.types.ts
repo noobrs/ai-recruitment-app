@@ -63,7 +63,6 @@ export interface ResumeData {
     education: EducationOut[];
     experience: ExperienceOut[];
     skills: string[];
-    languages: string[];
     certifications: CertificationOut[];
     activities: ActivityOut[];
 }
@@ -75,6 +74,7 @@ export interface ApiResponse<T = ResumeData> {
     status: 'success' | 'error' | 'warning';
     data: T | null;
     message?: string;
+    redacted_file_url?: string | null;
 }
 
 /**
