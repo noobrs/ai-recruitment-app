@@ -1,52 +1,74 @@
+"""
+- Loads your fine-tuned BERT classifier saved at 'bert_resume_classifier' (model_path).
+- Exposes classify_segments(ocr_results) accepting list of dicts {segment_id, text, box}
+  Returns list of classified segments: {segment_id, label, score, text}
+"""
 
-from transformers import pipeline
-import os
+from transformers import AutoTokenizer, AutoModelForSequenceClassification, pipeline
 
-# device selection: use GPU if available
-try:
-    import torch
-    device = 0 if torch.cuda.is_available() else -1
-except Exception:
-    device = -1
+HF_MODEL_ID = "JokerYong/bert_resume_classifier_sections"
 
-# instantiate once
-classifier = pipeline("zero-shot-classification", model="facebook/bart-large-mnli", device=device)
+_tokenizer = None
+_model = None
+_pipeline = None
 
-LABEL_MAP = {
-    "Education": "Educational Background and Degrees",
-    "Experience": "Work and Professional Experience",
-    "Profile": "Profile Summary or Personal Statement",
-    "Skills": "Skills and Competencies",
-    "Contact": "Contact Information",
-    "Languages": "Languages Spoken",
-    "Other": "Other Information",
-}
-CANDIDATE_LABELS = list(LABEL_MAP.values())
+
+def _ensure_loaded():
+    global _tokenizer, _model, _pipeline
+    if _pipeline is None:
+        print(f"Loading resume classifier from HuggingFace: {HF_MODEL_ID}")
+        _tokenizer = AutoTokenizer.from_pretrained(HF_MODEL_ID)
+        _model = AutoModelForSequenceClassification.from_pretrained(HF_MODEL_ID)
+        _pipeline = pipeline(
+            "text-classification",
+            model=_model,
+            tokenizer=_tokenizer,
+            device=0
+        )
+    return _pipeline
+
+def normalize_label(label: str, text: str) -> str:
+    text_upper = (text or "").strip().upper()
+    if text_upper.startswith("SKILLS"):
+        return "Skills"
+    if text_upper.startswith("ACTIVITIES"):
+        return "Activities"
+    if text_upper.startswith("EDUCATION"):
+        return "Education"
+    if text_upper.startswith("LICENSES") or text_upper.startswith("CERTIFICATIONS"):
+        return "Certifications"
+    if text_upper.startswith("WORK EXPERIENCE") or text_upper.startswith("EXPERIENCE"):
+        return "Experience"
+    return label
 
 def classify_segments(ocr_results):
-    """ocr_results: list of dicts with keys 'segment_id' and 'text'"""
+    """
+    ocr_results: list of {segment_id, text, box}
+    Returns: list of {segment_id, label, score, text}
+    """
+    pipe = _ensure_loaded()
     classified = []
     for seg in ocr_results:
-        text = seg.get("text","").strip()
-        if not text:
+        text = seg.get("text", "") or ""
+        if not text.strip():
             continue
         try:
-            result = classifier(text, CANDIDATE_LABELS)
-            # pick best
-            best_idx = int(result["scores"].index(max(result["scores"])))
-            label = result["labels"][best_idx]
-            short_label = [k for k, v in LABEL_MAP.items() if v == label][0]
+            res = pipe(text[:1024])  # truncate to model max
+            lbl = res[0]["label"]
+            score = float(res[0]["score"])
+            corrected = normalize_label(lbl, text)
             classified.append({
-                "segment_id": seg["segment_id"],
-                "label": short_label,
-                "score": float(result["scores"][best_idx]),
+                "segment_id": seg.get("segment_id"),
+                "label": corrected,
+                "score": score,
                 "text": text,
                 "box": seg.get("box")
             })
         except Exception:
+            # fallback to default label
             classified.append({
-                "segment_id": seg["segment_id"],
-                "label": "Other",
+                "segment_id": seg.get("segment_id"),
+                "label": "Unknown",
                 "score": 0.0,
                 "text": text,
                 "box": seg.get("box")
