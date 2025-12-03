@@ -1,87 +1,53 @@
-"""
-- process_image_resume(bytes) : the top-level function your FastAPI endpoint calls.
-Flow (reordered):
-1. save bytes to temp file
-2. detect layout boxes (roboflow) on raw image
-3. for each box: crop -> preprocess (icons/bullets + lines) -> OCR
-4. classify segments
-5. NER extraction + normalization
-6. return final JSON (builder)
-"""
-
-import tempfile
-import os
-import shutil
-import json
 import logging
-from typing import List
-
-from .detection_model import detect_segments
-from .ocr_extraction import extract_text_from_segments, extract_text_simple
-from .preprocessing import remove_bullets_symbols, remove_drawing_lines
-from .text_classification import classify_segments
-from .ner_pipeline import run_full_resume_pipeline
+from .preprocessing import (
+    save_temp_image_bytes, mask_to_detected_boxes, 
+    remove_drawing_lines, remove_bullets_symbols, 
+    enhance_image_clahe, sharpen_image
+)
+from .segmentation import run_detection, detections_to_predictions
+from .ocr import crop_and_ocr_boxes
+from .cleaning import clean_ocr_text
+from .classifier import load_text_classifier, classify_text
+from .extraction import run_full_resume_pipeline
 from .builder import build_final_response
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("api.image.pipeline")
 
-def _write_bytes_to_tempfile(bts: bytes, suffix=".jpg"):
-    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
-    tmp.write(bts)
-    tmp.close()
-    return tmp.name
+def process_image_resume(file_bytes: bytes):
+    tmp_path = save_temp_image_bytes(file_bytes, ext="jpg")
 
-def process_image_resume(image_bytes: bytes,
-                         do_preprocess_crops: bool = True,
-                         debug: bool = False):
-    """
-    End-to-end runner. Accepts image bytes and returns final JSON.
-    Detection runs on the raw image bytes; each detected crop is preprocessed before OCR.
-    """
-    tmp_path = _write_bytes_to_tempfile(image_bytes, suffix=".jpg")
-    cleaned_crop_tempfiles: List[str] = []
-    try:
-        # 1) Detect segments via Roboflow on raw image
-        boxes = detect_segments(tmp_path)
-        logger.info(f"Detected {len(boxes)} boxes")
+    detection_result = run_detection(tmp_path)
+    predictions = detections_to_predictions(detection_result)
 
-        # fallback: if no boxes, OCR whole image without per-crop preprocessing
-        if not boxes:
-            text = extract_text_simple(tmp_path)
-            ocr_results = [{"segment_id": 1, "text": text, "box": None}]
-        else:
-            # 2) For each box: crop, optionally preprocess, then OCR
-            # We will pass preprocessing functions to extract_text_from_segments to apply per-crop.
-            preprocess_fns = None
-            if do_preprocess_crops:
-                # use functions that accept numpy arrays and return arrays
-                preprocess_fns = [remove_bullets_symbols, remove_drawing_lines]
+    segmented_path = mask_to_detected_boxes(tmp_path, predictions)
+    cleaned = remove_drawing_lines(segmented_path)
 
-            # extract_text_from_segments will apply preprocess_fns per crop then OCR
-            ocr_results = extract_text_from_segments(tmp_path, boxes, preprocess_fn_list=preprocess_fns)
+    for _ in range(5):
+        cleaned = remove_bullets_symbols(cleaned)
 
-        # 3) Classify segments
-        classified = classify_segments(ocr_results)
+    cleaned = enhance_image_clahe(cleaned)
+    # cleaned = sharpen_image(cleaned)
 
-        # 4) Run NER pipeline + normalization
-        normalized = run_full_resume_pipeline(classified)
+    ocr_results = crop_and_ocr_boxes(cleaned, predictions)
 
-        # 5) Build final API response
-        final_json = build_final_response(normalized)
-        return final_json
-    except Exception as e:
-        logger.exception("Error in process_image_resume")
-        raise
-    finally:
-        # cleanup temp files
-        try:
-            os.remove(tmp_path)
-        except Exception:
-            pass
-        # if any intermediate saved images exist, try to remove (preprocessors may have saved if called with save_path)
-        for p in cleaned_crop_tempfiles:
-            try:
-                if os.path.exists(p):
-                    os.remove(p)
-            except Exception:
-                pass
+    classifier = load_text_classifier()
+    classified_segments = []
+
+    for seg in ocr_results:
+        text = seg.get("text","").strip()
+        if not text:
+            continue
+
+        label, score = classify_text(text, classifier)
+        segment_text = clean_ocr_text(text)
+
+        classified_segments.append({
+            "segment_id": seg["segment_id"],
+            "label": label,
+            "score": score,
+            "text": segment_text
+        })
+
+    normalized = run_full_resume_pipeline(classified_segments)
+    final = build_final_response(normalized)
+    return final

@@ -1,50 +1,43 @@
 from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
-
 import logging
 
 from api.types.types import ApiResponse
 from .supabase_client import supabase
 
-# import pipeline stage functions
+# IMPORTANT: import the NEW pipeline, not the old one
 from api.image.pipeline import process_image_resume
 
 from api.services.ranking_service import rank_application
 
-# Logging setup
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("api.index")
 
-app = FastAPI(title="AI Resume Processing API", version="1.0", docs_url="/api/py/docs")
+app = FastAPI(
+    title="AI Resume Processing API",
+    version="1.0",
+    docs_url="/api/py/docs"
+)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Update later for production
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# ==============================
-# ✅ YOUR LOCAL TEST ROUTE
-# ==============================
 @app.get("/")
 def root():
     return {"status": "✅ FastAPI backend running locally"}
 
-# ==============================
-# 🩺 HEALTH CHECK
-# ==============================
 @app.get("/api/py/health")
 def health():
     return {"ok": True, "service": "fastapi"}
 
-# ==============================
-# 🧠 SUPABASE TEST
-# ==============================
 @app.get("/api/py/test-supabase")
 async def test_supabase():
     try:
@@ -57,67 +50,62 @@ async def test_supabase():
     except Exception as e:
         return {
             "status": "error",
-            "message": str(e),
-            "hint": "Ensure Supabase table exists"
+            "message": str(e)
         }
 
 # ----------------------
-# Image Part
+# IMAGE PIPELINE
 # ----------------------
-
 @app.post("/api/py/process-image")
 async def api_process_image(file: UploadFile = File(...)):
-    """
-    Full unified pipeline.
-    Save uploaded file to a temp path first, because underlying
-    image functions require a real file path (not bytes).
-    """
+    if not file:
+        raise HTTPException(status_code=400, detail="File is required")
+
+    try:
+        tmp_bytes = await file.read()
+        logger.info(f"[IMAGE] Received file: {file.filename}")
+
+        result = process_image_resume(tmp_bytes)
+
+        logger.info("[IMAGE] Pipeline completed successfully")
+        return result
+
+    except Exception as e:
+        logger.error(f"[IMAGE] Pipeline error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ----------------------
+# PDF PIPELINE
+# ----------------------
+@app.post("/api/py/process-pdf")
+async def api_process_pdf(file: UploadFile = File(...)) -> ApiResponse:
+    from api.pdf.pipeline import process_pdf_resume
     
     if not file:
         raise HTTPException(status_code=400, detail="File is required")
 
     try:
         tmp_bytes = await file.read()
-        result = process_image_resume(tmp_bytes)
+        logger.info(f"[PDF] Received file: {file.filename}")
 
-        return result
-
-    except Exception as e:
-        logger.error(f"Image processing error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-# ----------------------
-# PDF Part
-# ----------------------
-
-@app.post("/api/py/process-pdf")
-async def api_process_pdf(file: UploadFile = File(...)) -> ApiResponse:
-    """Full end-to-end pipeline for PDF: layout -> grouping -> GLiNER -> aggregate -> build json.
-    Accepts a file upload via multipart form data.
-    This endpoint only extracts data and does NOT save to database."""
-    from api.pdf.pipeline import process_pdf_resume
-
-    if not file:
-        raise HTTPException(status_code=400, detail="File is required")
-
-    try:
-        tmp_bytes = await file.read()
         result = process_pdf_resume(tmp_bytes)
-        logger.info(f"PDF processing result: {result}")
+
+        logger.info("[PDF] Pipeline completed successfully")
         return result
+
     except Exception as e:
-        logger.error(f"PDF processing error: {e}")
+        logger.error(f"[PDF] Pipeline error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
 # ----------------------
-# Candidate Ranking API
+# RANKING
 # ----------------------
-
 @app.post("/api/py/rank/application/{application_id}")
 async def api_rank_application(application_id: int):
     try:
-        result = await rank_application(application_id)
-        return result
+        return await rank_application(application_id)
     except Exception as e:
+        logger.error(f"[RANK] Error ranking application {application_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
