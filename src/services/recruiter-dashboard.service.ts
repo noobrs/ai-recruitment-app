@@ -30,8 +30,8 @@ export async function getRecruiterDashboard() {
       activeJobs: 0,
       totalApplications: 0,
       applicationsThisWeek: 0,
-      scheduledInterviews: 0,
-      hiresThisMonth: 0,
+      pendingReview: 0,
+      withdrawnThisMonth: 0,
       recentApplications: [],
     };
   }
@@ -56,10 +56,15 @@ export async function getRecruiterDashboard() {
   const applicationsThisWeek =
     allApps?.filter((a) => new Date(a.created_at) >= oneWeekAgo).length || 0;
 
-  const hiresThisMonth =
+  const pendingReview =
+    allApps?.filter(
+      (a) => a.status === "received"
+    ).length || 0;
+
+  const withdrawnThisMonth =
     allApps?.filter(
       (a) =>
-        a.status === "hired" &&
+        a.status === "withdrawn" &&
         new Date(a.updated_at) >= firstDayOfMonth
     ).length || 0;
 
@@ -103,8 +108,8 @@ export async function getRecruiterDashboard() {
     activeJobs,
     totalApplications,
     applicationsThisWeek,
-    scheduledInterviews: 0,
-    hiresThisMonth,
+    pendingReview,
+    withdrawnThisMonth,
     recentApplications,
   };
 }
