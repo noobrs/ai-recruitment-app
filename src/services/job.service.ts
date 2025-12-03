@@ -41,13 +41,19 @@ export async function getAllJobs(): Promise<Job[]> {
 /**
  * Get jobs by recruiter ID
  */
-export async function getJobsByRecruiterId(recruiterId: number): Promise<Job[]> {
+export async function getJobsByRecruiterId(recruiterId: number, statuses?: string[]): Promise<Job[]> {
     const supabase = await createClient();
-    const { data, error } = await supabase
+    let query = supabase
         .from('job')
         .select('*')
         .eq('recruiter_id', recruiterId)
         .order('created_at', { ascending: false });
+
+    if (statuses && statuses.length > 0) {
+        query = query.in('job_status', statuses);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
         logError('getJobsByRecruiterId', error);
@@ -163,11 +169,11 @@ export async function getAllJobsWithRelations(): Promise<JobWithRelations[]> {
  * Fetch job details for recruiter view
  */
 export async function getJobDetailsForRecruiter(jobId: string) {
-  const supabase = await createClient();
+    const supabase = await createClient();
 
-  const { data, error } = await supabase
-    .from("job")
-    .select(`
+    const { data, error } = await supabase
+        .from("job")
+        .select(`
       job_id,
       job_title,
       job_type,
@@ -182,37 +188,37 @@ export async function getJobDetailsForRecruiter(jobId: string) {
         )
       )
     `)
-    .eq("job_id", jobId)
-    .single();
+        .eq("job_id", jobId)
+        .single();
 
-  if (error) {
-    console.error("Error fetching job details:", error);
-    return null;
-  }
+    if (error) {
+        console.error("Error fetching job details:", error);
+        return null;
+    }
 
-  const recruiter = Array.isArray(data.recruiter)
-    ? data.recruiter[0]
-    : data.recruiter;
+    const recruiter = Array.isArray(data.recruiter)
+        ? data.recruiter[0]
+        : data.recruiter;
 
-  const company = recruiter?.company
-    ? Array.isArray(recruiter.company)
-      ? recruiter.company[0]
-      : recruiter.company
-    : null;
+    const company = recruiter?.company
+        ? Array.isArray(recruiter.company)
+            ? recruiter.company[0]
+            : recruiter.company
+        : null;
 
-  return {
-    id: data.job_id,
-    title: data.job_title,
-    type: data.job_type,
-    location: data.job_location,
-    status: data.job_status,
-    date: new Date(data.created_at).toLocaleDateString("en-GB", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    }),
-    company: company?.comp_name || "Unknown",
-    compLogo: company?.comp_logo_path || "/default-company.png",
-  };
+    return {
+        id: data.job_id,
+        title: data.job_title,
+        type: data.job_type,
+        location: data.job_location,
+        status: data.job_status,
+        date: new Date(data.created_at).toLocaleDateString("en-GB", {
+            day: "2-digit",
+            month: "short",
+            year: "numeric",
+        }),
+        company: company?.comp_name || "Unknown",
+        compLogo: company?.comp_logo_path || "/default-company.png",
+    };
 }
 

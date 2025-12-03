@@ -68,36 +68,6 @@ def extract_bbox(layout_obj: Any) -> Optional[Dict[str, float]]:
             "y1": float(y + height),
         }
 
-    # Fallback 1: bbox or rect tuple
-    bbox = getattr(layout_obj, "bbox", None)
-    if bbox is None:
-        bbox = getattr(layout_obj, "rect", None)
-
-    if bbox is not None:
-        x0, y0, x1, y1 = bbox
-        return {
-            "page_index": float(page_index),
-            "x0": float(x0),
-            "y0": float(y0),
-            "x1": float(x1),
-            "y1": float(y1),
-        }
-
-    # Fallback 2: individual x0, y0, x1, y1 attributes
-    x0 = getattr(layout_obj, "x0", None)
-    y0 = getattr(layout_obj, "y0", None)
-    x1 = getattr(layout_obj, "x1", None)
-    y1 = getattr(layout_obj, "y1", None)
-
-    if all(v is not None for v in [x0, y0, x1, y1]):
-        return {
-            "page_index": float(page_index),
-            "x0": float(x0),
-            "y0": float(y0),
-            "x1": float(x1),
-            "y1": float(y1),
-        }
-
     # No valid coordinates found
     return None
 

@@ -28,6 +28,11 @@ export default function JobSeekerOnboarding({
     const [isLoading, setIsLoading] = useState(false);
     const [profilePicture, setProfilePicture] = useState<File | null>(null);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+    const [firstName, setFirstName] = useState(defaultFirstName);
+    const [lastName, setLastName] = useState(defaultLastName);
+
+    // Check if all required fields are filled
+    const isFormValid = firstName.trim() !== '' && lastName.trim() !== '';
 
     const handleProfilePictureChange = (file: File | null, preview: string | null) => {
         setProfilePicture(file);
@@ -119,7 +124,8 @@ export default function JobSeekerOnboarding({
                                 type="text"
                                 name="firstName"
                                 required
-                                defaultValue={defaultFirstName}
+                                value={firstName}
+                                onChange={(e) => setFirstName(e.target.value)}
                                 disabled={isLoading}
                                 placeholder="John"
                                 className="w-full rounded-lg border border-neutral-200 bg-white/70 pl-10 pr-3 py-2 outline-none focus:ring-2 focus:ring-primary"
@@ -137,7 +143,8 @@ export default function JobSeekerOnboarding({
                                 type="text"
                                 name="lastName"
                                 required
-                                defaultValue={defaultLastName}
+                                value={lastName}
+                                onChange={(e) => setLastName(e.target.value)}
                                 disabled={isLoading}
                                 placeholder="Doe"
                                 className="w-full rounded-lg border border-neutral-200 bg-white/70 pl-10 pr-3 py-2 outline-none focus:ring-2 focus:ring-primary"
@@ -180,8 +187,8 @@ export default function JobSeekerOnboarding({
 
                 <button
                     type="submit"
-                    disabled={isLoading}
-                    className="w-full rounded-lg bg-neutral-900 text-white py-3 font-medium flex items-center justify-center gap-2 hover:opacity-95 disabled:opacity-70 transition-opacity"
+                    disabled={isLoading || !isFormValid}
+                    className="w-full rounded-lg bg-neutral-900 text-white py-3 font-medium flex items-center justify-center gap-2 hover:opacity-95 disabled:opacity-70 disabled:cursor-not-allowed transition-opacity"
                 >
                     {isLoading ? (
                         <>

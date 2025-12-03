@@ -58,7 +58,7 @@ def build_education(groups: List[Dict]) -> List[Dict]:
 
         # If no degree entities, create one record for the whole group
         if not degree_entities:
-            edu_records.append(_build_education_record(entities, full_text, None))
+            edu_records.append(_build_education_record(entities, full_text, None, None, heading))
             continue
 
         # Create records for each degree entity
@@ -71,10 +71,9 @@ def build_education(groups: List[Dict]) -> List[Dict]:
 
             local_entities = [e for e in entities if is_in_window(e, w_start, w_end)]
 
-            # Try to get date from local entities first, fallback to all entities
+            # Extract date only from local entities within the window
+            # Don't fallback to all entities to avoid assigning wrong dates to multiple records
             duration = extract_date_range(local_entities, window_text)
-            if not duration:
-                duration = extract_date_range(entities, full_text)
 
             edu_records.append(
                 _build_education_record(
@@ -82,8 +81,12 @@ def build_education(groups: List[Dict]) -> List[Dict]:
                     window_text or full_text,
                     degree_entity["text"].strip(),
                     duration,
+                    heading,
                 )
             )
+
+    # Filter out records where degree (title) is null
+    edu_records = [record for record in edu_records if record.get("title")]
 
     # Deduplicate by title, institution, duration, and location
     return deduplicate_records(edu_records, ("title", "institution", "duration", "location"))
@@ -94,6 +97,7 @@ def _build_education_record(
     text: str,
     degree_title: str = None,
     duration: str = None,
+    heading: str = None,
 ) -> Dict:
     """Helper to build a single education record from entities."""
     if degree_title is None:
@@ -110,6 +114,8 @@ def _build_education_record(
 
     # Collect fields to remove from description
     fields_to_remove = []
+    if heading and heading != "NO_HEADING":
+        fields_to_remove.append(heading)
     if degree_title:
         fields_to_remove.append(degree_title)
     if orgs:
@@ -163,7 +169,7 @@ def build_experience(groups: List[Dict]) -> List[Dict]:
 
         # If no title entities, create one record for the whole group
         if not title_entities:
-            exp_records.append(_build_experience_record(entities, full_text, None))
+            exp_records.append(_build_experience_record(entities, full_text, None, None, heading))
             continue
 
         # Create records for each job title
@@ -176,10 +182,9 @@ def build_experience(groups: List[Dict]) -> List[Dict]:
 
             local_entities = [e for e in entities if is_in_window(e, w_start, w_end)]
 
-            # Try to get date from local entities first, fallback to all entities
+            # Extract date only from local entities within the window
+            # Don't fallback to all entities to avoid assigning wrong dates to multiple records
             duration = extract_date_range(local_entities, window_text)
-            if not duration:
-                duration = extract_date_range(entities, full_text)
 
             exp_records.append(
                 _build_experience_record(
@@ -187,8 +192,12 @@ def build_experience(groups: List[Dict]) -> List[Dict]:
                     window_text or full_text,
                     title_entity["text"].strip(),
                     duration,
+                    heading,
                 )
             )
+
+    # Filter out records where job_title (position) is null
+    exp_records = [record for record in exp_records if record.get("position")]
 
     # Deduplicate by position, company, duration, and location
     return deduplicate_records(exp_records, ("position", "company", "duration", "location"))
@@ -199,6 +208,7 @@ def _build_experience_record(
     text: str,
     position: str = None,
     duration: str = None,
+    heading: str = None,
 ) -> Dict:
     """Helper to build a single experience record from entities."""
     locs = [e["text"] for e in entities if e["label"].lower() == "location"]
@@ -212,6 +222,8 @@ def _build_experience_record(
 
     # Collect fields to remove from description
     fields_to_remove = []
+    if heading and heading != "NO_HEADING":
+        fields_to_remove.append(heading)
     if position:
         fields_to_remove.append(position)
     if orgs:

@@ -31,39 +31,39 @@ ENTITY_LABELS: List[str] = [
 
 # Section type labels for classification
 SECTION_TYPE_LABELS: List[str] = [
-    "Education Section",
-    "Experience Section",
-    "Skills Section",
-    "Certifications Section",
-    "Projects Section",
-    "Activities Section",
-    "Summary Section",
+    "Education",
+    "Experience",
+    "Skills",
+    "Certifications",
+    "Projects",
+    "Activities",
+    "Summary",
 ]
 
 # Confidence thresholds for entity extraction
 ENTITY_THRESHOLDS: Dict[str, float] = {
-    "skill": 0.70,
-    "language": 0.70,
-    "degree": 0.70,
-    "job title": 0.70,
-    "organization": 0.60,
-    "company": 0.60,
-    "school": 0.60,
-    "university": 0.60,
-    "location": 0.60,
-    "person": 0.60,
-    "certification": 0.60,
-    "award": 0.60,
-    "activity": 0.60,
-    "project": 0.60,
-    "date": 0.60,
+    "skill": 0.60,
+    "language": 0.60,
+    "degree": 0.60,
+    "job title": 0.60,
+    "organization": 0.50,
+    "company": 0.50,
+    "school": 0.50,
+    "university": 0.50,
+    "location": 0.50,
+    "person": 0.50,
+    "certification": 0.50,
+    "award": 0.50,
+    "activity": 0.50,
+    "project": 0.50,
+    "date": 0.50,
 }
 
 # Threshold for section type classification
-SECTION_TYPE_THRESHOLD: float = 0.60
+SECTION_TYPE_THRESHOLD: float = 0.10
 
 # spaCy-layout span labels to skip (tables, pictures, etc.)
 SKIP_SPAN_LABELS: Set[str] = {"table", "picture", "equation"}
 
 # Default threshold for entities not explicitly listed
-DEFAULT_THRESHOLD: float = 0.60
+DEFAULT_THRESHOLD: float = 0.50

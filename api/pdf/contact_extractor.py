@@ -12,7 +12,7 @@ from api.pdf.layout_parser import extract_bbox
 
 # Contact information patterns
 EMAIL_RE = re.compile(r"[\w\.-]+@[\w\.-]+\.\w+")
-PHONE_RE = re.compile(r"\+?\d[\d\s\-()]{7,}")
+PHONE_RE = re.compile(r"(?:\+60|01\d)[\d\s\-()]{7,}")
 
 
 def _find_closest_item(
@@ -81,7 +81,7 @@ def extract_candidate_info(
 
         regions = []
         if doc is not None:
-            regions = _extract_candidate_regions(doc, None, email_text, phone_text)
+            regions = _extract_candidate_regions(doc, None, email_text, phone_text, location_text)
 
         return [{
             "name": None,
@@ -128,7 +128,7 @@ def extract_candidate_info(
         # Extract coordinate regions if doc provided
         regions = []
         if doc is not None:
-            regions = _extract_candidate_regions(doc, name_text, email_text, phone_text)
+            regions = _extract_candidate_regions(doc, name_text, email_text, phone_text, location_text)
 
         candidates.append({
             "name": name_text,
@@ -146,6 +146,7 @@ def _extract_candidate_regions(
     name: Optional[str],
     email: Optional[str],
     phone: Optional[str],
+    location: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
     """
     Find layout spans containing candidate info and return their coordinates.
@@ -164,6 +165,7 @@ def _extract_candidate_regions(
     name_tokens = [t.lower() for t in re.split(r"\s+", name) if t] if name else []
     email_lower = email.lower() if email else ""
     phone_digits = "".join(ch for ch in (phone or "") if ch.isdigit())
+    location_tokens = [t.lower() for t in re.split(r"[,\s]+", location) if t] if location else []
 
     for span in layout_spans:
         raw_text = span.text or ""
@@ -186,6 +188,11 @@ def _extract_candidate_regions(
         # Check for name (all tokens must be present)
         if not is_match and name_tokens:
             if all(token in text_lower for token in name_tokens):
+                is_match = True
+
+        # Check for location (any token match is sufficient for partial matches)
+        if not is_match and location_tokens:
+            if any(token in text_lower for token in location_tokens):
                 is_match = True
 
         if not is_match:

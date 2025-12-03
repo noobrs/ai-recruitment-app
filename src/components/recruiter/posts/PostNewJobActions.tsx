@@ -6,7 +6,7 @@ export default function PostNewJobActions() {
     const router = useRouter();
 
     const handleBrowse = () => {
-        router.push('/recruiter/jobs/create'); // or your actual browse applicants route
+        router.push('/recruiter/posts/create'); // or your actual browse applicants route
     };
 
     return (

@@ -169,13 +169,6 @@ export default async function Home() {
             </span>
           </div>
         </div>
-
-        {/* ======================= */}
-        {/* FOOTER */}
-        {/* ======================= */}
-        <footer className="mt-24 text-center text-gray-500 text-sm py-8">
-          © {new Date().getFullYear()} AI Recruitment System — Built for SMEs & Startups
-        </footer>
       </div>
     </main>
   )

@@ -71,9 +71,9 @@ export default function CompaniesLoading() {
               <div className="w-32 h-32 bg-gray-200 rounded-full border border-gray-200"></div>
             </div>
 
-            <div className="flex gap-4 items-center">
-              <div className="w-10 h-10 bg-gray-200 rounded-full"></div>
-              <div className="w-10 h-10 bg-gray-200 rounded-full"></div>
+            <div className="flex items-center gap-4">
+              <div className="w-7 h-7 bg-gray-200 rounded"></div>
+              <div className="w-6 h-6 bg-gray-200 rounded"></div>
             </div>
           </div>
 

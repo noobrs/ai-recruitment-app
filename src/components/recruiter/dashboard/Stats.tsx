@@ -23,20 +23,20 @@ export default async function Stats() {
         <p className="text-sm text-gray-600 mt-1">New this week</p>
       </div>
 
-      {/* Interviews */}
+      {/* Pending Review */}
       <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-sm font-medium text-gray-500">Interviews</h3>
+        <h3 className="text-sm font-medium text-gray-500">Pending Review</h3>
         <p className="text-3xl font-bold text-green-600 mt-2">
-          {stats?.scheduledInterviews}
+          {stats?.pendingReview}
         </p>
-        <p className="text-sm text-gray-600 mt-1">Scheduled</p>
+        <p className="text-sm text-gray-600 mt-1">Awaiting action</p>
       </div>
 
-      {/* Hired */}
+      {/* Withdrawn */}
       <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-sm font-medium text-gray-500">Hired</h3>
+        <h3 className="text-sm font-medium text-gray-500">Withdrawn</h3>
         <p className="text-3xl font-bold text-blue-600 mt-2">
-          {stats?.hiresThisMonth}
+          {stats?.withdrawnThisMonth}
         </p>
         <p className="text-sm text-gray-600 mt-1">This month</p>
       </div>

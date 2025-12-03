@@ -53,11 +53,15 @@ def upload_redacted_resume_to_storage(
         else:
             file_path = f"anonymous/{unique_filename}"
 
-        # Upload to Supabase storage
+        # Upload to Supabase storage with custom filename in Content-Disposition
         response = supabase.storage.from_("resumes-redacted").upload(
             path=file_path,
             file=file_bytes,
-            file_options={"content-type": "application/pdf", "upsert": "false"}
+            file_options={
+                "content-type": "application/pdf",
+                "upsert": "false",
+                "content-disposition": 'inline; filename="redacted-resume.pdf"'
+            }
         )
 
         # Check if upload was successful
