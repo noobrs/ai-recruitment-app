@@ -194,6 +194,15 @@ def redact_pdf(
         if face_regions:
             apply_face_removal(pdf_doc, face_regions)
 
+        # Update PDF metadata to change filename displayed in browser
+        pdf_doc.set_metadata({
+            "title": "redacted-resume.pdf",
+            "author": "",
+            "subject": "Redacted Resume",
+            "creator": "",
+            "producer": "",
+        })
+
         # Save redacted PDF
         out_path = pdf_path.with_name(pdf_path.stem + "_redacted.pdf")
         pdf_doc.save(str(out_path))

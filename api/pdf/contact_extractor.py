@@ -12,7 +12,7 @@ from api.pdf.layout_parser import extract_bbox
 
 # Contact information patterns
 EMAIL_RE = re.compile(r"[\w\.-]+@[\w\.-]+\.\w+")
-PHONE_RE = re.compile(r"\+?\d[\d\s\-()]{7,}")
+PHONE_RE = re.compile(r"(?:\+60|01\d)[\d\s\-()]{7,}")
 
 
 def _find_closest_item(
