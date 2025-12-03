@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import { MoreHorizontal } from "lucide-react";
 
 import CompanyCard from "@/components/jobseeker/companies/CompanyCard";
 import ButtonFilledPrimary from "@/components/shared/buttons/ButtonFilledPrimary";
@@ -41,7 +40,7 @@ export default function CompaniesPage() {
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [visibleJobsCount, setVisibleJobsCount] = useState(4);
-  const isExpanded = false;
+  const [isExpanded, setIsExpanded] = useState(false);
 
   const companiesPerPage = 5;
 
@@ -260,11 +259,69 @@ export default function CompaniesPage() {
               } rounded-lg shadow-md border border-gray-300 px-14 py-12 bg-white`}
           >
             {detailsLoading ? (
-              <div className="flex items-center justify-center py-20 text-gray-600">
-                <div className="flex flex-col items-center gap-3">
-                  <div className="w-8 h-8 border-4 border-gray-300 border-t-primary rounded-full animate-spin" />
-                  <span>Loading company details...</span>
+              <div className="animate-pulse">
+                {/* Header: Logo + Buttons */}
+                <div className="flex flex-row items-start justify-between pb-6 border-b border-gray-100">
+                  <div className="flex items-center">
+                    <div className="w-32 h-32 bg-gray-200 rounded-full border border-gray-200"></div>
+                  </div>
+                  <div className="flex gap-4 items-center">
+                    <div className="w-10 h-10 bg-gray-200 rounded-full"></div>
+                    <div className="w-10 h-10 bg-gray-200 rounded-full"></div>
+                  </div>
                 </div>
+
+                {/* Company Name + Info */}
+                <div className="flex flex-row items-start justify-between mt-6">
+                  <div className="space-y-4">
+                    <div className="h-7 w-64 bg-gray-200 rounded"></div>
+                    <div className="h-5 w-40 bg-gray-200 rounded"></div>
+                    <div className="h-5 w-56 bg-gray-200 rounded"></div>
+                  </div>
+                  <div className="h-10 w-36 bg-gray-200 rounded"></div>
+                </div>
+
+                {/* Tabs */}
+                <div className="flex gap-8 mt-5 border-b border-gray-200 pb-3">
+                  <div className="h-5 w-16 bg-gray-300 rounded"></div>
+                  <div className="h-5 w-16 bg-gray-200 rounded"></div>
+                  <div className="h-5 w-16 bg-gray-200 rounded"></div>
+                  <div className="h-5 w-16 bg-gray-200 rounded"></div>
+                </div>
+
+                {/* About Section */}
+                <section className="mt-5">
+                  <div className="h-6 w-40 bg-gray-200 rounded mb-3"></div>
+                  <div className="space-y-3">
+                    <div className="h-4 bg-gray-200 rounded w-full"></div>
+                    <div className="h-4 bg-gray-200 rounded w-5/6"></div>
+                    <div className="h-4 bg-gray-200 rounded w-4/6"></div>
+                  </div>
+                </section>
+
+                {/* Jobs Section */}
+                <section className="mt-8">
+                  <div className="h-6 w-40 bg-gray-200 rounded mb-5"></div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    {[...Array(4)].map((_, i) => (
+                      <div
+                        key={i}
+                        className="border border-gray-200 rounded-lg p-4 bg-white shadow-sm"
+                      >
+                        <div className="flex items-center mb-3">
+                          <div className="w-10 h-10 bg-gray-200 rounded mr-2"></div>
+                          <div className="h-4 w-24 bg-gray-200 rounded"></div>
+                        </div>
+                        <div className="h-5 w-48 bg-gray-200 rounded mb-2"></div>
+                        <div className="h-4 w-32 bg-gray-200 rounded mb-2"></div>
+                        <div className="h-4 w-20 bg-gray-200 rounded"></div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex justify-center mt-6">
+                    <div className="h-4 w-32 bg-gray-200 rounded"></div>
+                  </div>
+                </section>
               </div>
             ) : selectedCompany ? (
               <>
@@ -281,19 +338,24 @@ export default function CompaniesPage() {
                       />
                     </div>
 
-                    <div className="flex gap-4 items-center">
+                    <div className="flex items-center gap-4">
+                      <Image
+                        src="/more-options.svg"
+                        alt="More Options"
+                        width={28}
+                        height={28}
+                        className="cursor-pointer hover:scale-110 transition-transform"
+                      />
                       <button
-                        title="More Options"
-                        className="p-2 border border-gray-300 rounded-full hover:bg-gray-100 transition-all duration-150"
+                        onClick={() => setIsExpanded(!isExpanded)}
+                        className="transition-transform hover:scale-110"
                       >
-                        <MoreHorizontal className="w-4 h-4 text-gray-800 cursor-pointer hover:text-gray-600" />
-                      </button>
-
-                      <button
-                        title="Expand"
-                        className="p-2 border border-gray-300 rounded-full hover:bg-gray-100 transition-all duration-150 cursor-pointer"
-                      >
-                        <Image src="/expand.svg" alt="Expand" width={16} height={16} className="w-4 h-4 opacity-70" />
+                        <Image
+                          src={isExpanded ? "/collapse.svg" : "/expand.svg"}
+                          alt="Toggle View"
+                          width={24}
+                          height={24}
+                        />
                       </button>
                     </div>
                   </div>

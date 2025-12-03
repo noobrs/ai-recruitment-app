@@ -87,7 +87,8 @@ export default function SearchBar({
                 )}
                 <button
                     type="submit"
-                    className="bg-primary text-white px-2 py-2 rounded-full hover:bg-primary/90 transition-colors duration-200 font-medium"
+                    disabled={!query.trim() && !location.trim()}
+                    className="bg-primary text-white px-2 py-2 rounded-full hover:bg-primary/90 transition-colors duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     <Search className="w-5 h-5 text-black" />
                 </button>

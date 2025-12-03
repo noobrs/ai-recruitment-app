@@ -6,6 +6,7 @@ import Image from "next/image";
 import ButtonFilledPrimary from "@/components/shared/buttons/ButtonFilledPrimary";
 import { toggleBookmark } from "../../actions";
 import type { JobWithApplicationStatus, JobRequirement } from "@/types";
+import JobViewLoading from "./loading";
 
 export default function JobViewPage() {
   const router = useRouter();
@@ -67,12 +68,7 @@ export default function JobViewPage() {
   // =============================
   // Loading & Error states
   // =============================
-  if (loading)
-    return (
-      <div className="flex items-center justify-center h-screen text-gray-600">
-        Loading job details...
-      </div>
-    );
+  if (loading) return <JobViewLoading />;
 
   if (error || !job)
     return (
