@@ -121,23 +121,9 @@ def enhance_image_clahe(img_path, cleaned_image_path=CLEANED_IMAGE_PATH):
     clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8,8))
     enhanced = clahe.apply(gray)
 
-    # sharpened = cv2.filter2D(enhanced, -1, 
-    #     np.array([[0,-1,0],[-1,5,-1],[0,-1,0]])
-    # )
-
     out = cv2.cvtColor(enhanced, cv2.COLOR_GRAY2BGR)
 
     os.makedirs(os.path.dirname(cleaned_image_path), exist_ok=True)
     cv2.imwrite(cleaned_image_path, out)
     logger.info("[Preprocess] CLAHE + Sharpen applied")
-    return cleaned_image_path
-
-def sharpen_image(img_path, cleaned_image_path=CLEANED_IMAGE_PATH):
-    img = cv2.imread(img_path)
-    kernel = np.array([[0,-1,0],[-1,5,-1],[0,-1,0]])
-    sharpened = cv2.filter2D(img, -1, kernel)
-
-    os.makedirs(os.path.dirname(cleaned_image_path), exist_ok=True)
-    cv2.imwrite(cleaned_image_path, sharpened)
-    logger.info("[Preprocess] Final sharpening applied")
     return cleaned_image_path

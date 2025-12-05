@@ -390,20 +390,26 @@ def normalize_output(all_segments):
     pi_emails = []
     pi_phones = []
     pi_locations = []
+    
     for seg in all_segments:
         label = seg.get("label", "").lower()
+        
         if label in ["sum", "summary", "about"]:
             final["summary"] += " " + seg.get("raw_text", "")
+            
         for sk in seg.get("skills", []):
             if sk and len(sk) > 1:
                 final["skills"].add(sk)
+                
         if label == "pi":
             if seg.get("emails"): pi_emails.append(seg.get("emails"))
             if seg.get("phones"): pi_phones.append(seg.get("phones"))
             if seg.get("locations"): pi_locations.extend(seg.get("locations", []))
+            
         if label in ["exp", "experience", "internships"]:
             for e in seg.get("experience_blocks", []):
                 final["experience"].append(e)
+                
         if label in ["edu", "education"]:
             final["education"].append({
                 "degree": seg.get("degrees", [""])[0] if seg.get("degrees") else "",
@@ -412,19 +418,25 @@ def normalize_output(all_segments):
                 "location": seg.get("locations", [""])[0] if seg.get("locations") else "",
                 "year": seg.get("dates", [""])[0] if seg.get("dates") else ""
             })
+            
         if seg.get("certifications"):
             for q in seg.get("certifications", []):
-                final["certifications"].append({"title": q.get("title", ""), "date": q.get("date", "")})
+                final["certifications"].append({"name": q.get("title", ""), "description": q.get("date", "")})
+                
         if label == "pi":
             if seg.get("names"):
                 pi_name = sorted(seg.get("names"), key=lambda x: len(x.split()), reverse=True)[0]
                 final["name"] = pi_name
+                
     if pi_emails:
         final["email"] = pi_emails[0]
+        
     if pi_phones:
         final["phone"] = pi_phones[0]
+        
     if pi_locations:
         final["location"] = pi_locations[0]
+        
     final["skills"] = sorted(list(final["skills"]))
     return final
 

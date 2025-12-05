@@ -57,7 +57,7 @@ async def test_supabase():
 # IMAGE PIPELINE
 # ----------------------
 @app.post("/api/py/process-image")
-async def api_process_image(file: UploadFile = File(...)):
+async def api_process_image(file: UploadFile = File(...)) -> ApiResponse:
     if not file:
         raise HTTPException(status_code=400, detail="File is required")
 
