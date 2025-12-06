@@ -64,11 +64,26 @@ class Entity:
 
 
 @dataclass
+class HeadingGroup:
+    """A group of text organized by original heading from PDF layout."""
+    heading: str  # Original heading text (or "NO_HEADING")
+    text: str  # Combined text: "heading\ntext content..." for classification
+    segments: List[TextSegment] = field(default_factory=list)  # Original segments with coordinates
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "heading": self.heading,
+            "text": self.text,
+            "segments": [s.to_dict() for s in self.segments],
+        }
+
+
+@dataclass
 class TextGroup:
     """A group of text organized by section label (classified heading)."""
-    heading: str  # Section label (e.g., "education", "experience") from GLiNER classification
+    heading: str  # Section label (e.g., "education", "experience") from classification
     text: str  # Combined text content
-    segments: List[TextSegment] = field(default_factory=list)
+    segments: List[TextSegment] = field(default_factory=list)  # Original segments with coordinates
     entities: List[Entity] = field(default_factory=list)
 
     def to_dict(self) -> Dict[str, Any]:

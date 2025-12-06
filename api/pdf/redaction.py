@@ -286,34 +286,3 @@ def redact_pdf(
                 out_path.unlink(missing_ok=True)
             except Exception:
                 pass
-
-
-def redact_pdf_with_regions(
-    file_bytes: bytes,
-    regions: List[Dict[str, Any]],
-) -> Dict[str, Any]:
-    """
-    Alternative redaction function that takes raw region dicts.
-    Useful for backward compatibility.
-    
-    Args:
-        file_bytes: PDF file as bytes
-        regions: List of region dicts with page_index and bbox
-        
-    Returns:
-        Dict with status, redacted_resume_file, and message
-    """
-    # Convert dicts to RedactionRegion objects
-    redaction_regions = []
-    for r in regions:
-        redaction_regions.append(RedactionRegion(
-            page_index=int(r.get("page_index", 0)),
-            bbox=r.get("bbox"),
-            info_type=r.get("info_type", "unknown"),
-        ))
-    
-    # Create a PersonInfo with the regions
-    person_info = PersonInfo(redaction_regions=redaction_regions)
-    
-    return redact_pdf(file_bytes, person_info)
-

@@ -1,10 +1,11 @@
 """
 Extract person information (name, email, phone, location) for redaction.
 Supports multiple names, emails, phones, and locations.
+Uses TextGroup.segments for coordinate data (no need for spaCy doc).
 """
 
 import re
-from typing import Any, List, Optional, Set
+from typing import List, Set
 
 from gliner import GLiNER
 
@@ -12,12 +13,12 @@ from api.pdf.models import (
     PersonInfo,
     RedactionRegion,
     TextGroup,
+    TextSegment,
 )
 from api.pdf.validators import (
     extract_emails,
     extract_phones,
 )
-from api.pdf.layout_parser import extract_bbox
 
 
 # =============================================================================
@@ -27,7 +28,6 @@ from api.pdf.layout_parser import extract_bbox
 def extract_person_info(
     groups: List[TextGroup],
     gliner: GLiNER,
-    doc: Optional[Any] = None,
 ) -> PersonInfo:
     """
     Extract person information from resume groups.
@@ -38,18 +38,20 @@ def extract_person_info(
     - Phones: Using regex pattern matching (Malaysia format)
     - Locations: Using GLiNER Location entity detection
     
-    Also extracts redaction regions for each piece of information.
+    Also extracts redaction regions from TextGroup segments (which have bbox coords).
     
     Args:
-        groups: List of TextGroup objects (classified)
+        groups: List of TextGroup objects (classified, with segments containing bbox)
         gliner: GLiNER model instance
-        doc: Optional spaCy Doc with layout info (for coordinate extraction)
         
     Returns:
         PersonInfo object with all extracted information
     """
-    # Combine text from groups, prioritizing person/summary sections and top of document
-    full_text = _get_person_section_text(groups)
+    # Get relevant groups for person info extraction
+    person_groups = _get_person_groups(groups)
+    
+    # Combine text for NER extraction
+    full_text = " ".join(g.text for g in person_groups)
     
     # Extract names and locations using GLiNER
     names, locations = _extract_names_and_locations(gliner, full_text)
@@ -58,12 +60,10 @@ def extract_person_info(
     emails = extract_emails(full_text)
     phones = extract_phones(full_text)
     
-    # Build redaction regions if doc is provided
-    redaction_regions = []
-    if doc is not None:
-        redaction_regions = _find_redaction_regions(
-            doc, names, emails, phones, locations
-        )
+    # Build redaction regions from segments
+    redaction_regions = _find_redaction_regions(
+        person_groups, names, emails, phones, locations
+    )
     
     return PersonInfo(
         names=names,
@@ -74,41 +74,35 @@ def extract_person_info(
     )
 
 
-def _get_person_section_text(groups: List[TextGroup]) -> str:
+def _get_person_groups(groups: List[TextGroup]) -> List[TextGroup]:
     """
-    Get text content for person info extraction.
-    
-    In the simplified pipeline, group.heading IS the section type.
-    Prioritizes:
-    1. Sections with heading 'person'
-    2. Sections with heading 'summary'
-    3. Sections with heading 'unknown' (often contain contact info)
+    Get groups that likely contain person info.
+    Priority: PII sections > Summary > Unknown sections.
     
     Args:
-        groups: List of TextGroup objects (heading = section type)
+        groups: List of TextGroup objects
         
     Returns:
-        Combined text for person info extraction
+        List of TextGroup objects to search for person info
     """
-    texts = []
+    result = []
     
     # Priority 1: Person sections
     for group in groups:
-        if group.heading.lower() == "person":
-            texts.append(group.text)
+        if group.heading.lower() == "candidate contact information":
+            result.append(group)
     
     # Priority 2: Summary sections
     for group in groups:
-        if group.heading.lower() == "summary":
-            texts.append(group.text)
+        if group.heading.lower() == "professional summary":
+            result.append(group)
     
     # Priority 3: Unknown sections (often contain contact info at top of resume)
     for group in groups:
         if group.heading.lower() == "unknown":
-            texts.append(group.text)
+            result.append(group)
     
-    combined = "\n".join(texts)
-    return combined
+    return result
 
 
 def _extract_names_and_locations(
@@ -154,7 +148,6 @@ def _extract_names_and_locations(
             continue
         
         if label == "person":
-            # Validate: should be a reasonable name
             if _is_valid_name(text_val):
                 key = text_val.lower()
                 if key not in seen_names:
@@ -196,21 +189,22 @@ def _is_valid_name(text: str) -> bool:
 
 
 # =============================================================================
-# Redaction Region Extraction
+# Redaction Region Extraction (using TextGroup.segments)
 # =============================================================================
 
 def _find_redaction_regions(
-    doc: Any,
+    groups: List[TextGroup],
     names: List[str],
     emails: List[str],
     phones: List[str],
     locations: List[str],
 ) -> List[RedactionRegion]:
     """
-    Find layout spans containing person info and return redaction regions.
+    Find redaction regions by searching TextGroup segments.
+    Uses the bbox coordinates already stored in TextSegment.
     
     Args:
-        doc: spaCy Doc with layout info
+        groups: List of TextGroup objects with segments
         names: List of detected names
         emails: List of detected emails
         phones: List of detected phones
@@ -221,17 +215,6 @@ def _find_redaction_regions(
     """
     regions = []
     
-    if doc is None or not hasattr(doc, "spans"):
-        return regions
-    
-    try:
-        layout_spans = doc.spans.get("layout", [])
-    except Exception:
-        return regions
-    
-    if not layout_spans:
-        return regions
-    
     # Prepare search patterns
     name_tokens = _build_name_search_tokens(names)
     email_lowers = [e.lower() for e in emails]
@@ -240,79 +223,115 @@ def _find_redaction_regions(
     
     seen_regions: Set[tuple] = set()
     
-    for span in layout_spans:
-        raw_text = span.text or ""
-        if not raw_text.strip():
-            continue
-        
-        text_lower = raw_text.lower()
-        span_digits = _extract_digits(raw_text)
-        
-        info_type = None
-        
-        # Check for email
-        for email in email_lowers:
-            if email in text_lower:
-                info_type = "email"
-                break
-        
-        # Check for phone
-        if not info_type:
-            for phone_d in phone_digits:
-                if phone_d and phone_d in span_digits:
-                    info_type = "phone"
-                    break
-        
-        # Check for name (all tokens must be present)
-        if not info_type:
-            for name_token_set in name_tokens:
-                if all(token in text_lower for token in name_token_set):
-                    info_type = "name"
-                    break
-        
-        # Check for location
-        if not info_type:
-            for loc_token in location_tokens:
-                if loc_token in text_lower:
-                    info_type = "location"
-                    break
-        
-        if not info_type:
-            continue
-        
-        # Extract bounding box
-        layout_obj = getattr(span._, "layout", None)
-        bbox = extract_bbox(layout_obj)
-        if bbox is None:
-            continue
-        
-        # Apply padding
-        pad = 1.0
-        region_key = (
-            bbox.page_index,
-            round(bbox.x0, 1),
-            round(bbox.y0, 1),
-            round(bbox.x1, 1),
-            round(bbox.y1, 1),
-        )
-        
-        if region_key in seen_regions:
-            continue
-        seen_regions.add(region_key)
-        
-        regions.append(RedactionRegion(
-            page_index=bbox.page_index,
-            bbox=(
-                float(bbox.x0 - pad),
-                float(bbox.y0 - pad),
-                float(bbox.x1 + pad),
-                float(bbox.y1 + pad),
-            ),
-            info_type=info_type,
-        ))
+    # Search through all segments in all groups
+    for group in groups:
+        for segment in group.segments:
+            region = _check_segment_for_pii(
+                segment,
+                name_tokens,
+                email_lowers,
+                phone_digits,
+                location_tokens,
+                seen_regions,
+            )
+            if region:
+                regions.append(region)
     
     return regions
 
+
+def _check_segment_for_pii(
+    segment: TextSegment,
+    name_tokens: List[Set[str]],
+    email_lowers: List[str],
+    phone_digits: List[str],
+    location_tokens: Set[str],
+    seen_regions: Set[tuple],
+) -> RedactionRegion | None:
+    """
+    Check if a segment contains PII and return a redaction region if so.
+    
+    Args:
+        segment: TextSegment with text and bbox
+        name_tokens: Tokenized names for matching
+        email_lowers: Lowercase emails
+        phone_digits: Phone numbers as digit strings
+        location_tokens: Location tokens
+        seen_regions: Set of already-seen region keys (for deduplication)
+        
+    Returns:
+        RedactionRegion if PII found, None otherwise
+    """
+    if not segment.text or not segment.bbox:
+        return None
+    
+    text_lower = segment.text.lower()
+    segment_digits = _extract_digits(segment.text)
+    
+    info_type = None
+    
+    # Check for email
+    for email in email_lowers:
+        if email in text_lower:
+            info_type = "email"
+            break
+    
+    # Check for phone
+    if not info_type:
+        for phone_d in phone_digits:
+            if phone_d and phone_d in segment_digits:
+                info_type = "phone"
+                break
+    
+    # Check for name (all tokens must be present)
+    if not info_type:
+        for name_token_set in name_tokens:
+            if all(token in text_lower for token in name_token_set):
+                info_type = "name"
+                break
+    
+    # Check for location
+    if not info_type:
+        for loc_token in location_tokens:
+            if loc_token in text_lower:
+                info_type = "location"
+                break
+    
+    if not info_type:
+        return None
+    
+    # Use bbox from segment
+    bbox = segment.bbox
+    
+    # Deduplicate by region key
+    pad = 1.0
+    region_key = (
+        bbox.page_index,
+        round(bbox.x0, 1),
+        round(bbox.y0, 1),
+        round(bbox.x1, 1),
+        round(bbox.y1, 1),
+    )
+    
+    if region_key in seen_regions:
+        return None
+    seen_regions.add(region_key)
+    
+    return RedactionRegion(
+        page_index=bbox.page_index,
+        bbox=(
+            float(bbox.x0 - pad),
+            float(bbox.y0 - pad),
+            float(bbox.x1 + pad),
+            float(bbox.y1 + pad),
+        ),
+        info_type=info_type,
+    )
+
+
+# =============================================================================
+# Helper Functions
+# =============================================================================
 
 def _build_name_search_tokens(names: List[str]) -> List[Set[str]]:
     """Build search token sets for each name."""
@@ -342,4 +361,3 @@ def _build_location_search_tokens(locations: List[str]) -> Set[str]:
 def _extract_digits(text: str) -> str:
     """Extract only digits from text."""
     return "".join(c for c in text if c.isdigit())
-

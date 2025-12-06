@@ -10,27 +10,56 @@ from typing import Dict, List, Set
 # =============================================================================
 
 GLINER_MODEL_NAME: str = "urchade/gliner_small-v2.1"
+SECTION_CLASSIFIER_MODEL_NAME: str = "facebook/bart-large-mnli"
 
 # =============================================================================
 # Section Types for Classification
 # =============================================================================
 
 SECTION_TYPE_LABELS: List[str] = [
-    "Person",        # Personal info section (name, contact)
-    "Education",     # Academic background
-    "Experience",    # Work experience / employment history
-    "Skills",        # Technical/soft skills
-    "Certifications", # Professional certifications
-    "Activities",    # Extracurricular activities
-    "Summary",       # Profile summary/objective
+    # "Personally Identifiable Information",        # Personal info section (name, contact)
+    # "Education",     # Academic background
+    # "Experience",    # Work experience / employment history
+    # "Languages",     # Languages spoken
+    # "Skills",        # Technical/soft skills
+    # "Certifications", # Professional certifications
+    # "Activities",    # Extracurricular activities
+    # "Summary",       # Profile summary/objective
+    "candidate contact information",
+    "professional experience",
+    "education and university degree",
+    "skills and tools",
+    "languages",
+    "certifications and awards",
+    "extracurricular activities",
+    "professional summary"
 ]
-
-# Threshold for section type classification
-SECTION_TYPE_THRESHOLD: float = 0.20
 
 # =============================================================================
 # Entity Labels by Section Type
 # =============================================================================
+
+# Section-specific entity labels for optimized extraction
+ENTITY_LABELS_BY_SECTION: Dict[str, List[str]] = {
+    "candidate contact information": ["Person", "Location"],
+    "professional experience": ["Job Title", "Company", "Organization", "Location", "Date"],
+    "education and university degree": ["Degree", "School", "University", "Organization", "Location", "Date"],
+    "skills and tools": ["Skill"],
+    "languages": ["Language"],
+    "certifications and awards": ["Certification"],
+    "extracurricular activities": ["Activity"],
+    "professional summary": ["Person", "Skill", "Location"],
+    # "candidate contact information": ["Person", "Location"],
+    # "education and university degree": ["Degree", "School", "University", "Organization", "Location", "Date"],
+    # "work experience and job history": ["Job Title", "Company", "Organization", "Location", "Date"],
+    # "technical skills and tools": ["Skill"],
+    # "spoken languages": ["Language"],
+    # "certifications and awards": ["Certification"],
+    # "extracurricular activities": ["Activity"],
+    # "professional summary": ["Person", "Skill", "Location"],  # Summary might mention skills
+    # "activities": ["Activity"],
+    # "summary": ["Person", "Skill", "Location"],  # Summary might mention skills
+}
 
 # All possible entity labels (used as fallback)
 ALL_ENTITY_LABELS: List[str] = [
@@ -50,39 +79,8 @@ ALL_ENTITY_LABELS: List[str] = [
     "Date",
 ]
 
-# Section-specific entity labels for optimized extraction
-ENTITY_LABELS_BY_SECTION: Dict[str, List[str]] = {
-    "person": ["Person", "Location"],  # Name extracted via GLiNER, others via regex
-    "education": ["Degree", "School", "University", "Organization", "Location", "Date"],
-    "experience": ["Job Title", "Company", "Organization", "Location", "Date"],
-    "skills": ["Skill", "Language"],
-    "certifications": ["Certification"],
-    "activities": ["Activity"],
-    "summary": ["Person", "Skill", "Location"],  # Summary might mention skills
-}
-
-# =============================================================================
-# Confidence Thresholds
-# =============================================================================
-
-ENTITY_THRESHOLDS: Dict[str, float] = {
-    "person": 0.50,
-    "skill": 0.50,
-    "language": 0.50,
-    "degree": 0.50,
-    "job title": 0.50,
-    "organization": 0.50,
-    "company": 0.50,
-    "school": 0.50,
-    "university": 0.50,
-    "location": 0.50,
-    "certification": 0.50,
-    "award": 0.50,
-    "activity": 0.50,
-    "date": 0.50,
-}
-
-DEFAULT_THRESHOLD: float = 0.50
+# Entity Threshold
+ENTITY_THRESHOLD: float = 0.50
 
 # =============================================================================
 # Layout Parser Configuration
@@ -136,10 +134,3 @@ DATE_PATTERNS: List[str] = [
     # Present/Current
     r"(?i)\b(?:Present|Current|Now|Ongoing)\b",
 ]
-
-# =============================================================================
-# Text Processing
-# =============================================================================
-
-# Maximum characters to consider for person section extraction
-PERSON_SECTION_MAX_CHARS: int = 1500

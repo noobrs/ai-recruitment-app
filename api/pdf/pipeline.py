@@ -5,7 +5,8 @@ Orchestrates layout parsing, section classification, entity extraction, and reda
 Features:
 - Uses spacy-layout for PDF text extraction
 - Groups text by headings
-- Uses GLiNER to classify headings into section types
+- Uses BART-large-MNLI to classify headings into section types (zero-shot classification)
+- Uses GLiNER for entity extraction
 - Merges groups by section type
 - Section-type-specific entity extraction
 - Multiple education/experience record handling
@@ -29,8 +30,9 @@ from api.types.types import ApiResponse
 
 from api.pdf.layout_parser import (
     load_pdf_first_page,
-    parse_and_group_by_section,
+    group_spans_by_heading,
 )
+from api.pdf.section_classifier import classify_and_merge_sections
 from api.pdf.entity_extraction import (
     extract_entities_for_all_sections,
     load_gliner_model,
@@ -144,15 +146,16 @@ def process_pdf_resume(file_bytes: bytes) -> ApiResponse:
     """
     Main pipeline for processing PDF resumes.
     
-    Simplified Pipeline Steps:
+    Pipeline Steps:
     1. Load PDF and extract layout (first page only)
     2. Load GLiNER model
-    3. Parse and group by section (group by heading -> classify -> merge)
-    4. Extract entities based on section type
-    5. Extract person information for redaction
-    6. Build structured resume data
-    7. Redact sensitive information and faces
-    8. Upload and return results
+    3. Group spans by heading
+    4. Classify headings and merge by section type
+    5. Extract entities based on section type
+    6. Extract person information for redaction
+    7. Build structured resume data
+    8. Redact sensitive information and faces
+    9. Upload and return results
     
     Args:
         file_bytes: PDF file as bytes
@@ -174,21 +177,25 @@ def process_pdf_resume(file_bytes: bytes) -> ApiResponse:
         print("[Pipeline] Step 2: Loading GLiNER model...")
         gliner = load_gliner_model()
         
-        print("[Pipeline] Step 3: Parsing and grouping by section...")
-        groups = parse_and_group_by_section(doc, gliner)
+        print("[Pipeline] Step 3: Grouping spans by heading...")
+        heading_groups = group_spans_by_heading(doc)
+        print(f"[Pipeline] Found {len(heading_groups)} heading groups")
+        
+        print("[Pipeline] Step 4: Classifying and merging by section...")
+        groups = classify_and_merge_sections(heading_groups)
         print(f"[Pipeline] Created {len(groups)} section groups")
         _log_groups(groups)
         
-        print("[Pipeline] Step 4: Extracting entities by section type...")
+        print("[Pipeline] Step 5: Extracting entities by section type...")
         groups = extract_entities_for_all_sections(gliner, groups)
         _log_entity_counts(groups)
         
-        print("[Pipeline] Step 5: Extracting person information...")
-        person_info = extract_person_info(groups, gliner, doc)
+        print("[Pipeline] Step 6: Extracting person information...")
+        person_info = extract_person_info(groups, gliner)
         print(f"[Pipeline] Found: names={person_info.names}, emails={person_info.emails}, "
               f"phones={person_info.phones}, locations={person_info.locations}")
         
-        print("[Pipeline] Step 6: Building structured resume data...")
+        print("[Pipeline] Step 7: Building structured resume data...")
         skills = build_skills(groups)
         education = build_education(groups)
         experience = build_experience(groups)
@@ -212,7 +219,7 @@ def process_pdf_resume(file_bytes: bytes) -> ApiResponse:
         # Convert to API format
         resume_data = _convert_to_api_response(resume)
         
-        print("[Pipeline] Step 7: Redacting sensitive information...")
+        print("[Pipeline] Step 8: Redacting sensitive information...")
         redaction_result = redact_pdf(file_bytes, person_info)
         
         # Handle redaction result
@@ -288,90 +295,3 @@ def _log_entity_counts(groups):
         if entity_count > 0:
             labels = set(e.label for e in group.entities)
             print(f"[Pipeline]   Section '{group.heading}': {entity_count} entities ({', '.join(labels)})")
-
-
-# =============================================================================
-# Alternative Entry Points
-# =============================================================================
-
-def extract_resume_data(file_bytes: bytes) -> Optional[ExtractedResume]:
-    """
-    Extract resume data without redaction.
-    Useful for testing or when redaction is not needed.
-    
-    Args:
-        file_bytes: PDF file as bytes
-        
-    Returns:
-        ExtractedResume object or None on error
-    """
-    fd, tmp_path = tempfile.mkstemp(suffix=".pdf", prefix="resume_")
-    pdf_path = Path(tmp_path)
-    
-    try:
-        with os.fdopen(fd, "wb") as f:
-            f.write(file_bytes)
-        
-        doc = load_pdf_first_page(str(pdf_path))
-        gliner = load_gliner_model()
-        
-        groups = parse_and_group_by_section(doc, gliner)
-        groups = extract_entities_for_all_sections(gliner, groups)
-        
-        person_info = extract_person_info(groups, gliner, doc)
-        
-        return ExtractedResume(
-            person=person_info,
-            education=build_education(groups),
-            experience=build_experience(groups),
-            skills=build_skills(groups),
-            certifications=build_certifications(groups),
-            activities=build_activities(groups),
-            raw_groups=groups,
-        )
-    
-    except Exception as e:
-        logger.error(f"Error extracting resume data: {e}")
-        return None
-    
-    finally:
-        try:
-            pdf_path.unlink(missing_ok=True)
-        except Exception:
-            pass
-
-
-def get_text_groups(file_bytes: bytes) -> Optional[list]:
-    """
-    Get raw text groups without entity extraction.
-    Useful for debugging layout parsing.
-    
-    Args:
-        file_bytes: PDF file as bytes
-        
-    Returns:
-        List of TextGroup dicts or None on error
-    """
-    fd, tmp_path = tempfile.mkstemp(suffix=".pdf", prefix="resume_")
-    pdf_path = Path(tmp_path)
-    
-    try:
-        with os.fdopen(fd, "wb") as f:
-            f.write(file_bytes)
-        
-        doc = load_pdf_first_page(str(pdf_path))
-        gliner = load_gliner_model()
-        
-        groups = parse_and_group_by_section(doc, gliner)
-        
-        return [g.to_dict() for g in groups]
-    
-    except Exception as e:
-        logger.error(f"Error getting text groups: {e}")
-        return None
-    
-    finally:
-        try:
-            pdf_path.unlink(missing_ok=True)
-        except Exception:
-            pass
