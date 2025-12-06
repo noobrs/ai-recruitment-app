@@ -70,7 +70,7 @@ def classify_group_text(gliner: GLiNER, heading: str, text: str) -> Optional[str
         entities = gliner.predict_entities(
             classification_text,
             SECTION_TYPE_LABELS,
-            threshold=0.3,  # Lower threshold for section classification
+            threshold=0.10,
         )
     except Exception as e:
         print(f"[SectionClassifier] Error classifying text: {e}")
@@ -108,14 +108,14 @@ def _keyword_fallback(heading: str) -> Optional[str]:
     # Keyword mappings
     keywords = {
         "contact": ["contact", "email", "phone", "address", "personal"],
-        "work experience": ["experience", "work", "employment", "career", "job"],
+        "experience": ["experience", "work", "employment", "career", "job"],
         "education": ["education", "academic", "school", "university", "degree"],
-        "skills": ["skill", "competenc", "expertise", "technical", "proficienc"],
+        "skills": ["skill", "competence", "expertise", "technical", "proficiency"],
         "languages": ["language", "linguistic"],
         "projects": ["project", "portfolio"],
-        "certifications": ["certif", "license", "credential", "accredit"],
-        "extracurricular activities": ["extracurricular", "activit", "volunteer", "hobby", "interest"],
-        "professional summary": ["summary", "objective", "profile", "about", "overview"],
+        "certifications": ["certification", "license", "credential", "accredit"],
+        "activities": ["extracurricular", "activity", "volunteer", "hobby", "interest"],
+        "summary": ["summary", "objective", "profile", "about", "overview"],
     }
     
     for section_type, kw_list in keywords.items():
