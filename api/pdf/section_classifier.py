@@ -1,158 +1,106 @@
 """
-Section type classification using GLiNER.
-Classifies resume section headings into types: contact, education, experience, skills, etc.
-Merges heading groups by classified section type.
+Section classification using BERT fine-tuned on resume sections.
+Classifies resume text into section types: education, experience, skills, etc.
 """
 
 from collections import defaultdict
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
-from gliner import GLiNER
+import torch
+from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
-from api.pdf.config import GLINER_MODEL_NAME, SECTION_TYPE_LABELS, SECTION_MERGE_MAP
+from api.pdf.config import SECTION_CLASSIFIER_MODEL, SECTION_MERGE_MAP
 from api.pdf.models import HeadingGroup, TextGroup, TextSegment
 
 
 # =============================================================================
-# Lazy-loaded Singleton for GLiNER Model
+# Model Singleton
 # =============================================================================
 
-_GLINER_MODEL: Optional[GLiNER] = None
+_MODEL = None
+_TOKENIZER = None
 
 
-def load_gliner_model() -> GLiNER:
+def load_section_classifier() -> Tuple[AutoModelForSequenceClassification, AutoTokenizer]:
     """
-    Load the GLiNER model for section classification.
-    Uses singleton pattern to avoid loading multiple times.
+    Load the BERT model for section classification.
+    Uses singleton pattern to avoid reloading.
+    """
+    global _MODEL, _TOKENIZER
     
-    Returns:
-        GLiNER model instance
-    """
-    global _GLINER_MODEL
-    if _GLINER_MODEL is None:
-        print(f"[SectionClassifier] Loading GLiNER model: {GLINER_MODEL_NAME}...")
-        _GLINER_MODEL = GLiNER.from_pretrained(GLINER_MODEL_NAME)
-        print("[SectionClassifier] GLiNER model loaded successfully.")
-    return _GLINER_MODEL
-
-
-# =============================================================================
-# Section Type Classification for Single Group
-# =============================================================================
-
-def classify_group_text(gliner: GLiNER, heading: str, text: str) -> Optional[str]:
-    """
-    Classify a group's text using GLiNER to identify section type.
+    if _MODEL is None or _TOKENIZER is None:
+        print(f"[SectionClassifier] Loading BERT model: {SECTION_CLASSIFIER_MODEL}...")
+        _TOKENIZER = AutoTokenizer.from_pretrained(SECTION_CLASSIFIER_MODEL)
+        _MODEL = AutoModelForSequenceClassification.from_pretrained(SECTION_CLASSIFIER_MODEL)
+        _MODEL.eval()
+        print("[SectionClassifier] BERT model loaded successfully.")
     
-    Uses the heading primarily (if available), with text as fallback.
-    GLiNER predicts which section type labels match the content.
+    return _MODEL, _TOKENIZER
+
+
+# =============================================================================
+# Classification
+# =============================================================================
+
+def classify_text(model, tokenizer, text: str) -> Optional[str]:
+    """
+    Classify text into a section type using BERT.
     
     Args:
-        gliner: GLiNER model instance
-        heading: The heading text of the group
-        text: The full text content of the group
+        model: BERT model instance
+        tokenizer: BERT tokenizer instance
+        text: Text to classify
         
     Returns:
-        Section type label (lowercase) or None if classification fails
+        Section type label (lowercase) or None
     """
-    # Prefer heading for classification (more indicative of section type)
-    classification_text = heading if heading and heading != "NO_HEADING" else ""
-    
-    # Add some text content for context (first 200 chars)
-    if text and text.strip():
-        classification_text = f"{classification_text} {text.strip()[:200]}".strip()
-    
-    if not classification_text:
+    if not text or not text.strip():
         return None
+    
+    # Truncate long text
+    text = text.strip()[:512]
     
     try:
-        # Use section type labels for entity extraction
-        entities = gliner.predict_entities(
-            classification_text,
-            SECTION_TYPE_LABELS,
-            threshold=0.10,
-        )
-    except Exception as e:
-        print(f"[SectionClassifier] Error classifying text: {e}")
-        return None
-    
-    if not entities:
-        # Fallback: try keyword matching on heading
-        return _keyword_fallback(heading)
-    
-    # Get the highest scoring entity
-    best_entity = max(entities, key=lambda e: e.get("score", 0))
-    label = best_entity.get("label", "").lower().strip()
-    score = best_entity.get("score", 0)
-    
-    print(f"[SectionClassifier] Classified as '{label}' (score: {score:.3f})")
-    
-    return label
-
-
-def _keyword_fallback(heading: str) -> Optional[str]:
-    """
-    Fallback classification using keyword matching on heading.
-    
-    Args:
-        heading: The heading text
+        inputs = tokenizer(text, return_tensors="pt", truncation=True, max_length=512)
         
-    Returns:
-        Section type or None
-    """
-    if not heading:
+        with torch.no_grad():
+            outputs = model(**inputs)
+            logits = outputs.logits
+            predicted_class = torch.argmax(logits, dim=-1).item()
+        
+        # Get label from model config
+        label = model.config.id2label.get(predicted_class, "unknown")
+        return label.lower()
+        
+    except Exception as e:
+        print(f"[SectionClassifier] Error classifying: {e}")
         return None
-    
-    heading_lower = heading.lower()
-    
-    # Keyword mappings
-    keywords = {
-        "contact": ["contact", "email", "phone", "address", "personal"],
-        "experience": ["experience", "work", "employment", "career", "job"],
-        "education": ["education", "academic", "school", "university", "degree"],
-        "skills": ["skill", "competence", "expertise", "technical", "proficiency"],
-        "languages": ["language", "linguistic"],
-        "projects": ["project", "portfolio"],
-        "certifications": ["certification", "license", "credential", "accredit"],
-        "activities": ["extracurricular", "activity", "volunteer", "hobby", "interest"],
-        "summary": ["summary", "objective", "profile", "about", "overview"],
-    }
-    
-    for section_type, kw_list in keywords.items():
-        for kw in kw_list:
-            if kw in heading_lower:
-                print(f"[SectionClassifier] Fallback matched '{section_type}' via keyword '{kw}'")
-                return section_type
-    
-    return None
 
 
-# =============================================================================
-# Classify All Heading Groups
-# =============================================================================
-
-def classify_heading_groups(
-    heading_groups: List[HeadingGroup],
-) -> Dict[str, str]:
+def classify_heading_groups(heading_groups: List[HeadingGroup]) -> Dict[str, str]:
     """
-    Classify each heading group using GLiNER.
+    Classify each heading group using BERT.
     
     Args:
         heading_groups: List of HeadingGroup from layout parser
         
     Returns:
-        Dict mapping heading text -> section type (e.g., "education", "work experience")
+        Dict mapping heading text -> section type
     """
-    gliner = load_gliner_model()
+    model, tokenizer = load_section_classifier()
     heading_to_section: Dict[str, str] = {}
     
     print(f"[SectionClassifier] Classifying {len(heading_groups)} heading groups...")
     
     for group in heading_groups:
-        print(f"[SectionClassifier] Classifying '{group.heading}'...")
-        section_type = classify_group_text(gliner, group.heading, group.text)
+        # Use heading + first part of text for classification
+        classification_text = group.heading if group.heading != "NO_HEADING" else ""
+        if group.text:
+            classification_text = f"{classification_text} {group.text[:300]}".strip()
+        
+        section_type = classify_text(model, tokenizer, classification_text)
         heading_to_section[group.heading] = section_type or "unknown"
-        print(f"[SectionClassifier]   '{group.heading}' -> {heading_to_section[group.heading]}")
+        print(f"[SectionClassifier] '{group.heading}' -> {heading_to_section[group.heading]}")
     
     return heading_to_section
 
@@ -167,88 +115,70 @@ def merge_groups_by_section(
 ) -> List[TextGroup]:
     """
     Merge heading groups that have the same section type.
-    The merged group's heading becomes the section type label.
     
     Args:
         heading_groups: List of HeadingGroup from layout parser
         heading_to_section: Dict of heading -> section type
         
     Returns:
-        List of merged TextGroup objects with section label as heading
+        List of merged TextGroup objects
     """
-    # Group by section type
     section_to_groups: Dict[str, List[HeadingGroup]] = defaultdict(list)
     
     for group in heading_groups:
         section_type = heading_to_section.get(group.heading, "unknown")
-        # Normalize section type (e.g., "person" -> "contact", "job title" -> "work experience")
-        normalized_type = SECTION_MERGE_MAP.get(section_type.lower(), section_type)
-        section_to_groups[normalized_type].append(group)
+        # Normalize to canonical names
+        normalized = SECTION_MERGE_MAP.get(section_type, section_type)
+        section_to_groups[normalized].append(group)
     
-    # Build merged TextGroups
     merged_groups: List[TextGroup] = []
     
     for section_type, groups in section_to_groups.items():
-        # Combine all text and segments from groups of the same section type
         combined_text_parts: List[str] = []
         combined_segments: List[TextSegment] = []
         
         for group in groups:
-            # Add the original heading as part of the text (for context)
             if group.heading != "NO_HEADING":
                 combined_text_parts.append(group.heading)
             
-            # Add all segment texts
             for segment in group.segments:
                 combined_text_parts.append(segment.text)
             
-            # Add all segments (preserves coordinates)
             combined_segments.extend(group.segments)
         
-        # Create merged TextGroup with section type as heading
         merged_group = TextGroup(
-            heading=section_type,  # Section label (e.g., "education", "work experience")
+            heading=section_type,
             text=" ".join(combined_text_parts),
             segments=combined_segments,
             entities=[],
         )
-        
         merged_groups.append(merged_group)
     
-    # Log merge results
     print(f"[SectionClassifier] Merged into {len(merged_groups)} section groups:")
     for group in merged_groups:
-        print(f"[SectionClassifier]   {group.heading}: {len(group.segments)} segments, {len(group.text)} chars")
+        print(f"[SectionClassifier]   {group.heading}: {len(group.segments)} segments")
     
     return merged_groups
 
 
 # =============================================================================
-# Main Function: Classify and Merge
+# Main Function
 # =============================================================================
 
-def classify_and_merge_sections(
-    heading_groups: List[HeadingGroup],
-) -> List[TextGroup]:
+def classify_and_merge_sections(heading_groups: List[HeadingGroup]) -> List[TextGroup]:
     """
-    Main function to classify heading groups and merge by section type.
-    
-    Pipeline:
-    1. Load GLiNER model
-    2. Classify each heading group's text using GLiNER
-    3. Merge groups with same section type
+    Classify heading groups and merge by section type.
     
     Args:
         heading_groups: List of HeadingGroup from layout parser
         
     Returns:
         List of TextGroup objects, one per section type
-        Each group's heading is the section label (e.g., "education", "work experience")
     """
-    print("[SectionClassifier] Step 1: Classifying heading groups with GLiNER...")
+    print("[SectionClassifier] Step 1: Classifying with BERT...")
     heading_to_section = classify_heading_groups(heading_groups)
     
-    print("[SectionClassifier] Step 2: Merging groups by section type...")
+    print("[SectionClassifier] Step 2: Merging by section type...")
     merged_groups = merge_groups_by_section(heading_groups, heading_to_section)
     
     return merged_groups

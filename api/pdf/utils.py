@@ -3,7 +3,7 @@ Utility functions for PDF resume extraction pipeline.
 """
 
 import re
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from rapidfuzz import fuzz
 
@@ -159,6 +159,7 @@ def remove_fields_from_description(
 ) -> str:
     """
     Remove duplicate content from description that appears in other fields.
+    Removes both entire lines that match and inline occurrences of field values.
     
     Args:
         text: Description text
@@ -173,42 +174,85 @@ def remove_fields_from_description(
     if not fields_to_remove:
         return clean_description(text)
     
-    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    # First pass: Remove inline occurrences of fields from the text
+    result_text = text
+    
+    # Sort fields by length (longest first) to avoid partial matches
+    sorted_fields = sorted(
+        [f for f in fields_to_remove if f and str(f).strip()],
+        key=lambda x: len(str(x)),
+        reverse=True
+    )
+    
+    for field in sorted_fields:
+        field_str = str(field).strip()
+        if not field_str or len(field_str) < 2:
+            continue
+        
+        # Escape special regex characters
+        escaped_field = re.escape(field_str)
+        
+        # Pattern to match the field with optional surrounding separators/parentheses
+        # Handles cases like: "Intern)", "| November 2023 - January 2024", "(Honours)"
+        patterns = [
+            # Field with optional closing paren/bracket before it
+            rf"[\)\]]*\s*{escaped_field}\s*[\(\[]*",
+            # Field surrounded by separators like |, -, :
+            rf"[\|\-–:,]*\s*{escaped_field}\s*[\|\-–:,]*",
+            # Just the field with surrounding whitespace
+            rf"\s*{escaped_field}\s*",
+        ]
+        
+        for pattern in patterns:
+            result_text = re.sub(pattern, " ", result_text, flags=re.IGNORECASE)
+    
+    # Clean up leftover separators and punctuation artifacts
+    # Remove orphaned separators like " | ", " - ", " : " etc.
+    result_text = re.sub(r"\s*[\|\-–]+\s*[\|\-–]+\s*", " ", result_text)
+    result_text = re.sub(r"^\s*[\|\-–:,]+\s*", "", result_text)
+    result_text = re.sub(r"\s*[\|\-–:,]+\s*$", "", result_text)
+    result_text = re.sub(r"\s*[\|\-–]+\s*$", "", result_text)
+    result_text = re.sub(r"^\s*[\|\-–]+\s*", "", result_text)
+    
+    # Remove empty parentheses
+    result_text = re.sub(r"\(\s*\)", "", result_text)
+    result_text = re.sub(r"\[\s*\]", "", result_text)
+    
+    # Remove orphaned closing parentheses/brackets at start (e.g., "Intern) ..." -> "...")
+    result_text = re.sub(r"^\s*[\)\]]+\s*", "", result_text)
+    
+    # Remove orphaned opening parentheses/brackets at end
+    result_text = re.sub(r"\s*[\(\[]+\s*$", "", result_text)
+    
+    # Clean up orphaned short parenthetical content at the start
+    # e.g., "(Honours) CGPA: 3.95..." -> "CGPA: 3.95..."
+    result_text = re.sub(r"^\s*\([A-Za-z\s]{1,20}\)\s*", "", result_text)
+    
+    # Second pass: Line-by-line filtering for remaining matches
+    lines = [line.strip() for line in result_text.splitlines() if line.strip()]
     filtered_lines = []
     
     for line in lines:
         line_normalized = normalize_text(line)
         should_skip = False
         
-        for field in fields_to_remove:
-            if not field:
-                continue
-            
-            field_normalized = normalize_text(str(field))
-            
-            # Skip if line is exactly the field
-            if field_normalized == line_normalized:
-                should_skip = True
-                break
-            
-            # Skip if line starts with field followed by separator
-            if line_normalized.startswith(field_normalized):
-                remaining = line_normalized[len(field_normalized):].strip()
-                if remaining.startswith("|") or remaining.startswith("-") or not remaining:
+        # Skip very short lines (likely just leftover separators)
+        if len(line_normalized) < 3:
+            should_skip = True
+        
+        if not should_skip:
+            for field in sorted_fields:
+                field_normalized = normalize_text(str(field))
+                
+                # Skip if line is exactly the field
+                if field_normalized == line_normalized:
                     should_skip = True
                     break
-            
-            # Skip if line ends with field
-            if line_normalized.endswith(field_normalized):
-                prefix = line_normalized[:-len(field_normalized)].strip()
-                if not prefix or prefix.endswith(":") or prefix.endswith("|"):
+                
+                # Skip if high similarity (>85%)
+                if len(field_normalized) > 10 and is_similar(line_normalized, field_normalized, threshold=85):
                     should_skip = True
                     break
-            
-            # Skip if high similarity (>85%)
-            if len(field_normalized) > 10 and is_similar(line_normalized, field_normalized, threshold=85):
-                should_skip = True
-                break
         
         if not should_skip:
             filtered_lines.append(line)

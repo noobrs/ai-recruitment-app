@@ -1,11 +1,11 @@
 """
-Main PDF resume extraction pipeline (Simplified Version).
+Main PDF resume extraction pipeline.
 Orchestrates layout parsing, section classification, entity extraction, and redaction.
 
 Features:
 - Uses spacy-layout for PDF text extraction
 - Groups text by headings
-- Uses BART-large-MNLI to classify headings into section types (zero-shot classification)
+- Uses BERT (has-abi/bert-finetuned-resumes-sections) for section classification
 - Uses GLiNER for entity extraction
 - Merges groups by section type
 - Section-type-specific entity extraction
