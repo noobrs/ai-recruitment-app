@@ -85,7 +85,6 @@ def _get_person_section_text(groups: List[TextGroup]) -> str:
     1. Sections classified as 'person'
     2. Sections classified as 'summary'
     3. NO_HEADING sections
-    4. First portion of other content
     
     Args:
         groups: List of TextGroup objects
@@ -110,17 +109,18 @@ def _get_person_section_text(groups: List[TextGroup]) -> str:
         if group.heading == "NO_HEADING":
             texts.append(group.text)
     
-    # Priority 4: Other sections (limited amount)
-    remaining_chars = PERSON_SECTION_MAX_CHARS - sum(len(t) for t in texts)
-    if remaining_chars > 0:
-        for group in groups:
-            if group.section_type not in ("person", "summary") and group.heading != "NO_HEADING":
-                if remaining_chars > 0:
-                    texts.append(group.text[:remaining_chars])
-                    remaining_chars -= len(group.text)
+    # # Priority 4: Other sections (limited amount)
+    # remaining_chars = PERSON_SECTION_MAX_CHARS - sum(len(t) for t in texts)
+    # if remaining_chars > 0:
+    #     for group in groups:
+    #         if group.section_type not in ("person", "summary") and group.heading != "NO_HEADING":
+    #             if remaining_chars > 0:
+    #                 texts.append(group.text[:remaining_chars])
+    #                 remaining_chars -= len(group.text)
     
     combined = "\n".join(texts)
-    return combined[:PERSON_SECTION_MAX_CHARS]
+    # return combined[:PERSON_SECTION_MAX_CHARS]
+    return combined
 
 
 def _extract_names_and_locations(
@@ -195,9 +195,9 @@ def _is_valid_name(text: str) -> bool:
     if not any(c.isalpha() for c in text):
         return False
     
-    # Shouldn't contain digits (except maybe in Jr., III, etc.)
+    # Shouldn't contain digits
     digit_count = sum(1 for c in text if c.isdigit())
-    if digit_count > 3:
+    if digit_count > 1:
         return False
     
     # Shouldn't contain @ or other special characters

@@ -21,7 +21,6 @@ SECTION_TYPE_LABELS: List[str] = [
     "Experience",    # Work experience / employment history
     "Skills",        # Technical/soft skills
     "Certifications", # Professional certifications
-    "Projects",      # Project work
     "Activities",    # Extracurricular activities
     "Summary",       # Profile summary/objective
 ]
@@ -48,7 +47,6 @@ ALL_ENTITY_LABELS: List[str] = [
     "Certification",
     "Award",
     "Activity",
-    "Project",
     "Date",
 ]
 
@@ -58,9 +56,8 @@ ENTITY_LABELS_BY_SECTION: Dict[str, List[str]] = {
     "education": ["Degree", "School", "University", "Organization", "Location", "Date"],
     "experience": ["Job Title", "Company", "Organization", "Location", "Date"],
     "skills": ["Skill", "Language"],
-    "certifications": ["Certification", "Organization", "Date"],
-    "projects": ["Project", "Skill", "Date"],
-    "activities": ["Activity", "Organization", "Location", "Date"],
+    "certifications": ["Certification"],
+    "activities": ["Activity"],
     "summary": ["Person", "Skill", "Location"],  # Summary might mention skills
 }
 
@@ -82,7 +79,6 @@ ENTITY_THRESHOLDS: Dict[str, float] = {
     "certification": 0.50,
     "award": 0.50,
     "activity": 0.50,
-    "project": 0.50,
     "date": 0.50,
 }
 
@@ -147,7 +143,3 @@ DATE_PATTERNS: List[str] = [
 
 # Maximum characters to consider for person section extraction
 PERSON_SECTION_MAX_CHARS: int = 1500
-
-# Window radius for multi-record extraction (characters)
-TEXT_WINDOW_RADIUS: int = 300
-

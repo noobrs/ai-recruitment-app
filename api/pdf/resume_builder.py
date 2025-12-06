@@ -5,7 +5,6 @@ Handles multiple education and experience records carefully.
 
 from typing import Dict, List, Optional, Tuple
 
-from api.pdf.config import TEXT_WINDOW_RADIUS
 from api.pdf.models import (
     ActivityRecord,
     CertificationRecord,
@@ -17,15 +16,109 @@ from api.pdf.models import (
 from api.pdf.utils import (
     clean_description,
     deduplicate_by_key,
-    deduplicate_strings,
-    entities_in_window,
     extract_date_from_entities,
     get_entity_texts,
-    make_text_window,
     normalize_key,
     remove_fields_from_description,
 )
 from api.pdf.validators import is_valid_degree, is_valid_date
+
+
+# =============================================================================
+# Entity Clustering Helpers
+# =============================================================================
+
+def _get_entity_position(entity: Entity, text: str) -> int:
+    """
+    Get the position of an entity in text.
+    Uses start_char if available, otherwise falls back to text.find().
+    
+    Args:
+        entity: Entity object
+        text: Full text to search in
+        
+    Returns:
+        Position in text (or 999999 if not found)
+    """
+    if entity.start_char >= 0:
+        return entity.start_char
+    # Fallback: find position in text
+    pos = text.find(entity.text.strip())
+    return pos if pos >= 0 else 999999
+
+
+def _cluster_entities_by_anchor(
+    entities: List[Entity],
+    anchor_label: str,
+    text: str,
+) -> List[Tuple[Entity, List[Entity]]]:
+    """
+    Cluster entities by anchor entities using sequential grouping.
+    Each anchor starts a new cluster; subsequent entities belong to it
+    until the next anchor is encountered.
+    
+    Args:
+        entities: All entities in the group
+        anchor_label: Label of anchor entities (e.g., "degree", "job title")
+        text: Full text for position lookup
+        
+    Returns:
+        List of tuples: (anchor_entity, list of related entities)
+    """
+    # Sort entities by their position in text
+    sorted_entities = sorted(entities, key=lambda e: _get_entity_position(e, text))
+    
+    clusters = []
+    current_anchor = None
+    current_entities = []
+    
+    for entity in sorted_entities:
+        if entity.label.lower() == anchor_label.lower():
+            # Save previous cluster if exists
+            if current_anchor is not None:
+                clusters.append((current_anchor, current_entities))
+            # Start new cluster
+            current_anchor = entity
+            current_entities = [entity]
+        elif current_anchor is not None:
+            # Add to current cluster
+            current_entities.append(entity)
+    
+    # Don't forget the last cluster
+    if current_anchor is not None:
+        clusters.append((current_anchor, current_entities))
+    
+    return clusters
+
+
+def _extract_text_for_cluster(
+    anchor: Entity,
+    next_anchor: Optional[Entity],
+    text: str,
+) -> str:
+    """
+    Extract the text segment for a cluster (from anchor to next anchor or end).
+    
+    Args:
+        anchor: Current anchor entity
+        next_anchor: Next anchor entity (or None if last)
+        text: Full text
+        
+    Returns:
+        Text segment for this cluster
+    """
+    start_pos = _get_entity_position(anchor, text)
+    if start_pos == 999999:
+        start_pos = 0
+    
+    if next_anchor is not None:
+        end_pos = _get_entity_position(next_anchor, text)
+        if end_pos == 999999:
+            end_pos = len(text)
+    else:
+        end_pos = len(text)
+    
+    return text[start_pos:end_pos].strip()
 
 
 # =============================================================================
@@ -53,7 +146,7 @@ def build_skills(groups: List[TextGroup]) -> List[str]:
         for entity in group.entities:
             if entity.label.lower() in ("skill", "language"):
                 key = normalize_key(entity.text)
-                if key and len(entity.text.strip()) >= 2:
+                if key and len(entity.text.strip()) >= 1:
                     # Keep highest score
                     if key not in skills_scores or entity.score > skills_scores[key]:
                         skills_scores[key] = entity.score
@@ -127,8 +220,9 @@ def _build_education_records_from_group(
     degree_entities: List[Entity],
 ) -> List[EducationRecord]:
     """
-    Build education records from a single group.
-    Creates separate records for each degree found.
+    Build education records from a single group using sequential clustering.
+    Each degree entity becomes an anchor, and subsequent entities are grouped
+    with it until the next degree is found.
     
     Args:
         group: TextGroup object
@@ -141,29 +235,31 @@ def _build_education_records_from_group(
         # No specific degrees found, create one record for the whole group
         return [_build_single_education_record(group, group.entities, None)]
     
+    # Cluster entities by degree anchors
+    clusters = _cluster_entities_by_anchor(group.entities, "degree", group.text)
+    
+    if not clusters:
+        # Fallback if clustering fails
+        return [_build_single_education_record(group, group.entities, None)]
+    
     records = []
     
-    for degree_entity in degree_entities:
+    for i, (anchor, cluster_entities) in enumerate(clusters):
         # Validate degree
-        if not is_valid_degree(degree_entity.text):
+        if not is_valid_degree(anchor.text):
             continue
         
-        # Create text window around this degree
-        window_text, w_start, w_end = make_text_window(
-            group.text,
-            degree_entity.start_char,
-            degree_entity.end_char,
-            radius=TEXT_WINDOW_RADIUS,
-        )
+        # Get next anchor for text extraction
+        next_anchor = clusters[i + 1][0] if i + 1 < len(clusters) else None
         
-        # Get entities within this window
-        local_entities = entities_in_window(group.entities, w_start, w_end)
+        # Extract text segment for this cluster
+        context_text = _extract_text_for_cluster(anchor, next_anchor, group.text)
         
         record = _build_single_education_record(
             group,
-            local_entities,
-            degree_entity.text.strip(),
-            window_text,
+            cluster_entities,
+            anchor.text.strip(),
+            context_text,
         )
         records.append(record)
     
@@ -304,8 +400,9 @@ def _build_experience_records_from_group(
     title_entities: List[Entity],
 ) -> List[ExperienceRecord]:
     """
-    Build experience records from a single group.
-    Creates separate records for each job title found.
+    Build experience records from a single group using sequential clustering.
+    Each job title entity becomes an anchor, and subsequent entities are grouped
+    with it until the next job title is found.
     
     Args:
         group: TextGroup object
@@ -318,25 +415,27 @@ def _build_experience_records_from_group(
         # No specific titles found, create one record for the whole group
         return [_build_single_experience_record(group, group.entities, None)]
     
+    # Cluster entities by job title anchors
+    clusters = _cluster_entities_by_anchor(group.entities, "job title", group.text)
+    
+    if not clusters:
+        # Fallback if clustering fails
+        return [_build_single_experience_record(group, group.entities, None)]
+    
     records = []
     
-    for title_entity in title_entities:
-        # Create text window around this title
-        window_text, w_start, w_end = make_text_window(
-            group.text,
-            title_entity.start_char,
-            title_entity.end_char,
-            radius=TEXT_WINDOW_RADIUS,
-        )
+    for i, (anchor, cluster_entities) in enumerate(clusters):
+        # Get next anchor for text extraction
+        next_anchor = clusters[i + 1][0] if i + 1 < len(clusters) else None
         
-        # Get entities within this window
-        local_entities = entities_in_window(group.entities, w_start, w_end)
+        # Extract text segment for this cluster
+        context_text = _extract_text_for_cluster(anchor, next_anchor, group.text)
         
         record = _build_single_experience_record(
             group,
-            local_entities,
-            title_entity.text.strip(),
-            window_text,
+            cluster_entities,
+            anchor.text.strip(),
+            context_text,
         )
         records.append(record)
     

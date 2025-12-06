@@ -117,65 +117,6 @@ def split_duration(duration: Optional[str]) -> Tuple[Optional[str], Optional[str
 
 
 # =============================================================================
-# Text Window for Multi-Record Extraction
-# =============================================================================
-
-def make_text_window(
-    text: str,
-    start: int,
-    end: int,
-    radius: int = 300,
-) -> Tuple[str, int, int]:
-    """
-    Create a text window around a specific position.
-    Used for extracting context around entity positions.
-    
-    Args:
-        text: Full text
-        start: Start position of the entity
-        end: End position of the entity
-        radius: Number of characters to include before and after
-        
-    Returns:
-        Tuple of (window_text, window_start, window_end)
-    """
-    if start < 0 or end < 0:
-        return text, 0, len(text)
-    
-    window_start = max(0, start - radius)
-    window_end = min(len(text), end + radius)
-    
-    return text[window_start:window_end], window_start, window_end
-
-
-def is_in_window(entity: Entity, window_start: int, window_end: int) -> bool:
-    """
-    Check if entity position falls within a text window.
-    
-    Args:
-        entity: Entity object
-        window_start: Start of window
-        window_end: End of window
-        
-    Returns:
-        True if entity is within window
-    """
-    pos = entity.start_char
-    if pos < 0:
-        return False
-    return window_start <= pos <= window_end
-
-
-def entities_in_window(
-    entities: List[Entity],
-    window_start: int,
-    window_end: int,
-) -> List[Entity]:
-    """Get all entities that fall within a text window."""
-    return [e for e in entities if is_in_window(e, window_start, window_end)]
-
-
-# =============================================================================
 # Description Cleaning
 # =============================================================================
 
@@ -310,29 +251,6 @@ def deduplicate_by_key(
                 unique_map[key] = rec
     
     return list(unique_map.values())
-
-
-def deduplicate_strings(items: List[str]) -> List[str]:
-    """
-    Deduplicate strings, preserving order.
-    Uses normalized comparison but preserves original casing.
-    
-    Args:
-        items: List of strings
-        
-    Returns:
-        Deduplicated list
-    """
-    seen: Set[str] = set()
-    result = []
-    
-    for item in items:
-        key = normalize_key(item)
-        if key not in seen:
-            seen.add(key)
-            result.append(item)
-    
-    return result
 
 
 # =============================================================================
