@@ -1,6 +1,9 @@
 """
 Build structured resume data from classified sections and extracted entities.
 Handles multiple education and experience records carefully.
+
+Note: In the simplified pipeline, group.heading IS the section type
+(e.g., "education", "experience", "skills").
 """
 
 from typing import Dict, List, Optional, Tuple
@@ -122,6 +125,25 @@ def _extract_text_for_cluster(
 
 
 # =============================================================================
+# Section Type Helpers
+# =============================================================================
+
+def _is_section_type(group: TextGroup, section_type: str) -> bool:
+    """
+    Check if a group is of a specific section type.
+    In the simplified pipeline, group.heading IS the section type.
+    
+    Args:
+        group: TextGroup object
+        section_type: Section type to check (e.g., "education", "experience")
+        
+    Returns:
+        True if group is of the specified section type
+    """
+    return group.heading.lower() == section_type.lower()
+
+
+# =============================================================================
 # Skills Building
 # =============================================================================
 
@@ -131,7 +153,7 @@ def build_skills(groups: List[TextGroup]) -> List[str]:
     Prioritizes skills sections but includes skills from other sections.
     
     Args:
-        groups: List of classified TextGroup objects
+        groups: List of TextGroup objects (heading = section type)
         
     Returns:
         List of unique skills, sorted by confidence
@@ -139,10 +161,6 @@ def build_skills(groups: List[TextGroup]) -> List[str]:
     skills_scores: Dict[str, float] = {}
     
     for group in groups:
-        # Skip NO_HEADING without section type
-        if group.heading == "NO_HEADING" and group.section_type is None:
-            continue
-        
         for entity in group.entities:
             if entity.label.lower() in ("skill", "language"):
                 key = normalize_key(entity.text)
@@ -164,11 +182,11 @@ def build_skills(groups: List[TextGroup]) -> List[str]:
 
 def build_education(groups: List[TextGroup]) -> List[EducationRecord]:
     """
-    Build education records from classified education sections.
+    Build education records from education sections.
     Handles multiple degrees within a single section.
     
     Args:
-        groups: List of classified TextGroup objects
+        groups: List of TextGroup objects (heading = section type)
         
     Returns:
         List of EducationRecord objects
@@ -176,11 +194,8 @@ def build_education(groups: List[TextGroup]) -> List[EducationRecord]:
     records = []
     
     for group in groups:
-        if group.heading == "NO_HEADING":
-            continue
-        
-        # Check if this is an education section
-        is_education = group.section_type == "education"
+        # Check if this is an education section (group.heading == "education")
+        is_education = _is_section_type(group, "education")
         
         # Also check for degree entities
         degree_entities = [e for e in group.entities if e.label.lower() == "degree"]
@@ -317,7 +332,6 @@ def _build_single_education_record(
     
     # Build description (remove extracted fields)
     fields_to_remove = [
-        group.heading if group.heading != "NO_HEADING" else None,
         degree,
         institution,
         location,
@@ -344,11 +358,11 @@ def _build_single_education_record(
 
 def build_experience(groups: List[TextGroup]) -> List[ExperienceRecord]:
     """
-    Build experience records from classified experience sections.
+    Build experience records from experience sections.
     Handles multiple job titles within a single section.
     
     Args:
-        groups: List of classified TextGroup objects
+        groups: List of TextGroup objects (heading = section type)
         
     Returns:
         List of ExperienceRecord objects
@@ -356,11 +370,8 @@ def build_experience(groups: List[TextGroup]) -> List[ExperienceRecord]:
     records = []
     
     for group in groups:
-        if group.heading == "NO_HEADING":
-            continue
-        
-        # Check if this is an experience section
-        is_experience = group.section_type == "experience"
+        # Check if this is an experience section (group.heading == "experience")
+        is_experience = _is_section_type(group, "experience")
         
         # Also check for job title entities
         title_entities = [e for e in group.entities if e.label.lower() == "job title"]
@@ -491,7 +502,6 @@ def _build_single_experience_record(
     
     # Build description
     fields_to_remove = [
-        group.heading if group.heading != "NO_HEADING" else None,
         job_title,
         company,
         location,
@@ -518,10 +528,10 @@ def _build_single_experience_record(
 
 def build_certifications(groups: List[TextGroup]) -> List[CertificationRecord]:
     """
-    Build certification records from classified certification sections.
+    Build certification records from certification sections.
     
     Args:
-        groups: List of classified TextGroup objects
+        groups: List of TextGroup objects (heading = section type)
         
     Returns:
         List of CertificationRecord objects
@@ -530,10 +540,8 @@ def build_certifications(groups: List[TextGroup]) -> List[CertificationRecord]:
     seen_names = set()
     
     for group in groups:
-        if group.heading == "NO_HEADING":
-            continue
-        
-        if group.section_type != "certifications":
+        # Check if this is a certifications section
+        if not _is_section_type(group, "certifications"):
             continue
         
         # Extract certification entities
@@ -585,10 +593,10 @@ def build_certifications(groups: List[TextGroup]) -> List[CertificationRecord]:
 
 def build_activities(groups: List[TextGroup]) -> List[ActivityRecord]:
     """
-    Build activity/project records from classified sections.
+    Build activity/project records from activities/projects sections.
     
     Args:
-        groups: List of classified TextGroup objects
+        groups: List of TextGroup objects (heading = section type)
         
     Returns:
         List of ActivityRecord objects
@@ -596,10 +604,8 @@ def build_activities(groups: List[TextGroup]) -> List[ActivityRecord]:
     records = []
     
     for group in groups:
-        if group.heading == "NO_HEADING":
-            continue
-        
-        if group.section_type not in ("activities", "projects"):
+        # Check if this is an activities or projects section
+        if not (_is_section_type(group, "activities") or _is_section_type(group, "projects")):
             continue
         
         text = (group.text or "").strip()
@@ -626,4 +632,3 @@ def build_activities(groups: List[TextGroup]) -> List[ActivityRecord]:
         ))
     
     return records
-

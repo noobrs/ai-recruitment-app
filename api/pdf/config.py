@@ -26,7 +26,7 @@ SECTION_TYPE_LABELS: List[str] = [
 ]
 
 # Threshold for section type classification
-SECTION_TYPE_THRESHOLD: float = 0.10
+SECTION_TYPE_THRESHOLD: float = 0.20
 
 # =============================================================================
 # Entity Labels by Section Type

@@ -10,7 +10,6 @@ from gliner import GLiNER
 
 from api.pdf.config import (
     ALL_ENTITY_LABELS,
-    ENTITY_LABELS_BY_SECTION,
     ENTITY_THRESHOLDS,
     DEFAULT_THRESHOLD,
     GLINER_MODEL_NAME,
@@ -64,8 +63,11 @@ def get_relevant_entity_labels(section_type: Optional[str]) -> List[str]:
     Get relevant entity labels based on section type.
     This optimizes GLiNER performance and reduces false positives.
     
+    Note: In the simplified pipeline, group.heading IS the section type
+    (e.g., "education", "experience", "skills").
+    
     Args:
-        section_type: The classified section type (lowercase)
+        section_type: The section type (from group.heading)
         
     Returns:
         List of entity labels to extract for this section
@@ -233,17 +235,23 @@ def extract_entities_for_section(
     """
     Extract entities from a TextGroup using section-type-specific labels.
     
+    Note: In the simplified pipeline, group.heading IS the section type
+    (e.g., "education", "experience").
+    
     Args:
         gliner: GLiNER model instance
-        group: TextGroup with section_type set
+        group: TextGroup with heading as section type
         
     Returns:
         List of extracted Entity objects
     """
-    # Get relevant labels for this section type
-    labels = get_relevant_entity_labels(group.section_type)
+    # group.heading is now the section type (e.g., "education", "experience")
+    section_type = group.heading
     
-    # Extract from the full text (heading + body)
+    # Get relevant labels for this section type
+    labels = get_relevant_entity_labels(section_type)
+    
+    # Extract from the full text
     entities = extract_entities_from_text(gliner, group.text, labels)
     
     return entities
@@ -259,17 +267,12 @@ def extract_entities_for_all_sections(
     
     Args:
         gliner: GLiNER model instance
-        groups: List of classified TextGroup objects
+        groups: List of TextGroup objects (heading = section type)
         
     Returns:
         Same groups list with entities field updated
     """
     for group in groups:
-        # Skip NO_HEADING groups without a section type
-        if group.heading == "NO_HEADING" and group.section_type is None:
-            group.entities = []
-            continue
-        
         entities = extract_entities_for_section(gliner, group)
         group.entities = entities
     
@@ -316,4 +319,3 @@ def deduplicate_entities(entities: List[Entity]) -> List[Entity]:
             best[key] = entity
     
     return list(best.values())
-

@@ -1,11 +1,12 @@
 """
-Main PDF resume extraction pipeline (New Version).
+Main PDF resume extraction pipeline (Simplified Version).
 Orchestrates layout parsing, section classification, entity extraction, and redaction.
 
 Features:
 - Uses spacy-layout for PDF text extraction
-- Groups text by headings with NO_HEADING handling
-- Uses GLiNER for section type classification
+- Groups text by headings
+- Uses GLiNER to classify headings into section types
+- Merges groups by section type
 - Section-type-specific entity extraction
 - Multiple education/experience record handling
 - Person info extraction for redaction
@@ -27,12 +28,9 @@ from typing import Any, Dict, Optional
 from api.types.types import ApiResponse
 
 from api.pdf.layout_parser import (
-    filter_no_heading_duplicates,
-    get_first_page_text,
-    group_spans_by_heading,
     load_pdf_first_page,
+    parse_and_group_by_section,
 )
-from api.pdf.section_classifier import classify_all_sections
 from api.pdf.entity_extraction import (
     extract_entities_for_all_sections,
     load_gliner_model,
@@ -46,8 +44,7 @@ from api.pdf.resume_builder import (
     build_skills,
 )
 from api.pdf.redaction import redact_pdf
-from api.pdf.models import ExtractedResume, TextGroup
-from api.pdf.utils import normalize_text
+from api.pdf.models import ExtractedResume
 
 
 logger = logging.getLogger(__name__)
@@ -147,16 +144,15 @@ def process_pdf_resume(file_bytes: bytes) -> ApiResponse:
     """
     Main pipeline for processing PDF resumes.
     
-    Pipeline steps:
+    Simplified Pipeline Steps:
     1. Load PDF and extract layout (first page only)
-    2. Group text spans by heading
-    3. Filter duplicate NO_HEADING content
-    4. Classify section types using GLiNER
-    5. Extract entities based on section type
-    6. Extract person information for redaction
-    7. Build structured resume data
-    8. Redact sensitive information and faces
-    9. Upload and return results
+    2. Load GLiNER model
+    3. Parse and group by section (group by heading -> classify -> merge)
+    4. Extract entities based on section type
+    5. Extract person information for redaction
+    6. Build structured resume data
+    7. Redact sensitive information and faces
+    8. Upload and return results
     
     Args:
         file_bytes: PDF file as bytes
@@ -175,31 +171,24 @@ def process_pdf_resume(file_bytes: bytes) -> ApiResponse:
         print("[Pipeline] Step 1: Loading PDF layout...")
         doc = load_pdf_first_page(str(pdf_path))
         
-        print("[Pipeline] Step 2: Grouping text by headings...")
-        groups = group_spans_by_heading(doc)
-        print(f"[Pipeline] Found {len(groups)} text groups")
-        
-        print("[Pipeline] Step 3: Filtering duplicate NO_HEADING content...")
-        groups = filter_no_heading_duplicates(groups)
-        print(f"[Pipeline] {len(groups)} groups after filtering")
-        
-        print("[Pipeline] Step 4: Loading GLiNER model...")
+        print("[Pipeline] Step 2: Loading GLiNER model...")
         gliner = load_gliner_model()
         
-        print("[Pipeline] Step 5: Classifying section types...")
-        groups = classify_all_sections(gliner, groups)
-        _log_section_types(groups)
+        print("[Pipeline] Step 3: Parsing and grouping by section...")
+        groups = parse_and_group_by_section(doc, gliner)
+        print(f"[Pipeline] Created {len(groups)} section groups")
+        _log_groups(groups)
         
-        print("[Pipeline] Step 6: Extracting entities by section type...")
+        print("[Pipeline] Step 4: Extracting entities by section type...")
         groups = extract_entities_for_all_sections(gliner, groups)
         _log_entity_counts(groups)
         
-        print("[Pipeline] Step 7: Extracting person information...")
+        print("[Pipeline] Step 5: Extracting person information...")
         person_info = extract_person_info(groups, gliner, doc)
         print(f"[Pipeline] Found: names={person_info.names}, emails={person_info.emails}, "
               f"phones={person_info.phones}, locations={person_info.locations}")
         
-        print("[Pipeline] Step 8: Building structured resume data...")
+        print("[Pipeline] Step 6: Building structured resume data...")
         skills = build_skills(groups)
         education = build_education(groups)
         experience = build_experience(groups)
@@ -223,7 +212,7 @@ def process_pdf_resume(file_bytes: bytes) -> ApiResponse:
         # Convert to API format
         resume_data = _convert_to_api_response(resume)
         
-        print("[Pipeline] Step 9: Redacting sensitive information...")
+        print("[Pipeline] Step 7: Redacting sensitive information...")
         redaction_result = redact_pdf(file_bytes, person_info)
         
         # Handle redaction result
@@ -286,22 +275,19 @@ def process_pdf_resume(file_bytes: bytes) -> ApiResponse:
 # Debugging Helpers
 # =============================================================================
 
-def _log_section_types(groups):
-    """Log section type classification results."""
+def _log_groups(groups):
+    """Log section groups."""
     for group in groups:
-        heading = group.heading[:30] if group.heading else "NO_HEADING"
-        section_type = group.section_type or "unknown"
-        print(f"[Pipeline]   '{heading}...' -> {section_type}")
+        print(f"[Pipeline]   Section '{group.heading}': {len(group.text)} chars, {len(group.segments)} segments")
 
 
 def _log_entity_counts(groups):
     """Log entity extraction counts per group."""
     for group in groups:
-        heading = group.heading[:30] if group.heading else "NO_HEADING"
         entity_count = len(group.entities)
         if entity_count > 0:
             labels = set(e.label for e in group.entities)
-            print(f"[Pipeline]   '{heading}...': {entity_count} entities ({', '.join(labels)})")
+            print(f"[Pipeline]   Section '{group.heading}': {entity_count} entities ({', '.join(labels)})")
 
 
 # =============================================================================
@@ -327,11 +313,9 @@ def extract_resume_data(file_bytes: bytes) -> Optional[ExtractedResume]:
             f.write(file_bytes)
         
         doc = load_pdf_first_page(str(pdf_path))
-        groups = group_spans_by_heading(doc)
-        groups = filter_no_heading_duplicates(groups)
-        
         gliner = load_gliner_model()
-        groups = classify_all_sections(gliner, groups)
+        
+        groups = parse_and_group_by_section(doc, gliner)
         groups = extract_entities_for_all_sections(gliner, groups)
         
         person_info = extract_person_info(groups, gliner, doc)
@@ -376,11 +360,9 @@ def get_text_groups(file_bytes: bytes) -> Optional[list]:
             f.write(file_bytes)
         
         doc = load_pdf_first_page(str(pdf_path))
-        groups = group_spans_by_heading(doc)
-        groups = filter_no_heading_duplicates(groups)
-        
         gliner = load_gliner_model()
-        groups = classify_all_sections(gliner, groups)
+        
+        groups = parse_and_group_by_section(doc, gliner)
         
         return [g.to_dict() for g in groups]
     
@@ -393,4 +375,3 @@ def get_text_groups(file_bytes: bytes) -> Optional[list]:
             pdf_path.unlink(missing_ok=True)
         except Exception:
             pass
-

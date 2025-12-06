@@ -1,61 +1,43 @@
 """
 Section type classification using GLiNER.
-Classifies resume sections into types: person, education, experience, skills, etc.
+Classifies resume section headings into types: person, education, experience, skills, etc.
 """
 
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from gliner import GLiNER
 
-from api.pdf.config import SECTION_TYPE_LABELS, SECTION_TYPE_THRESHOLD
-from api.pdf.models import TextGroup
+from api.pdf.config import SECTION_TYPE_LABELS
 
 
 # =============================================================================
-# Section Type Classification
+# Heading Classification
 # =============================================================================
 
-def classify_section_type(
-    gliner: GLiNER,
-    heading: str,
-    text: str,
-) -> Optional[str]:
+def classify_heading(gliner: GLiNER, heading: str) -> Optional[str]:
     """
-    Classify the type of a resume section using GLiNER.
+    Classify a section heading using GLiNER.
     
-    Uses the GLiNER model to understand the semantic meaning of the section
-    based on both the heading and content.
+    Uses the GLiNER model to understand the semantic meaning of the heading
+    and map it to a standard section type.
     
     Args:
         gliner: GLiNER model instance
-        heading: Section heading text
-        text: Section body text (used as context)
+        heading: Section heading text to classify
         
     Returns:
         Section type string (lowercase) or None if classification fails.
         Possible values: "person", "education", "experience", "skills",
                         "certifications", "projects", "activities", "summary"
     """
-    # Prepare text for classification
-    if heading and heading != "NO_HEADING":
-        # Prioritize heading, add context from body
-        classification_text = f"{heading}\n{text[:500]}" if text else heading
-    elif text:
-        # Use first portion of text for NO_HEADING groups
-        classification_text = text[:500]
-    else:
+    if not heading or not heading.strip():
         return None
     
-    if not classification_text.strip():
-        return None
+    heading = heading.strip()
     
-    # Use GLiNER to classify
+    # Use GLiNER to classify the heading
     try:
-        predictions = gliner.predict_entities(
-            classification_text,
-            SECTION_TYPE_LABELS,
-            threshold=SECTION_TYPE_THRESHOLD,
-        )
+        predictions = gliner.predict_entities(heading, SECTION_TYPE_LABELS)
     except Exception:
         return None
     
@@ -73,89 +55,32 @@ def classify_section_type(
         "experience": "experience",
         "skills": "skills",
         "certifications": "certifications",
-        "projects": "projects",
         "activities": "activities",
+        "projects": "projects",
         "summary": "summary",
     }
     
     return label_map.get(label)
 
 
-def classify_all_sections(gliner: GLiNER, groups: List[TextGroup]) -> List[TextGroup]:
+def classify_headings_batch(
+    gliner: GLiNER,
+    headings: List[str],
+) -> Dict[str, Optional[str]]:
     """
-    Classify all sections in a list of TextGroups.
-    Updates each group's section_type field in place.
+    Classify multiple headings and return a mapping of heading -> section type.
     
     Args:
         gliner: GLiNER model instance
-        groups: List of TextGroup objects
+        headings: List of heading texts to classify
         
     Returns:
-        Same groups list with section_type field updated
+        Dict mapping each heading to its section type (or None)
     """
-    for group in groups:
-        section_type = classify_section_type(
-            gliner,
-            group.heading,
-            group.text,
-        )
-        group.section_type = section_type
+    result = {}
     
-    return groups
-
-
-def identify_person_section(groups: List[TextGroup]) -> Optional[TextGroup]:
-    """
-    Identify the person/contact information section.
-    
-    The person section is typically:
-    1. Classified as 'person' type
-    2. A NO_HEADING group at the beginning (often contains name/contact)
-    3. A 'summary' section that contains contact info
-    
-    Args:
-        groups: List of classified TextGroup objects
+    for heading in headings:
+        section_type = classify_heading(gliner, heading)
+        result[heading] = section_type
         
-    Returns:
-        TextGroup identified as person section, or None
-    """
-    # First, look for explicitly classified 'person' sections
-    for group in groups:
-        if group.section_type == "person":
-            return group
-    
-    # Next, look for NO_HEADING groups that might contain person info
-    for group in groups:
-        if group.heading == "NO_HEADING":
-            text_lower = group.text.lower()
-            # Check for typical person section indicators
-            has_contact_indicators = any(indicator in text_lower for indicator in [
-                "@", "email", "phone", "tel:", "mobile",
-            ])
-            if has_contact_indicators:
-                return group
-    
-    # Finally, check summary sections
-    for group in groups:
-        if group.section_type == "summary":
-            return group
-    
-    return None
-
-
-def get_sections_by_type(
-    groups: List[TextGroup],
-    section_type: str,
-) -> List[TextGroup]:
-    """
-    Get all groups of a specific section type.
-    
-    Args:
-        groups: List of TextGroup objects
-        section_type: Type to filter by (e.g., 'education', 'experience')
-        
-    Returns:
-        List of matching TextGroup objects
-    """
-    return [g for g in groups if g.section_type == section_type]
-
+    return result

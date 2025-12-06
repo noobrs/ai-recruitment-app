@@ -8,9 +8,7 @@ from typing import Any, List, Optional, Set
 
 from gliner import GLiNER
 
-from api.pdf.config import PERSON_SECTION_MAX_CHARS
 from api.pdf.models import (
-    BoundingBox,
     PersonInfo,
     RedactionRegion,
     TextGroup,
@@ -18,8 +16,6 @@ from api.pdf.models import (
 from api.pdf.validators import (
     extract_emails,
     extract_phones,
-    find_emails_with_positions,
-    find_phones_with_positions,
 )
 from api.pdf.layout_parser import extract_bbox
 
@@ -81,13 +77,15 @@ def extract_person_info(
 def _get_person_section_text(groups: List[TextGroup]) -> str:
     """
     Get text content for person info extraction.
+    
+    In the simplified pipeline, group.heading IS the section type.
     Prioritizes:
-    1. Sections classified as 'person'
-    2. Sections classified as 'summary'
-    3. NO_HEADING sections
+    1. Sections with heading 'person'
+    2. Sections with heading 'summary'
+    3. Sections with heading 'unknown' (often contain contact info)
     
     Args:
-        groups: List of TextGroup objects
+        groups: List of TextGroup objects (heading = section type)
         
     Returns:
         Combined text for person info extraction
@@ -96,30 +94,20 @@ def _get_person_section_text(groups: List[TextGroup]) -> str:
     
     # Priority 1: Person sections
     for group in groups:
-        if group.section_type == "person":
+        if group.heading.lower() == "person":
             texts.append(group.text)
     
     # Priority 2: Summary sections
     for group in groups:
-        if group.section_type == "summary":
+        if group.heading.lower() == "summary":
             texts.append(group.text)
     
-    # Priority 3: NO_HEADING sections (often contain contact info)
+    # Priority 3: Unknown sections (often contain contact info at top of resume)
     for group in groups:
-        if group.heading == "NO_HEADING":
+        if group.heading.lower() == "unknown":
             texts.append(group.text)
-    
-    # # Priority 4: Other sections (limited amount)
-    # remaining_chars = PERSON_SECTION_MAX_CHARS - sum(len(t) for t in texts)
-    # if remaining_chars > 0:
-    #     for group in groups:
-    #         if group.section_type not in ("person", "summary") and group.heading != "NO_HEADING":
-    #             if remaining_chars > 0:
-    #                 texts.append(group.text[:remaining_chars])
-    #                 remaining_chars -= len(group.text)
     
     combined = "\n".join(texts)
-    # return combined[:PERSON_SECTION_MAX_CHARS]
     return combined
 
 

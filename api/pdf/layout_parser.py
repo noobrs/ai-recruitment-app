@@ -1,11 +1,11 @@
 """
 PDF layout parsing using spaCy-Layout.
 Extracts text spans with headings and coordinates.
-Groups text by heading with proper handling of NO_HEADING.
+Groups text by heading, classifies headings with GLiNER, then merges by section type.
 """
 
 from collections import defaultdict
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional
 
 import spacy
 from spacy_layout import spaCyLayout
@@ -136,33 +136,37 @@ def normalize_text(text: Optional[str]) -> str:
 
 
 # =============================================================================
-# Heading Grouping
+# Raw Heading Group (Internal)
 # =============================================================================
 
-def group_spans_by_heading(doc: spacy.tokens.Doc) -> List[TextGroup]:
-    """
-    Group layout spans by their heading and preserve coordinates.
+class _RawHeadingGroup:
+    """Internal class for grouping text by raw heading before classification."""
+    def __init__(self, heading: str):
+        self.heading = heading  # Original heading text
+        self.text_parts: List[str] = []
+        self.segments: List[TextSegment] = []
     
-    Features:
-    1. Groups text under their respective headings
-    2. Creates NO_HEADING group for orphaned text
-    3. Removes heading text from NO_HEADING to avoid duplication
-    4. Includes heading text in each group's text content
-    5. Preserves bounding box coordinates for each segment
+    def add_segment(self, text: str, label: str, bbox: Optional[BoundingBox]):
+        """Add a text segment to this group."""
+        self.text_parts.append(text)
+        self.segments.append(TextSegment(text=text, label=label, bbox=bbox))
+
+
+# =============================================================================
+# Step 1: Group Spans by Heading
+# =============================================================================
+
+def group_spans_by_heading(doc: spacy.tokens.Doc) -> Dict[str, _RawHeadingGroup]:
+    """
+    Group layout spans by their heading.
     
     Args:
         doc: spaCy Doc with layout spans
         
     Returns:
-        List of TextGroup objects, each containing:
-        - heading: heading text or 'NO_HEADING'
-        - text: concatenated text content (includes heading)
-        - segments: list of TextSegment with bbox coordinates
-        - section_type: None (to be classified later)
-        - entities: empty list (to be extracted later)
+        Dict mapping heading text -> _RawHeadingGroup
     """
-    # Collect spans by heading
-    groups_dict: Dict[str, List[Any]] = defaultdict(list)
+    groups: Dict[str, _RawHeadingGroup] = {}
     
     for span in doc.spans.get("layout", []):
         if span.label_ in SKIP_SPAN_LABELS:
@@ -175,131 +179,165 @@ def group_spans_by_heading(doc: spacy.tokens.Doc) -> List[TextGroup]:
         if not head_text:
             head_text = "NO_HEADING"
         
-        groups_dict[head_text].append(span)
-    
-    # Collect all heading texts (excluding NO_HEADING) for deduplication
-    heading_texts: Set[str] = set()
-    for head_text in groups_dict.keys():
-        if head_text != "NO_HEADING":
-            heading_texts.add(head_text.lower().strip())
-    
-    # Build TextGroup objects
-    result: List[TextGroup] = []
-    
-    for head_text, spans in groups_dict.items():
-        # Sort spans by position in document
-        spans_sorted = sorted(spans, key=lambda s: (s.start_char, s.end_char))
+        # Create group if not exists
+        if head_text not in groups:
+            groups[head_text] = _RawHeadingGroup(head_text)
         
-        text_lines = []
-        segments = []
-        
-        # If this is a proper heading (not NO_HEADING), include heading as first line
-        if head_text != "NO_HEADING":
-            text_lines.append(head_text)
-        
-        for span in spans_sorted:
-            span_text = (span.text or "").strip()
-            if not span_text:
-                continue
-            
-            normalized_span_text = normalize_text(span_text)
-            
-            # For NO_HEADING group, skip text that matches a heading elsewhere
-            if head_text == "NO_HEADING":
-                if normalized_span_text.lower() in heading_texts:
-                    continue
-                # Also check if first line of multi-line text matches a heading
-                first_line = span_text.split("\n")[0].strip().lower()
-                if first_line and first_line in heading_texts:
-                    continue
-            
-            text_lines.append(span_text)
-            
-            # Extract coordinates
-            layout_obj = getattr(span._, "layout", None)
-            bbox = extract_bbox(layout_obj)
-            
-            segments.append(TextSegment(
-                text=span_text,
-                label=span.label_,
-                bbox=bbox,
-            ))
-        
-        # Skip empty groups
-        if not segments and head_text == "NO_HEADING":
+        # Get span text and bbox
+        span_text = (span.text or "").strip()
+        if not span_text:
             continue
         
-        group_text = "\n".join(text_lines)
+        layout_obj = getattr(span._, "layout", None)
+        bbox = extract_bbox(layout_obj)
         
-        result.append(TextGroup(
-            heading=head_text,
-            text=group_text,
-            segments=segments,
-            section_type=None,
-            entities=[],
-        ))
+        groups[head_text].add_segment(span_text, span.label_, bbox)
     
-    # Sort by text length (longer sections tend to be more important)
-    result.sort(key=lambda g: -len(g.text))
-    
-    return result
+    return groups
 
 
-def filter_no_heading_duplicates(groups: List[TextGroup]) -> List[TextGroup]:
+# =============================================================================
+# Step 2: Classify Headings with GLiNER
+# =============================================================================
+
+def classify_headings(
+    groups: Dict[str, _RawHeadingGroup],
+    gliner,
+) -> Dict[str, str]:
     """
-    Additional filtering to remove NO_HEADING groups whose content
-    substantially overlaps with other heading groups.
-    
-    This is a secondary pass after the initial grouping to catch
-    any remaining duplicates.
+    Classify each heading using GLiNER and return heading -> section_type mapping.
     
     Args:
-        groups: List of TextGroup objects
+        groups: Dict of heading -> _RawHeadingGroup
+        gliner: GLiNER model instance
         
     Returns:
-        Filtered list with duplicate NO_HEADING content removed
+        Dict mapping heading text -> section type (e.g., "education", "experience")
     """
-    # Collect all non-NO_HEADING text content
-    heading_content: Set[str] = set()
-    for group in groups:
-        if group.heading != "NO_HEADING":
-            # Add heading
-            heading_content.add(group.heading.lower().strip())
-            # Add first lines of segments
-            for segment in group.segments:
-                first_line = segment.text.split("\n")[0].strip().lower()
-                if first_line:
-                    heading_content.add(first_line)
+    from api.pdf.section_classifier import classify_heading
     
-    # Filter NO_HEADING groups
-    filtered = []
-    for group in groups:
-        if group.heading == "NO_HEADING":
-            # Check if this NO_HEADING group's content is mostly headings
-            remaining_segments = []
-            for segment in group.segments:
-                text_lower = segment.text.strip().lower()
-                first_line = text_lower.split("\n")[0].strip()
-                
-                # Keep segment if it's not just a heading
-                if text_lower not in heading_content and first_line not in heading_content:
-                    remaining_segments.append(segment)
-            
-            if remaining_segments:
-                # Rebuild the group with filtered segments
-                new_text = "\n".join(s.text for s in remaining_segments)
-                filtered.append(TextGroup(
-                    heading="NO_HEADING",
-                    text=new_text,
-                    segments=remaining_segments,
-                    section_type=group.section_type,
-                    entities=group.entities,
-                ))
+    heading_to_section: Dict[str, str] = {}
+    
+    for heading in groups.keys():
+        if heading == "NO_HEADING":
+            # Try to classify NO_HEADING based on first few lines of content
+            content = " ".join(groups[heading].text_parts[:3])[:200]
+            section_type = classify_heading(gliner, content)
+            heading_to_section[heading] = section_type or "unknown"
         else:
-            filtered.append(group)
+            section_type = classify_heading(gliner, heading)
+            heading_to_section[heading] = section_type or "unknown"
     
-    return filtered
+    return heading_to_section
 
+
+# =============================================================================
+# Step 3: Merge Groups by Section Type
+# =============================================================================
+
+def merge_groups_by_section(
+    raw_groups: Dict[str, _RawHeadingGroup],
+    heading_to_section: Dict[str, str],
+) -> List[TextGroup]:
+    """
+    Merge groups that have the same section type.
+    The merged group's heading becomes the section type label.
+    
+    Args:
+        raw_groups: Dict of heading -> _RawHeadingGroup
+        heading_to_section: Dict of heading -> section type
+        
+    Returns:
+        List of merged TextGroup objects with section label as heading
+    """
+    # Group raw groups by their section type
+    section_to_raw_groups: Dict[str, List[_RawHeadingGroup]] = defaultdict(list)
+    
+    for heading, raw_group in raw_groups.items():
+        section_type = heading_to_section.get(heading, "unknown")
+        section_to_raw_groups[section_type].append(raw_group)
+    
+    # Build merged TextGroups
+    merged_groups: List[TextGroup] = []
+    
+    for section_type, raw_group_list in section_to_raw_groups.items():
+        # Combine all text and segments from groups of the same section type
+        combined_text_parts: List[str] = []
+        combined_segments: List[TextSegment] = []
+        
+        for raw_group in raw_group_list:
+            # Add the original heading as part of the text (for context)
+            if raw_group.heading != "NO_HEADING":
+                combined_text_parts.append(raw_group.heading)
+            
+            # Add all text parts
+            combined_text_parts.extend(raw_group.text_parts)
+            
+            # Add all segments (preserves coordinates)
+            combined_segments.extend(raw_group.segments)
+        
+        # Create merged TextGroup with section type as heading
+        merged_group = TextGroup(
+            heading=section_type,  # Section label (e.g., "education", "experience")
+            text=" ".join(combined_text_parts),
+            segments=combined_segments,
+            entities=[],
+        )
+        
+        merged_groups.append(merged_group)
+    
+    # Log merge results
+    print(f"[Layout] Merged into {len(merged_groups)} section groups:")
+    for group in merged_groups:
+        print(f"[Layout]   {group.heading}: {len(group.segments)} segments, {len(group.text)} chars")
+    
+    return merged_groups
+
+
+# =============================================================================
+# Main Function: Parse and Group by Section
+# =============================================================================
+
+def parse_and_group_by_section(
+    doc: spacy.tokens.Doc,
+    gliner,
+) -> List[TextGroup]:
+    """
+    Main function to parse PDF and group text by classified section type.
+    
+    Pipeline:
+    1. Group spans by their raw heading
+    2. Classify each heading using GLiNER
+    3. Merge groups with same section type
+    
+    Args:
+        doc: spaCy Doc with layout spans
+        gliner: GLiNER model instance
+        
+    Returns:
+        List of TextGroup objects, one per section type
+        Each group's heading is the section label (e.g., "education", "experience")
+    """
+    print("[Layout] Step 1: Grouping spans by heading...")
+    raw_groups = group_spans_by_heading(doc)
+    print(f"[Layout] Found {len(raw_groups)} raw heading groups:")
+    for heading, group in raw_groups.items():
+        print(f"[Layout]   '{heading}': {len(group.segments)} segments")
+    
+    print("[Layout] Step 2: Classifying headings with GLiNER...")
+    heading_to_section = classify_headings(raw_groups, gliner)
+    for heading, section in heading_to_section.items():
+        print(f"[Layout]   '{heading}' -> {section}")
+    
+    print("[Layout] Step 3: Merging groups by section type...")
+    merged_groups = merge_groups_by_section(raw_groups, heading_to_section)
+    
+    return merged_groups
+
+
+# =============================================================================
+# Utility Functions
+# =============================================================================
 
 def get_document_text(doc: spacy.tokens.Doc) -> str:
     """Extract full text from document."""
@@ -318,4 +356,3 @@ def get_first_page_text(doc: spacy.tokens.Doc) -> str:
         else:
             texts.append(span.text or "")
     return "\n".join(texts)
-
