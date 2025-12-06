@@ -14,7 +14,7 @@ Features:
 - Coordinate-based text redaction
 
 Usage:
-    from api.pdf_new import process_pdf_resume
+    from api.pdf import process_pdf_resume
     
     with open("resume.pdf", "rb") as f:
         result = process_pdf_resume(f.read())
@@ -24,7 +24,7 @@ Usage:
         redacted_url = result.redacted_file_url
 
 For debugging/testing:
-    from api.pdf_new import extract_resume_data, get_text_groups
+    from api.pdf import extract_resume_data, get_text_groups
     
     # Get structured data without redaction
     resume = extract_resume_data(file_bytes)
@@ -33,13 +33,13 @@ For debugging/testing:
     groups = get_text_groups(file_bytes)
 """
 
-from api.pdf_new.pipeline import (
+from api.pdf.pipeline import (
     process_pdf_resume,
     extract_resume_data,
     get_text_groups,
 )
 
-from api.pdf_new.models import (
+from api.pdf.models import (
     BoundingBox,
     TextSegment,
     Entity,
@@ -53,12 +53,12 @@ from api.pdf_new.models import (
     ExtractedResume,
 )
 
-from api.pdf_new.entity_extraction import (
+from api.pdf.entity_extraction import (
     load_gliner_model,
     get_relevant_entity_labels,
 )
 
-from api.pdf_new.validators import (
+from api.pdf.validators import (
     is_valid_email,
     extract_emails,
     is_valid_malaysia_phone,

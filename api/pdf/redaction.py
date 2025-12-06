@@ -13,7 +13,7 @@ import cv2
 import fitz  # PyMuPDF
 import numpy as np
 
-from api.pdf_new.models import PersonInfo, RedactionRegion
+from api.pdf.models import PersonInfo, RedactionRegion
 
 
 # =============================================================================

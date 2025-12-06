@@ -8,20 +8,20 @@ from typing import Any, List, Optional, Set
 
 from gliner import GLiNER
 
-from api.pdf_new.config import PERSON_SECTION_MAX_CHARS
-from api.pdf_new.models import (
+from api.pdf.config import PERSON_SECTION_MAX_CHARS
+from api.pdf.models import (
     BoundingBox,
     PersonInfo,
     RedactionRegion,
     TextGroup,
 )
-from api.pdf_new.validators import (
+from api.pdf.validators import (
     extract_emails,
     extract_phones,
     find_emails_with_positions,
     find_phones_with_positions,
 )
-from api.pdf_new.layout_parser import extract_bbox
+from api.pdf.layout_parser import extract_bbox
 
 
 # =============================================================================

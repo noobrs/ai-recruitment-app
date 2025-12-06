@@ -26,28 +26,28 @@ from typing import Any, Dict, Optional
 
 from api.types.types import ApiResponse
 
-from api.pdf_new.layout_parser import (
+from api.pdf.layout_parser import (
     filter_no_heading_duplicates,
     get_first_page_text,
     group_spans_by_heading,
     load_pdf_first_page,
 )
-from api.pdf_new.section_classifier import classify_all_sections
-from api.pdf_new.entity_extraction import (
+from api.pdf.section_classifier import classify_all_sections
+from api.pdf.entity_extraction import (
     extract_entities_for_all_sections,
     load_gliner_model,
 )
-from api.pdf_new.person_extractor import extract_person_info
-from api.pdf_new.resume_builder import (
+from api.pdf.person_extractor import extract_person_info
+from api.pdf.resume_builder import (
     build_activities,
     build_certifications,
     build_education,
     build_experience,
     build_skills,
 )
-from api.pdf_new.redaction import redact_pdf
-from api.pdf_new.models import ExtractedResume, TextGroup
-from api.pdf_new.utils import normalize_text
+from api.pdf.redaction import redact_pdf
+from api.pdf.models import ExtractedResume, TextGroup
+from api.pdf.utils import normalize_text
 
 
 logger = logging.getLogger(__name__)

@@ -5,8 +5,8 @@ Handles multiple education and experience records carefully.
 
 from typing import Dict, List, Optional, Tuple
 
-from api.pdf_new.config import TEXT_WINDOW_RADIUS
-from api.pdf_new.models import (
+from api.pdf.config import TEXT_WINDOW_RADIUS
+from api.pdf.models import (
     ActivityRecord,
     CertificationRecord,
     EducationRecord,
@@ -14,7 +14,7 @@ from api.pdf_new.models import (
     ExperienceRecord,
     TextGroup,
 )
-from api.pdf_new.utils import (
+from api.pdf.utils import (
     clean_description,
     deduplicate_by_key,
     deduplicate_strings,
@@ -25,7 +25,7 @@ from api.pdf_new.utils import (
     normalize_key,
     remove_fields_from_description,
 )
-from api.pdf_new.validators import is_valid_degree, is_valid_date
+from api.pdf.validators import is_valid_degree, is_valid_date
 
 
 # =============================================================================

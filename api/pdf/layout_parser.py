@@ -10,8 +10,8 @@ from typing import Any, Dict, List, Optional, Set
 import spacy
 from spacy_layout import spaCyLayout
 
-from api.pdf_new.config import SKIP_SPAN_LABELS
-from api.pdf_new.models import BoundingBox, TextGroup, TextSegment
+from api.pdf.config import SKIP_SPAN_LABELS
+from api.pdf.models import BoundingBox, TextGroup, TextSegment
 
 
 # =============================================================================

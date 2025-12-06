@@ -7,8 +7,8 @@ from typing import List, Optional
 
 from gliner import GLiNER
 
-from api.pdf_new.config import SECTION_TYPE_LABELS, SECTION_TYPE_THRESHOLD
-from api.pdf_new.models import TextGroup
+from api.pdf.config import SECTION_TYPE_LABELS, SECTION_TYPE_THRESHOLD
+from api.pdf.models import TextGroup
 
 
 # =============================================================================

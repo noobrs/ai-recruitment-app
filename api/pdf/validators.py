@@ -5,7 +5,7 @@ Regex validators for email, phone (Malaysia), degree, and date.
 import re
 from typing import List, Optional, Tuple
 
-from api.pdf_new.config import (
+from api.pdf.config import (
     EMAIL_PATTERN,
     PHONE_PATTERNS,
     DEGREE_PATTERNS,

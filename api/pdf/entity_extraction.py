@@ -8,15 +8,15 @@ from typing import Dict, List, Optional
 
 from gliner import GLiNER
 
-from api.pdf_new.config import (
+from api.pdf.config import (
     ALL_ENTITY_LABELS,
     ENTITY_LABELS_BY_SECTION,
     ENTITY_THRESHOLDS,
     DEFAULT_THRESHOLD,
     GLINER_MODEL_NAME,
 )
-from api.pdf_new.models import Entity, TextGroup
-from api.pdf_new.validators import is_valid_degree, is_valid_date
+from api.pdf.models import Entity, TextGroup
+from api.pdf.validators import is_valid_degree, is_valid_date
 
 
 # =============================================================================

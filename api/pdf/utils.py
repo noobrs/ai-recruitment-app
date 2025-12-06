@@ -7,7 +7,7 @@ from typing import Dict, List, Optional, Set, Tuple
 
 from rapidfuzz import fuzz
 
-from api.pdf_new.models import Entity
+from api.pdf.models import Entity
 
 
 # =============================================================================
