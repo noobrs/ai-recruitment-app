@@ -1,43 +1,62 @@
-# FastAPI and Web Framework
+# FastAPI & Backend
 fastapi
 uvicorn[standard]
 python-multipart
+python-dotenv
+httpx
+ipython
 
-# Data Validation and Configuration
+# Pydantic / Config
 pydantic
 pydantic-settings
 
-# Database and Storage
+# Supabase
 supabase
 
-# Environment and HTTP
-python-dotenv
-httpx
-
-# PDF Processing Dependencies
-spacy>=3.7.0
-spacy-layout
-gliner
+# PDF Processing
 pymupdf
 rapidfuzz
+gliner
+spacy>=3.7.0
+spacy-layout
+en-core-web-sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl
 
-# Image Processing Dependencies
-opencv-python-headless
+# NER / NLP / Transformers
+transformers
+tokenizers
+torch
+torchaudio
+torchvision
+
+# Machine Learning / Utilities
+scikit-learn
 numpy
-Pillow
+pandas
+regex
+python-dateutil
+nltk
+
+# Image Processing (OCR + Preprocessing)
+opencv-python-headless
+pillow
 pytesseract
 
-# Machine Learning and NLP
-transformers
-torch
-scikit-learn
-skillNer
-find-job-titles
-ipython
-
-# Computer Vision and Detection
+# Detection (Roboflow)
 supervision
 inference-sdk
 
-# Date Parsing
-python-dateutil
+# Skill Extraction
+skillner
+find-job-titles
+
+# Optional Utilities (safe)
+requests
+tqdm
+
+# DO NOT INSTALL
+# - ipython / jupyter (dev only)
+# - spacy-layout (not used)
+
+# conda create -n resume_api python=3.10
+# conda activate resume_api
+# pip install -r requirements.txt

@@ -4,9 +4,9 @@ Extracts resume entities like skills, degrees, job titles, etc.
 """
 
 from typing import Dict, List
+import logging
 
 from gliner import GLiNER
-from gliner.model import GLiNERConfig
 
 from api.pdf.config import ENTITY_LABELS, GLINER_MODEL_NAME
 from api.pdf.utils import passes_threshold
@@ -16,9 +16,19 @@ def load_gliner_model(model_name: str = GLINER_MODEL_NAME) -> GLiNER:
     """
     Load and return the GLiNER model for entity extraction.
     """
-    cfg = GLiNERConfig.from_pretrained(model_name)
-    print(f"[GLiNER] Loading model: {model_name}, backbone: {cfg.model_name}")
-    return GLiNER.from_pretrained(model_name)
+    # Temporarily suppress transformers logging to avoid JSON serialization error
+    # with GLiNER config properties
+    transformers_logger = logging.getLogger("transformers.configuration_utils")
+    original_level = transformers_logger.level
+    transformers_logger.setLevel(logging.WARNING)
+    
+    try:
+        print(f"[GLiNER] Loading model: {model_name}")
+        model = GLiNER.from_pretrained(model_name)
+        return model
+    finally:
+        # Restore original logging level
+        transformers_logger.setLevel(original_level)
 
 
 def extract_entities_from_text(
