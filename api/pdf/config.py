@@ -10,30 +10,32 @@ from typing import Dict, List, Set
 # =============================================================================
 
 GLINER_MODEL_NAME: str = "urchade/gliner_small-v2.1"
-SECTION_CLASSIFIER_MODEL_NAME: str = "facebook/bart-large-mnli"
 
 # =============================================================================
 # Section Types for Classification
 # =============================================================================
 
 SECTION_TYPE_LABELS: List[str] = [
-    # "Personally Identifiable Information",        # Personal info section (name, contact)
-    # "Education",     # Academic background
-    # "Experience",    # Work experience / employment history
-    # "Languages",     # Languages spoken
-    # "Skills",        # Technical/soft skills
-    # "Certifications", # Professional certifications
-    # "Activities",    # Extracurricular activities
-    # "Summary",       # Profile summary/objective
-    "candidate contact information",
-    "professional experience",
-    "education and university degree",
-    "skills and tools",
-    "languages",
-    "certifications and awards",
-    "extracurricular activities",
-    "professional summary"
+    "Person",
+    "Contact",
+    "Job Title",
+    "Work Experience",
+    "Education",
+    "Skills",
+    "Projects",
+    "Certifications",
+    "Activities",
+    "Summary"
 ]
+
+# Section merge mapping: maps classified section types to canonical names
+# This allows merging related sections together (e.g., Person + Contact -> contact)
+SECTION_MERGE_MAP: Dict[str, str] = {
+    "person": "contact",
+    "contact": "contact",
+    "job title": "experience",
+    "work experience": "experience",
+}
 
 # =============================================================================
 # Entity Labels by Section Type
@@ -41,24 +43,14 @@ SECTION_TYPE_LABELS: List[str] = [
 
 # Section-specific entity labels for optimized extraction
 ENTITY_LABELS_BY_SECTION: Dict[str, List[str]] = {
-    "candidate contact information": ["Person", "Location"],
-    "professional experience": ["Job Title", "Company", "Organization", "Location", "Date"],
-    "education and university degree": ["Degree", "School", "University", "Organization", "Location", "Date"],
-    "skills and tools": ["Skill"],
-    "languages": ["Language"],
-    "certifications and awards": ["Certification"],
-    "extracurricular activities": ["Activity"],
-    "professional summary": ["Person", "Skill", "Location"],
-    # "candidate contact information": ["Person", "Location"],
-    # "education and university degree": ["Degree", "School", "University", "Organization", "Location", "Date"],
-    # "work experience and job history": ["Job Title", "Company", "Organization", "Location", "Date"],
-    # "technical skills and tools": ["Skill"],
-    # "spoken languages": ["Language"],
-    # "certifications and awards": ["Certification"],
-    # "extracurricular activities": ["Activity"],
-    # "professional summary": ["Person", "Skill", "Location"],  # Summary might mention skills
-    # "activities": ["Activity"],
-    # "summary": ["Person", "Skill", "Location"],  # Summary might mention skills
+    "contact": ["Person", "Location"],
+    "experience": ["Job Title", "Company", "Organization", "Location", "Date"],
+    "education": ["Degree", "School", "University", "Organization", "Location", "Date"],
+    "skills": ["Skill", "Language"],
+    "projects": ["Project"],
+    "certifications": ["Certification"],
+    "activities": ["Activity"],
+    "summary": ["Person", "Skill", "Location"],
 }
 
 # All possible entity labels (used as fallback)

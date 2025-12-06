@@ -89,12 +89,12 @@ def _get_person_groups(groups: List[TextGroup]) -> List[TextGroup]:
     
     # Priority 1: Person sections
     for group in groups:
-        if group.heading.lower() == "candidate contact information":
+        if group.heading.lower() == "contact":
             result.append(group)
     
     # Priority 2: Summary sections
     for group in groups:
-        if group.heading.lower() == "professional summary":
+        if group.heading.lower() == "summary":
             result.append(group)
     
     # Priority 3: Unknown sections (often contain contact info at top of resume)
