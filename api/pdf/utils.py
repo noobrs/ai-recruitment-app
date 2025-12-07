@@ -196,7 +196,7 @@ def remove_fields_from_description(
         # Handles cases like: "Intern)", "| November 2023 - January 2024", "(Honours)"
         patterns = [
             # Field with optional closing paren/bracket before it
-            rf"[\)\]]*\s*{escaped_field}\s*[\(\[]*",
+            # rf"[\)\]]*\s*{escaped_field}\s*[\(\[]*",
             # Field surrounded by separators like |, -, :
             rf"[\|\-–:,]*\s*{escaped_field}\s*[\|\-–:,]*",
             # Just the field with surrounding whitespace
