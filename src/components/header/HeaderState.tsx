@@ -9,7 +9,6 @@ import { useEffect, useState } from "react";
 
 type Props = {
     user: BaseUser | null;
-    actionLink: { href: string; label: string } | null;
     theme: { text: string; bg: string; hoverChip: string; underline: string };
     notificationData: {
         unreadCount: number;
@@ -17,7 +16,7 @@ type Props = {
     } | null;
 };
 
-export default function HeaderState({ user, actionLink, theme, notificationData }: Props) {
+export default function HeaderState({ user, theme, notificationData }: Props) {
     const pathname = usePathname();
 
     const [mounted, setMounted] = useState(false);
@@ -34,6 +33,8 @@ export default function HeaderState({ user, actionLink, theme, notificationData 
             {/* Right section of first row */}
             {user ? (
                 <div className="flex items-center gap-4">
+                    <ProfileMenu user={user} theme={theme} />
+
                     {notificationData && (
                         <NotificationBell
                             userId={user.id}
@@ -41,17 +42,6 @@ export default function HeaderState({ user, actionLink, theme, notificationData 
                             hoverClass={theme.hoverChip}
                             iconClass={theme.text}
                         />
-                    )}
-
-                    <ProfileMenu user={user} theme={theme} />
-
-                    {actionLink && (
-                        <Link
-                            href={actionLink.href}
-                            className={`hidden sm:block px-4 py-2 text-sm font-medium rounded-lg transition-colors ${theme.text} ${theme.hoverChip}`}
-                        >
-                            {actionLink.label}
-                        </Link>
                     )}
                 </div>
             ) : (

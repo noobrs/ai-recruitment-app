@@ -44,14 +44,6 @@ export default async function Header() {
         ]
         : [];
 
-  // optional CTA on the right (example)
-  const actionLink =
-    role === "recruiter"
-      ? { href: "/recruiter/posts/new", label: "New Post" }
-      : role === "jobseeker"
-        ? { href: "/jobseeker/profile", label: "Update Profile" }
-        : null;
-
   const hasNav = user && navLinks.length > 0;
 
   return (
@@ -69,7 +61,6 @@ export default async function Header() {
           {/* Right side */}
           <HeaderState
             user={user ?? null}
-            actionLink={actionLink}
             theme={
               { text, bg, hoverChip, underline }
             }
