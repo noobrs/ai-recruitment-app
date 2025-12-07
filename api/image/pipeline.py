@@ -89,10 +89,7 @@ def process_image_resume(file_bytes: bytes) -> ApiResponse:
         # 9. UPLOAD REDACTED FILE
         from api.supabase_client import upload_redacted_resume_to_storage
 
-        upload_result = upload_redacted_resume_to_storage(
-            file_bytes=cleaned_bytes,
-            job_seeker_id=None
-        )
+        upload_result = upload_redacted_resume_to_storage(file_bytes=cleaned_bytes, file_type="jpg")
 
         if upload_result.get("status") == "success":
             redacted_file_url = upload_result.get("signed_url")

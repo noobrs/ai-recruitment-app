@@ -218,7 +218,7 @@ def process_pdf_resume(file_bytes: bytes) -> ApiResponse:
             if redacted_bytes:
                 from api.supabase_client import upload_redacted_resume_to_storage
                 
-                upload_result = upload_redacted_resume_to_storage(file_bytes=redacted_bytes)
+                upload_result = upload_redacted_resume_to_storage(file_bytes=redacted_bytes, file_type="pdf")
                 
                 if upload_result.get("status") == "success":
                     redacted_file_url = upload_result.get("signed_url")
@@ -230,7 +230,7 @@ def process_pdf_resume(file_bytes: bytes) -> ApiResponse:
             # Upload original if no redaction needed
             from api.supabase_client import upload_redacted_resume_to_storage
             
-            upload_result = upload_redacted_resume_to_storage(file_bytes=file_bytes)
+            upload_result = upload_redacted_resume_to_storage(file_bytes=file_bytes, file_type="pdf")
 
             if upload_result.get("status") == "success":
                 redacted_file_url = upload_result.get("signed_url")

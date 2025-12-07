@@ -24,15 +24,16 @@ supabase: Client = create_client(url, key)
 
 
 def upload_redacted_resume_to_storage(
-    file_bytes: bytes
+    file_bytes: bytes,
+    file_type: str = "pdf"
 ) -> Dict[str, Any]:
     """
-    Upload a redacted resume PDF to Supabase storage bucket 'resumes-redacted'
+    Upload a redacted resume file to Supabase storage bucket 'resumes-redacted'
     and generate a long-lived signed URL.
 
     Args:
-        file_bytes: The PDF file bytes to upload
-        job_seeker_id: Optional job seeker ID for folder organization
+        file_bytes: The file bytes to upload (PDF or image)
+        file_type: File type - either "pdf" or "jpg"/"jpeg"/"png" (default: "pdf")
 
     Returns:
         {
@@ -43,17 +44,38 @@ def upload_redacted_resume_to_storage(
         }
     """
     try:
+        # Normalize file type
+        file_type = file_type.lower()
+        
+        # Determine content type and file extension
+        content_type_map = {
+            "pdf": ("application/pdf", "pdf", "redacted-resume.pdf"),
+            "jpg": ("image/jpeg", "jpg", "redacted-resume.jpg"),
+            "jpeg": ("image/jpeg", "jpg", "redacted-resume.jpg"),
+            "png": ("image/png", "png", "redacted-resume.png"),
+        }
+        
+        if file_type not in content_type_map:
+            return {
+                "status": "error",
+                "file_path": None,
+                "signed_url": None,
+                "message": f"Unsupported file type: {file_type}. Supported types: pdf, jpg, jpeg, png"
+            }
+        
+        content_type, extension, display_filename = content_type_map[file_type]
+        
         # Generate unique filepath
-        file_path = f"anonymous/{uuid.uuid4()}.pdf"
+        file_path = f"anonymous/{uuid.uuid4()}.{extension}"
 
         # Upload to Supabase storage with custom filename in Content-Disposition
         response = supabase.storage.from_("resumes-redacted").upload(
             path=file_path,
             file=file_bytes,
             file_options={
-                "content-type": "application/pdf",
+                "content-type": content_type,
                 "upsert": "false",
-                "content-disposition": 'inline; filename="redacted-resume.pdf"'
+                "content-disposition": f'inline; filename="{display_filename}"'
             }
         )
 
