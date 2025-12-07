@@ -10,6 +10,8 @@ import {
   SuccessConfirmation,
 } from '@/components/jobseeker/jobs';
 import ApplyJobLoading from './loading';
+import { checkActiveApplication } from './actions';
+import toast from 'react-hot-toast';
 
 export type ApplicationStep = 1 | 2 | 3;
 
@@ -22,6 +24,26 @@ export default function ApplyJobPage() {
   const [resumeData, setResumeData] = useState<ResumeData | null>(null);
   const [existingResumeId, setExistingResumeId] = useState<number | undefined>(undefined);
   const [redactedFileUrl, setRedactedFileUrl] = useState<string | null>(null);
+  const [isCheckingApplication, setIsCheckingApplication] = useState(true);
+
+  // Check if user already has an active application
+  useEffect(() => {
+    async function checkExistingApplication() {
+      try {
+        const result = await checkActiveApplication(job_id);
+        if (result.hasActive) {
+          toast.error('You already have an active application for this job.');
+          router.push('/jobseeker/jobs');
+          return;
+        }
+        setIsCheckingApplication(false);
+      } catch (err) {
+        console.error('Error checking active application:', err);
+        setIsCheckingApplication(false);
+      }
+    }
+    checkExistingApplication();
+  }, [job_id, router]);
 
   // Fetch job details for display
   useEffect(() => {
@@ -55,8 +77,8 @@ export default function ApplyJobPage() {
     setStep(3);
   };
 
-  // Loading job details
-  if (!job) {
+  // Loading while checking for active application or job details
+  if (isCheckingApplication || !job) {
     return (
       <ApplyJobLoading />
     );

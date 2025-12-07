@@ -199,6 +199,28 @@ export async function createApplication(application: ApplicationInsert): Promise
 }
 
 /**
+ * Check if job seeker has an active application for a specific job
+ * Active means status is 'received' or 'shortlisted'
+ */
+export async function hasActiveApplication(jobSeekerId: number, jobId: number): Promise<boolean> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('application')
+    .select('application_id, status')
+    .eq('job_seeker_id', jobSeekerId)
+    .eq('job_id', jobId)
+    .in('status', ['received', 'shortlisted'])
+    .maybeSingle();
+
+  if (error) {
+    console.error('Error checking active application:', error);
+    return false;
+  }
+
+  return !!data;
+}
+
+/**
  * Update application status
  */
 export async function updateApplicationStatus(applicationId: number, status: ApplicationStatus): Promise<Application | null> {

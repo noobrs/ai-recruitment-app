@@ -12,6 +12,21 @@ import { getCompanyById } from '@/services/company.service';
 import { getUserById } from '@/services/user.service';
 import { notifyJobApplicationSubmitted, notifyNewApplicationReceived } from '@/utils/notification-helper';
 import { createAdminClient } from '@/utils/supabase/admin';
+import { hasActiveApplication } from '@/services/application.service';
+
+/**
+ * Check if jobseeker has an active application for this job
+ */
+export async function checkActiveApplication(jobId: string) {
+  try {
+    const jobSeekerId = await getAuthenticatedJobSeeker();
+    const hasActive = await hasActiveApplication(jobSeekerId, parseInt(jobId));
+    return { hasActive };
+  } catch (error) {
+    console.error('Error checking active application:', error);
+    return { hasActive: false, error: 'Failed to check application status' };
+  }
+}
 
 /**
  * submitApplication()
@@ -41,6 +56,12 @@ export async function submitApplication(formData: FormData) {
 
   if (!jobId) {
     throw new Error('Missing required job ID.');
+  }
+
+  // 2.5️⃣ Check if jobseeker already has an active application for this job
+  const hasActive = await hasActiveApplication(jobSeekerId, parseInt(jobId));
+  if (hasActive) {
+    throw new Error('You already have an active application for this job.');
   }
 
   let resumeId: number;
