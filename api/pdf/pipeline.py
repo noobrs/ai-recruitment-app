@@ -241,7 +241,7 @@ def process_pdf_resume(file_bytes: bytes) -> ApiResponse:
             status="success",
             data=resume_data,
             message=None,
-            redacted_file_url=redacted_file_url,
+            # redacted_file_url=redacted_file_url,
         )
     
     except Exception as e:
