@@ -13,10 +13,6 @@ Features:
 - Person info extraction for redaction
 - Haar Cascade face detection
 - Regex validation for emails, phones, degrees, dates
-
-Assumptions:
-- Single page resume (uses first page if multi-page)
-- English only
 """
 
 import logging
@@ -24,7 +20,7 @@ import os
 import tempfile
 import traceback
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 from api.types.types import ApiResponse
 
@@ -33,10 +29,7 @@ from api.pdf.layout_parser import (
     group_spans_by_heading,
 )
 from api.pdf.section_classifier import classify_and_merge_sections
-from api.pdf.entity_extraction import (
-    extract_entities_for_all_sections,
-    load_gliner_model,
-)
+from api.pdf.entity_extraction import extract_entities_for_all_sections
 from api.pdf.person_extractor import extract_person_info
 from api.pdf.resume_builder import (
     build_activities,
@@ -148,14 +141,13 @@ def process_pdf_resume(file_bytes: bytes) -> ApiResponse:
     
     Pipeline Steps:
     1. Load PDF and extract layout (first page only)
-    2. Load GLiNER model
-    3. Group spans by heading
-    4. Classify headings and merge by section type
-    5. Extract entities based on section type
-    6. Extract person information for redaction
-    7. Build structured resume data
-    8. Redact sensitive information and faces
-    9. Upload and return results
+    2. Group spans by heading
+    3. Classify headings and merge by section type
+    4. Extract entities based on section type (loads GLiNER internally)
+    5. Extract person information for redaction
+    6. Build structured resume data
+    7. Redact sensitive information and faces
+    8. Upload and return results
     
     Args:
         file_bytes: PDF file as bytes
@@ -174,28 +166,25 @@ def process_pdf_resume(file_bytes: bytes) -> ApiResponse:
         print("[Pipeline] Step 1: Loading PDF layout...")
         doc = load_pdf_first_page(str(pdf_path))
         
-        print("[Pipeline] Step 2: Loading GLiNER model...")
-        gliner = load_gliner_model()
-        
-        print("[Pipeline] Step 3: Grouping spans by heading...")
+        print("[Pipeline] Step 2: Grouping spans by heading...")
         heading_groups = group_spans_by_heading(doc)
         print(f"[Pipeline] Found {len(heading_groups)} heading groups")
         
-        print("[Pipeline] Step 4: Classifying and merging by section...")
+        print("[Pipeline] Step 3: Classifying and merging by section...")
         groups = classify_and_merge_sections(heading_groups)
         print(f"[Pipeline] Created {len(groups)} section groups")
         _log_groups(groups)
         
-        print("[Pipeline] Step 5: Extracting entities by section type...")
-        groups = extract_entities_for_all_sections(gliner, groups)
+        print("[Pipeline] Step 4: Extracting entities by section type...")
+        groups = extract_entities_for_all_sections(groups)
         _log_entity_counts(groups)
         
-        print("[Pipeline] Step 6: Extracting person information...")
-        person_info = extract_person_info(groups, gliner)
+        print("[Pipeline] Step 5: Extracting person information...")
+        person_info = extract_person_info(groups)
         print(f"[Pipeline] Found: names={person_info.names}, emails={person_info.emails}, "
               f"phones={person_info.phones}, locations={person_info.locations}")
         
-        print("[Pipeline] Step 7: Building structured resume data...")
+        print("[Pipeline] Step 6: Building structured resume data...")
         skills = build_skills(groups)
         education = build_education(groups)
         experience = build_experience(groups)
@@ -219,7 +208,7 @@ def process_pdf_resume(file_bytes: bytes) -> ApiResponse:
         # Convert to API format
         resume_data = _convert_to_api_response(resume)
         
-        print("[Pipeline] Step 8: Redacting sensitive information...")
+        print("[Pipeline] Step 7: Redacting sensitive information...")
         redaction_result = redact_pdf(file_bytes, person_info)
         
         # Handle redaction result
@@ -229,25 +218,20 @@ def process_pdf_resume(file_bytes: bytes) -> ApiResponse:
             if redacted_bytes:
                 from api.supabase_client import upload_redacted_resume_to_storage
                 
-                upload_result = upload_redacted_resume_to_storage(
-                    file_bytes=redacted_bytes,
-                    job_seeker_id=None,  # Will be set by frontend
-                )
+                upload_result = upload_redacted_resume_to_storage(file_bytes=redacted_bytes)
                 
                 if upload_result.get("status") == "success":
                     redacted_file_url = upload_result.get("signed_url")
                     print(f"[Pipeline] Redacted resume uploaded: {redacted_file_url}")
                 else:
                     print(f"[Pipeline] Upload failed: {upload_result.get('message')}")
-        elif redaction_result.get("status") == "no_redaction_needed":
+        else:
             print("[Pipeline] No redaction needed, using original file")
             # Upload original if no redaction needed
             from api.supabase_client import upload_redacted_resume_to_storage
             
-            upload_result = upload_redacted_resume_to_storage(
-                file_bytes=file_bytes,
-                job_seeker_id=None,
-            )
+            upload_result = upload_redacted_resume_to_storage(file_bytes=file_bytes)
+
             if upload_result.get("status") == "success":
                 redacted_file_url = upload_result.get("signed_url")
         

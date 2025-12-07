@@ -557,14 +557,8 @@ def build_certifications(groups: List[TextGroup]) -> List[CertificationRecord]:
                     continue
                 seen_names.add(name_key)
                 
-                # Try to find organization and date nearby
-                org_texts = get_entity_texts(group.entities, "organization")
-                date_texts = get_entity_texts(group.entities, "date")
-                
                 records.append(CertificationRecord(
                     name=name,
-                    organization=org_texts[0] if org_texts else None,
-                    date=date_texts[0] if date_texts else None,
                     description=None,
                 ))
         else:
@@ -579,8 +573,6 @@ def build_certifications(groups: List[TextGroup]) -> List[CertificationRecord]:
                     
                     records.append(CertificationRecord(
                         name=line,
-                        organization=None,
-                        date=None,
                         description=line,
                     ))
     

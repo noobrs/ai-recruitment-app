@@ -24,8 +24,7 @@ supabase: Client = create_client(url, key)
 
 
 def upload_redacted_resume_to_storage(
-    file_bytes: bytes,
-    job_seeker_id: int = None
+    file_bytes: bytes
 ) -> Dict[str, Any]:
     """
     Upload a redacted resume PDF to Supabase storage bucket 'resumes-redacted'
@@ -44,14 +43,8 @@ def upload_redacted_resume_to_storage(
         }
     """
     try:
-        # Generate unique filename
-        unique_filename = f"{uuid.uuid4()}.pdf"
-        
-        # Create file path with optional job_seeker_id folder
-        if job_seeker_id:
-            file_path = f"{job_seeker_id}/{unique_filename}"
-        else:
-            file_path = f"anonymous/{unique_filename}"
+        # Generate unique filepath
+        file_path = f"anonymous/{uuid.uuid4()}.pdf"
 
         # Upload to Supabase storage with custom filename in Content-Disposition
         response = supabase.storage.from_("resumes-redacted").upload(

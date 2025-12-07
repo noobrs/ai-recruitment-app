@@ -6,9 +6,9 @@ Uses TextGroup.segments for coordinate data (no need for spaCy doc).
 
 import re
 from typing import List, Set
-
 from gliner import GLiNER
 
+from api.pdf.entity_extraction import load_gliner_model
 from api.pdf.models import (
     PersonInfo,
     RedactionRegion,
@@ -27,7 +27,6 @@ from api.pdf.validators import (
 
 def extract_person_info(
     groups: List[TextGroup],
-    gliner: GLiNER,
 ) -> PersonInfo:
     """
     Extract person information from resume groups.
@@ -42,11 +41,11 @@ def extract_person_info(
     
     Args:
         groups: List of TextGroup objects (classified, with segments containing bbox)
-        gliner: GLiNER model instance
         
     Returns:
         PersonInfo object with all extracted information
     """
+    gliner = load_gliner_model()
     # Get relevant groups for person info extraction
     person_groups = _get_person_groups(groups)
     

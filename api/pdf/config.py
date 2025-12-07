@@ -86,6 +86,7 @@ ENTITY_THRESHOLD: float = 0.50
 COMMON_SECTION_HEADERS: Dict[str, List[str]] = {
     "contact": [
         "contact",
+        "contacts",
         "contact information",
         "contact info",
         "personal information",
@@ -95,6 +96,7 @@ COMMON_SECTION_HEADERS: Dict[str, List[str]] = {
     ],
     "experience": [
         "experience",
+        "experiences",
         "work experience",
         "professional experience",
         "employment history",
@@ -111,6 +113,7 @@ COMMON_SECTION_HEADERS: Dict[str, List[str]] = {
     ],
     "education": [
         "education",
+        "educations",
         "educational background",
         "academic background",
         "academic qualifications",
@@ -121,6 +124,7 @@ COMMON_SECTION_HEADERS: Dict[str, List[str]] = {
         "academics",
     ],
     "skills": [
+        "skills",
         "skills",
         "technical skills",
         "core skills",

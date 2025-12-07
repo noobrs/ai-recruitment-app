@@ -99,7 +99,6 @@ def extract_entities_from_text(
 
 
 def extract_entities_for_all_sections(
-    gliner: GLiNER,
     groups: List[TextGroup],
 ) -> List[TextGroup]:
     """
@@ -107,12 +106,13 @@ def extract_entities_for_all_sections(
     Updates each group's entities field in place.
     
     Args:
-        gliner: GLiNER model instance
         groups: List of TextGroup objects (heading = section type)
         
     Returns:
         Same groups list with entities field updated
     """
+    gliner = load_gliner_model()
+    
     for group in groups:
         section_type = group.heading
         
