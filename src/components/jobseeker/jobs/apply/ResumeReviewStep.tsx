@@ -96,16 +96,19 @@ export default function ResumeReviewStep({
                     <SkillsEditor
                         skills={resumeData.skills}
                         onChange={(skills) => setResumeData({ ...resumeData, skills })}
+                        disabled={isSubmitting}
                     />
 
                     <ExperienceEditor
                         experiences={resumeData.experience}
                         onChange={(experience) => setResumeData({ ...resumeData, experience })}
+                        disabled={isSubmitting}
                     />
 
                     <EducationEditor
                         education={resumeData.education}
                         onChange={(education) => setResumeData({ ...resumeData, education })}
+                        disabled={isSubmitting}
                     />
                 </div>
 
@@ -115,7 +118,8 @@ export default function ResumeReviewStep({
                         type="checkbox"
                         checked={agreePolicy}
                         onChange={(e) => setAgreePolicy(e.target.checked)}
-                        className="w-4 h-4 accent-primary cursor-pointer"
+                        disabled={isSubmitting}
+                        className="w-4 h-4 accent-primary cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                     />
                     <span>
                         By submitting this application, I agree to the{' '}
