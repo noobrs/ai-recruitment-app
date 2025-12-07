@@ -12,6 +12,7 @@ import PasswordRequirements, { validatePasswordStrength, isPasswordStrong } from
 export default function RegisterForm() {
     const [isPending, startTransition] = useTransition();
     const router = useRouter();
+    const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
 
@@ -45,6 +46,9 @@ export default function RegisterForm() {
 
             if (response.errorMessage) {
                 toast.error(response.errorMessage);
+                setEmail("");
+                setPassword("");
+                setConfirmPassword("");
             }
         });
     };
@@ -61,6 +65,8 @@ export default function RegisterForm() {
                         required
                         placeholder="you@example.com"
                         disabled={isPending}
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
                         className="w-full rounded-lg border border-neutral-200 bg-white/70 pl-10 pr-3 py-2 outline-none focus:ring-2 focus:ring-neutral-900"
                     />
                 </div>
@@ -93,7 +99,7 @@ export default function RegisterForm() {
 
             <button
                 type="submit"
-                disabled={isPending || !passwordStrong || password !== confirmPassword || !password}
+                disabled={isPending || !email || !password || !confirmPassword || !passwordStrong || password !== confirmPassword}
                 className="w-full rounded-lg bg-neutral-900 text-white py-2.5 font-medium flex items-center justify-center gap-2 hover:opacity-95 disabled:opacity-70 disabled:cursor-not-allowed"
             >
                 {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Create Account"}

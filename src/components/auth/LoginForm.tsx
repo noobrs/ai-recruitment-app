@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { Loader2, Mail } from "lucide-react";
@@ -11,12 +11,16 @@ import PasswordInput from "@/components/shared/PasswordInput";
 export default function LoginForm() {
     const router = useRouter();
     const [isPending, startTransition] = useTransition();
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
 
     const onSubmit = (formData: FormData) => {
         startTransition(async () => {
             const { errorMessage, role, status } = await loginAction(formData);
             if (errorMessage) {
                 toast.error(errorMessage);
+                setEmail("");
+                setPassword("");
             } else {
                 toast.success("Successfully logged in");
 
@@ -47,6 +51,8 @@ export default function LoginForm() {
                         required
                         placeholder="you@example.com"
                         disabled={isPending}
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
                         className="w-full rounded-lg border border-neutral-200 bg-white/70 pl-10 pr-3 py-2 outline-none focus:ring-2 focus:ring-neutral-900"
                     />
                 </div>
@@ -58,6 +64,8 @@ export default function LoginForm() {
                 required
                 placeholder="••••••••"
                 disabled={isPending}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
             />
 
             <div className="flex items-center justify-end">
@@ -70,7 +78,7 @@ export default function LoginForm() {
             </div>
 
             <button
-                disabled={isPending}
+                disabled={isPending || !email || !password}
                 className="w-full rounded-lg bg-neutral-900 text-white py-2.5 font-medium flex items-center justify-center gap-2 hover:opacity-95 disabled:opacity-70"
             >
                 {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Log in"}
