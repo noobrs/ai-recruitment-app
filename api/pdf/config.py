@@ -74,7 +74,7 @@ ALL_ENTITY_LABELS: List[str] = [
 ]
 
 # Entity confidence threshold
-ENTITY_THRESHOLD: float = 0.50
+ENTITY_THRESHOLD: float = 0.30
 
 # =============================================================================
 # Common Section Headers (Fast-path classification)

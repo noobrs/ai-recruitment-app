@@ -6,7 +6,10 @@ Note: In the simplified pipeline, group.heading IS the section type
 (e.g., "education", "experience", "skills").
 """
 
+import logging
 from typing import Dict, List, Optional, Tuple
+
+logger = logging.getLogger(__name__)
 
 from api.pdf.models import (
     ActivityRecord,
