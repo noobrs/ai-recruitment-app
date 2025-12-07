@@ -1,111 +1,129 @@
-"""
-- remove_bullets_symbols: remove small low-confidence OCR boxes & common bullet symbols
-- remove_drawing_lines: detect & inpaint lines (cleaned up version)
-Both functions accept either a filepath or numpy image array.
-"""
-
+import os
 import cv2
 import numpy as np
 import pytesseract
-import matplotlib.pyplot as plt
-from typing import Union
-import os
+import logging
 
-# default Tesseract path — keep as you had it (change if needed)
-pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+logger = logging.getLogger("api.image.preprocessing")
 
-BULLET_CHARS = {'•', '-', '–', '—', '*', '▪', '●', '○', '.', '·'}
+TMP_DIR = "tmp"
+RESUME_CLEANED = "cleaned_resume.jpg"
+CLEANED_IMAGE_PATH = os.path.join(TMP_DIR, RESUME_CLEANED)
 
-def _load_image(img: Union[str, np.ndarray]):
-    if isinstance(img, str):
-        return cv2.imread(img)
-    return img.copy()
+bullet_symbols = {
+    '•','-','–','—','*','▪','●','○','.','·','¢','e','o','O',
+    '0','1','2','3','4','5','6','7','8','9','@','#','$','%',
+    '&','(',')','+','=', '>', '<','?','/','\\','{','}','[',
+    ']',':',';','&','_'
+}
 
-def remove_bullets_symbols(image_path_or_array, save_path=None, debug=False):
-    """
-    Remove bullets and low-confidence tiny OCR boxes.
-    - image_path_or_array: file path or numpy array
-    - save_path: optional path to save cleaned image
-    - debug: if True, show debug plots
-    Returns cleaned image (numpy array) and optionally saves to save_path.
-    """
-    img = _load_image(image_path_or_array)
-    if img is None:
-        raise ValueError("Image not found or unreadable.")
+def save_temp_image_bytes(file_bytes: bytes, ext="jpg"):
+    os.makedirs(TMP_DIR, exist_ok=True)
+    fname = f"tmp_{os.urandom(6).hex()}.{ext}"
+    path = os.path.join(TMP_DIR, fname)
+    with open(path, "wb") as f:
+        f.write(file_bytes)
+    return path
 
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+def mask_to_detected_boxes(img_path, predictions, output_path=CLEANED_IMAGE_PATH):
+    image = cv2.imread(img_path)
+    if image is None:
+        raise ValueError("cannot read image")
 
-    # OCR with bounding box info
-    ocr_df = pytesseract.image_to_data(gray, output_type=pytesseract.Output.DATAFRAME)
-    ocr_df = ocr_df[ocr_df['text'].notna()]
+    h, w = image.shape[:2]
+    white_bg = np.ones((h, w, 3), dtype=np.uint8) * 255
+    out = white_bg.copy()
 
-    draw_img = img.copy()
-    # Remove boxes that look like icons / bullets or have low confidence & short length
-    for _, row in ocr_df.iterrows():
-        try:
-            x, y, w, h = int(row['left']), int(row['top']), int(row['width']), int(row['height'])
-            text = str(row['text']).strip()
-            conf = int(row['conf']) if row['conf'] not in [None, ''] else 0
-        except Exception:
+    for pred in predictions:
+        conf = pred.get("confidence", 0)
+        if conf < 0.5:
             continue
 
-        if (len(text) <= 2 and conf < 70) or (text in BULLET_CHARS):
-            # whiten-out small boxes
-            cv2.rectangle(draw_img, (x, y), (x + w, y + h), (255, 255, 255), -1)
+        x = pred["x"]; y = pred["y"]
+        bw = pred["width"]; bh = pred["height"]
 
-    if save_path:
-        cv2.imwrite(save_path, draw_img)
-    if debug:
-        plt.figure(figsize=(8, 12))
-        plt.imshow(cv2.cvtColor(draw_img, cv2.COLOR_BGR2RGB))
-        plt.axis("off")
-        plt.title("Bullets/Icons Removed")
-        plt.show()
+        x_min = max(0, int(x - bw / 2))
+        y_min = max(0, int(y - bh / 2))
+        x_max = min(w, int(x + bw / 2))
+        y_max = min(h, int(y + bh / 2))
 
-    return draw_img
+        out[y_min:y_max, x_min:x_max] = image[y_min:y_max, x_min:x_max]
 
-def remove_drawing_lines(image_path_or_array, save_path=None, debug=False):
-    """
-    Remove table-like lines by morphological ops + inpainting.
-    Input: file path or numpy image array.
-    Returns cleaned image (numpy array).
-    """
-    img = _load_image(image_path_or_array)
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    cv2.imwrite(output_path, out)
+    logger.info(f"[Preprocess] Segmented image saved → {output_path}")
+    return output_path
+
+def remove_bullets_symbols(img_path, cleaned_image_path=CLEANED_IMAGE_PATH):
+    image = cv2.imread(img_path)
+    if image is None:
+        raise ValueError("cannot read image")
+
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    ocr_df = pytesseract.image_to_data(gray, output_type=pytesseract.Output.DATAFRAME)
+    ocr_df = ocr_df.dropna()
+    ocr_df = ocr_df[ocr_df['text'].notna()]
+
+    out = image.copy()
+
+    for _, row in ocr_df.iterrows():
+        x = int(row['left'])
+        y = int(row['top'])
+        w = int(row['width'])
+        h = int(row['height'])
+        text = str(row['text']).strip()
+
+        try:
+            conf = int(float(row['conf']))
+        except:
+            conf = 0
+
+        if (len(text) <= 2 and conf < 70) or (text in bullet_symbols):
+            cv2.rectangle(out, (x, y), (x + w, y + h), (255, 255, 255), -1)
+
+    os.makedirs(os.path.dirname(cleaned_image_path), exist_ok=True)
+    cv2.imwrite(cleaned_image_path, out)
+    logger.info("[Preprocess] Bullet cleanup applied")
+    return cleaned_image_path
+
+def remove_drawing_lines(img_path, cleaned_image_path=CLEANED_IMAGE_PATH):
+    img = cv2.imread(img_path)
     if img is None:
-        raise ValueError("Image not found or unreadable.")
+        raise ValueError("cannot read image")
 
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    # Invert and threshold to get strong lines
-    thresh = cv2.adaptiveThreshold(~gray, 255,
+    thresh = cv2.adaptiveThreshold(~gray, 255, 
                                    cv2.ADAPTIVE_THRESH_MEAN_C,
                                    cv2.THRESH_BINARY, 15, -2)
 
-    # horizontal structure
-    horizontal_size = max(10, img.shape[1] // 30)
-    horiz_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (horizontal_size, 1))
-    horiz = cv2.erode(thresh, horiz_kernel, iterations=1)
-    horiz = cv2.dilate(horiz, horiz_kernel, iterations=1)
+    horiz_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (max(1, img.shape[1] // 30), 1))
+    horiz = cv2.dilate(cv2.erode(thresh, horiz_kernel, 2), horiz_kernel, 2)
 
-    # vertical structure
-    vertical_size = max(10, img.shape[0] // 30)
-    vert_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (1, vertical_size))
-    vert = cv2.erode(thresh, vert_kernel, iterations=1)
-    vert = cv2.dilate(vert, vert_kernel, iterations=1)
+    vert_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (1, max(1, img.shape[0] // 30)))
+    vert = cv2.dilate(cv2.erode(thresh, vert_kernel, 1), vert_kernel, 1)
 
     line_mask = cv2.bitwise_or(horiz, vert)
-    line_mask = cv2.dilate(line_mask, np.ones((3, 3), np.uint8), iterations=1)
-    # Convert mask to 8-bit single channel
-    mask_uint8 = (line_mask > 0).astype('uint8') * 255
+    line_mask = cv2.dilate(line_mask, np.ones((3, 3), np.uint8), 1)
 
-    inpainted = cv2.inpaint(img, mask_uint8, inpaintRadius=2, flags=cv2.INPAINT_TELEA)
+    cleaned = cv2.inpaint(img, line_mask, inpaintRadius=2, flags=cv2.INPAINT_TELEA)
 
-    if save_path:
-        cv2.imwrite(save_path, inpainted)
-    if debug:
-        plt.figure(figsize=(8, 12))
-        plt.imshow(cv2.cvtColor(inpainted, cv2.COLOR_BGR2RGB))
-        plt.axis("off")
-        plt.title("Lines Removed (Inpainted)")
-        plt.show()
+    os.makedirs(os.path.dirname(cleaned_image_path), exist_ok=True)
+    cv2.imwrite(cleaned_image_path, cleaned)
+    logger.info("[Preprocess] Lines removed")
+    return cleaned_image_path
 
-    return inpainted
+def enhance_image_clahe(img_path, cleaned_image_path=CLEANED_IMAGE_PATH):
+    img = cv2.imread(img_path)
+    if img is None:
+        raise ValueError("cannot read image")
+
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8,8))
+    enhanced = clahe.apply(gray)
+
+    out = cv2.cvtColor(enhanced, cv2.COLOR_GRAY2BGR)
+
+    os.makedirs(os.path.dirname(cleaned_image_path), exist_ok=True)
+    cv2.imwrite(cleaned_image_path, out)
+    logger.info("[Preprocess] CLAHE + Sharpen applied")
+    return cleaned_image_path

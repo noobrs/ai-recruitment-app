@@ -1,87 +1,119 @@
-"""
-- process_image_resume(bytes) : the top-level function your FastAPI endpoint calls.
-Flow (reordered):
-1. save bytes to temp file
-2. detect layout boxes (roboflow) on raw image
-3. for each box: crop -> preprocess (icons/bullets + lines) -> OCR
-4. classify segments
-5. NER extraction + normalization
-6. return final JSON (builder)
-"""
-
-import tempfile
 import os
-import shutil
-import json
 import logging
-from typing import List
+import cv2
+import tempfile
 
-from .detection_model import detect_segments
-from .ocr_extraction import extract_text_from_segments, extract_text_simple
-from .preprocessing import remove_bullets_symbols, remove_drawing_lines
-from .text_classification import classify_segments
-from .ner_pipeline import run_full_resume_pipeline
-from .builder import build_final_response
+from api.image.builder import build_final_response, convert_image_resume_to_data
+from api.types.types import ApiResponse
 
-logger = logging.getLogger(__name__)
 
-def _write_bytes_to_tempfile(bts: bytes, suffix=".jpg"):
-    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
-    tmp.write(bts)
-    tmp.close()
-    return tmp.name
+from .preprocessing import (
+    save_temp_image_bytes, mask_to_detected_boxes,
+    remove_drawing_lines, remove_bullets_symbols,
+    enhance_image_clahe
+)
+from .segmentation import run_detection, detections_to_predictions
+from .ocr import crop_and_ocr_boxes
+from .cleaning import clean_ocr_text
+from .classifier import load_text_classifier, classify_text
+from .extraction import normalize_output, run_segment_ner
 
-def process_image_resume(image_bytes: bytes,
-                         do_preprocess_crops: bool = True,
-                         debug: bool = False):
-    """
-    End-to-end runner. Accepts image bytes and returns final JSON.
-    Detection runs on the raw image bytes; each detected crop is preprocessed before OCR.
-    """
-    tmp_path = _write_bytes_to_tempfile(image_bytes, suffix=".jpg")
-    cleaned_crop_tempfiles: List[str] = []
+logger = logging.getLogger("api.image.pipeline")
+
+
+def process_image_resume(file_bytes: bytes) -> ApiResponse:
+
+    tmp_path = save_temp_image_bytes(file_bytes, ext="jpg")
+    redacted_file_url = None
+
     try:
-        # 1) Detect segments via Roboflow on raw image
-        boxes = detect_segments(tmp_path)
-        logger.info(f"Detected {len(boxes)} boxes")
+        # 1. YOLO LAYOUT DETECTION
+        detection_result = run_detection(tmp_path)
+        predictions = detections_to_predictions(detection_result)
+        
+        # 2. PREPROCESSING
+        segmented_path = mask_to_detected_boxes(tmp_path, predictions)
+        cleaned = remove_drawing_lines(segmented_path)
 
-        # fallback: if no boxes, OCR whole image without per-crop preprocessing
-        if not boxes:
-            text = extract_text_simple(tmp_path)
-            ocr_results = [{"segment_id": 1, "text": text, "box": None}]
+        for _ in range(5):
+            cleaned = remove_bullets_symbols(cleaned)
+
+        cleaned = enhance_image_clahe(cleaned)
+
+        # 3. OCR PER SEGMENT
+        ocr_segments = crop_and_ocr_boxes(cleaned, predictions)
+
+        # 4. CLASSIFY + CLEAN TEXT
+        classifier = load_text_classifier()
+        classified_segments = []
+
+        for seg in ocr_segments:
+            raw_text = seg.get("text", "").strip()
+            if not raw_text:
+                continue
+            
+            label, score = classify_text(raw_text, classifier)
+            cleaned_text = clean_ocr_text(raw_text)
+
+            classified_segments.append({
+                "segment_id": seg["segment_id"],
+                "label": label,
+                "score": score,
+                "text": cleaned_text
+            })
+
+        # 5. SEGMENT NER
+        clean_segments = []
+        for seg in classified_segments:
+            r = run_segment_ner(seg)
+            clean_segments.append(r)
+
+        # 6. NORMALIZE OUTPUT (YOUR LOGIC)
+        normalized = normalize_output(clean_segments)
+
+        # 7. CONVERT TO ResumeData MODEL
+        resume_dict = build_final_response(normalized)
+        resume_data = convert_image_resume_to_data(resume_dict)
+        
+        logging.info(f"[Pipeline] Normalized: {normalized}")
+
+        # 8. CREATE REDACTED JPG
+        cleaned_img = cv2.imread(cleaned)
+
+        if cleaned_img is None:
+            raise Exception("Failed to load cleaned image for redaction upload")
+
+        _, enc = cv2.imencode(".jpg", cleaned_img)
+        cleaned_bytes = enc.tobytes()
+
+        # 9. UPLOAD REDACTED FILE
+        from api.supabase_client import upload_redacted_resume_to_storage
+
+        upload_result = upload_redacted_resume_to_storage(
+            file_bytes=cleaned_bytes,
+            job_seeker_id=None
+        )
+
+        if upload_result.get("status") == "success":
+            redacted_file_url = upload_result.get("signed_url")
         else:
-            # 2) For each box: crop, optionally preprocess, then OCR
-            # We will pass preprocessing functions to extract_text_from_segments to apply per-crop.
-            preprocess_fns = None
-            if do_preprocess_crops:
-                # use functions that accept numpy arrays and return arrays
-                preprocess_fns = [remove_bullets_symbols, remove_drawing_lines]
+            logger.warning(f"[Pipeline] Upload failed: {upload_result}")
 
-            # extract_text_from_segments will apply preprocess_fns per crop then OCR
-            ocr_results = extract_text_from_segments(tmp_path, boxes, preprocess_fn_list=preprocess_fns)
+        # 10. RETURN FULL RESPONSE
+        return ApiResponse(
+            status="success",
+            data=resume_data,
+            message=None,
+            redacted_file_url=redacted_file_url
+        )
 
-        # 3) Classify segments
-        classified = classify_segments(ocr_results)
-
-        # 4) Run NER pipeline + normalization
-        normalized = run_full_resume_pipeline(classified)
-
-        # 5) Build final API response
-        final_json = build_final_response(normalized)
-        return final_json
     except Exception as e:
-        logger.exception("Error in process_image_resume")
-        raise
+        logger.error(f"[IMAGE] Pipeline error: {e}")
+        return ApiResponse(status="error", data=None, message=str(e))
+
     finally:
-        # cleanup temp files
         try:
             os.remove(tmp_path)
-        except Exception:
+            os.remove(cleaned)
+        except:
             pass
-        # if any intermediate saved images exist, try to remove (preprocessors may have saved if called with save_path)
-        for p in cleaned_crop_tempfiles:
-            try:
-                if os.path.exists(p):
-                    os.remove(p)
-            except Exception:
-                pass
