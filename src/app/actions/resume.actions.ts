@@ -12,6 +12,51 @@ import {
 } from '@/services/resume.service';
 
 /**
+ * Filter out empty or whitespace-only skills
+ */
+function filterEmptySkills(skills: string[]): string[] {
+    return skills.filter(skill => skill && skill.trim().length > 0);
+}
+
+/**
+ * Check if an experience entry is empty (all fields are null or empty)
+ */
+function isExperienceEmpty(exp: ExperienceOut): boolean {
+    return !exp.job_title?.trim() && 
+           !exp.company?.trim() && 
+           !exp.location?.trim() && 
+           !exp.start_date?.trim() && 
+           !exp.end_date?.trim() && 
+           !exp.description?.trim();
+}
+
+/**
+ * Filter out empty experience entries
+ */
+function filterEmptyExperiences(experiences: ExperienceOut[]): ExperienceOut[] {
+    return experiences.filter(exp => !isExperienceEmpty(exp));
+}
+
+/**
+ * Check if an education entry is empty (all fields are null or empty)
+ */
+function isEducationEmpty(edu: EducationOut): boolean {
+    return !edu.degree?.trim() && 
+           !edu.institution?.trim() && 
+           !edu.location?.trim() && 
+           !edu.start_date?.trim() && 
+           !edu.end_date?.trim() && 
+           !edu.description?.trim();
+}
+
+/**
+ * Filter out empty education entries
+ */
+function filterEmptyEducation(education: EducationOut[]): EducationOut[] {
+    return education.filter(edu => !isEducationEmpty(edu));
+}
+
+/**
  * Delete resume by updating its status to 'deleted'
  * 
  * @param resumeId - The resume ID to delete
@@ -64,6 +109,11 @@ export async function saveResumeToDatabase(
             await unsetAllProfileResumes(jobSeekerId);
         }
 
+        // Filter out empty records before saving
+        const filteredSkills = filterEmptySkills(extractedData.skills || []);
+        const filteredExperiences = filterEmptyExperiences(extractedData.experience || []);
+        const filteredEducation = filterEmptyEducation(extractedData.education || []);
+
         // Create resume record with signed URL and extracted data
         const { data: resumeRecord, error: resumeError } = await supabase
             .from('resume')
@@ -71,9 +121,9 @@ export async function saveResumeToDatabase(
                 job_seeker_id: jobSeekerId,
                 original_file_path: signedUrl,
                 redacted_file_path: redactedFileUrl || null,
-                extracted_skills: JSON.stringify(extractedData.skills || []),
-                extracted_experiences: JSON.stringify(extractedData.experience || []),
-                extracted_education: JSON.stringify(extractedData.education || []),
+                extracted_skills: JSON.stringify(filteredSkills),
+                extracted_experiences: JSON.stringify(filteredExperiences),
+                extracted_education: JSON.stringify(filteredEducation),
                 is_profile: isProfile,
                 status: 'processed',
             })
@@ -125,9 +175,12 @@ export async function updateResumeSkills(resumeId: number, skills: string[]) {
             throw new Error('Unauthorized');
         }
 
+        // Filter out empty skills before saving
+        const filteredSkills = filterEmptySkills(skills);
+
         const { error } = await supabase
             .from('resume')
-            .update({ extracted_skills: JSON.stringify(skills) })
+            .update({ extracted_skills: JSON.stringify(filteredSkills) })
             .eq('resume_id', resumeId);
 
         if (error) throw error;
@@ -165,9 +218,12 @@ export async function updateResumeExperience(resumeId: number, experiences: Expe
             throw new Error('Unauthorized');
         }
 
+        // Filter out empty experience entries before saving
+        const filteredExperiences = filterEmptyExperiences(experiences);
+
         const { error } = await supabase
             .from('resume')
-            .update({ extracted_experiences: JSON.stringify(experiences) })
+            .update({ extracted_experiences: JSON.stringify(filteredExperiences) })
             .eq('resume_id', resumeId);
 
         if (error) throw error;
@@ -205,9 +261,12 @@ export async function updateResumeEducation(resumeId: number, education: Educati
             throw new Error('Unauthorized');
         }
 
+        // Filter out empty education entries before saving
+        const filteredEducation = filterEmptyEducation(education);
+
         const { error } = await supabase
             .from('resume')
-            .update({ extracted_education: JSON.stringify(education) })
+            .update({ extracted_education: JSON.stringify(filteredEducation) })
             .eq('resume_id', resumeId);
 
         if (error) throw error;

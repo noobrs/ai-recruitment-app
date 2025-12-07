@@ -73,6 +73,7 @@ export default function ResumeSkills({ skills, resumeId, onUpdate }: ResumeSkill
                     skills={editedSkills}
                     onChange={setEditedSkills}
                     disabled={isLoading}
+                    showTitle={false}
                 />
             ) : isEmpty ? (
                 <div className="text-center py-8 px-4 bg-gray-50 rounded-lg border border-gray-200">

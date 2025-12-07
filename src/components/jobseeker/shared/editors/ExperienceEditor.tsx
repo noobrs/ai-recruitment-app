@@ -4,6 +4,7 @@ interface ExperienceEditorProps {
     experiences: ExperienceOut[];
     onChange: (experiences: ExperienceOut[]) => void;
     disabled?: boolean;
+    showTitle?: boolean;
 }
 
 /**
@@ -12,7 +13,8 @@ interface ExperienceEditorProps {
 export default function ExperienceEditor({
     experiences,
     onChange,
-    disabled = false
+    disabled = false,
+    showTitle = true
 }: ExperienceEditorProps) {
     const handleExperienceChange = (
         index: number,
@@ -46,7 +48,7 @@ export default function ExperienceEditor({
 
     return (
         <div>
-            <h3 className="font-bold text-lg mb-2">Experience</h3>
+            {showTitle && <h3 className="font-bold text-lg mb-2">Experience</h3>}
             {experiences.map((exp, index) => (
                 <div key={index} className="border p-4 rounded-md mb-3">
                     <div className="flex justify-end mb-2">

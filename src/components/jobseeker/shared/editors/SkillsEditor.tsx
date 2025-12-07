@@ -2,12 +2,13 @@ interface SkillsEditorProps {
     skills: string[];
     onChange: (skills: string[]) => void;
     disabled?: boolean;
+    showTitle?: boolean;
 }
 
 /**
  * SkillsEditor - Editable list of skills
  */
-export default function SkillsEditor({ skills, onChange, disabled = false }: SkillsEditorProps) {
+export default function SkillsEditor({ skills, onChange, disabled = false, showTitle = true }: SkillsEditorProps) {
     const handleSkillChange = (index: number, newValue: string) => {
         const updated = [...skills];
         updated[index] = newValue;
@@ -26,7 +27,7 @@ export default function SkillsEditor({ skills, onChange, disabled = false }: Ski
 
     return (
         <div>
-            <h3 className="font-bold text-lg mb-2">Skills</h3>
+            {showTitle && <h3 className="font-bold text-lg mb-2">Skills</h3>}
             <div className="flex flex-col gap-2">
                 {skills.map((skill, index) => (
                     <div key={index} className="flex gap-2 items-center">

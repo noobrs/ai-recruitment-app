@@ -76,6 +76,7 @@ export default function ResumeEducation({ education, resumeId, onUpdate }: Resum
                     education={editedEducation}
                     onChange={setEditedEducation}
                     disabled={isLoading}
+                    showTitle={false}
                 />
             ) : isEmpty ? (
                 <div className="text-center py-8 px-4 bg-gray-50 rounded-lg border border-gray-200">
