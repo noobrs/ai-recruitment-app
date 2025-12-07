@@ -23,7 +23,7 @@ export default function ResumeSkills({ skills, resumeId, onUpdate }: ResumeSkill
     const [editedSkills, setEditedSkills] = useState<string[]>(skills || []);
     const [isLoading, setIsLoading] = useState(false);
 
-    if (!skills || skills.length === 0) return null;
+    const isEmpty = !skills || skills.length === 0;
 
     const handleEdit = () => {
         setEditedSkills([...skills]);
@@ -74,6 +74,15 @@ export default function ResumeSkills({ skills, resumeId, onUpdate }: ResumeSkill
                     onChange={setEditedSkills}
                     disabled={isLoading}
                 />
+            ) : isEmpty ? (
+                <div className="text-center py-8 px-4 bg-gray-50 rounded-lg border border-gray-200">
+                    <p className="mt-4 text-sm text-gray-600">
+                        No skills found in your resume.
+                    </p>
+                    <p className="mt-1 text-xs text-gray-500">
+                        Click the edit button to add your skills manually.
+                    </p>
+                </div>
             ) : (
                 <div className="flex flex-wrap gap-2">
                     {skills.map((skill, index) => (

@@ -23,7 +23,7 @@ export default function ResumeExperience({ experiences, resumeId, onUpdate }: Re
     );
     const [isLoading, setIsLoading] = useState(false);
 
-    if (!experiences || experiences.length === 0) return null;
+    const isEmpty = !experiences || experiences.length === 0;
 
     const handleEdit = () => {
         setEditedExperiences(experiences);
@@ -74,6 +74,15 @@ export default function ResumeExperience({ experiences, resumeId, onUpdate }: Re
                     onChange={setEditedExperiences}
                     disabled={isLoading}
                 />
+            ) : isEmpty ? (
+                <div className="text-center py-8 px-4 bg-gray-50 rounded-lg border border-gray-200">
+                    <p className="mt-4 text-sm text-gray-600">
+                        No work experience found in your resume.
+                    </p>
+                    <p className="mt-1 text-xs text-gray-500">
+                        Click the edit button to add your work experience manually.
+                    </p>
+                </div>
             ) : (
                 <div className="space-y-3">
                     {experiences.map((exp, index) => (

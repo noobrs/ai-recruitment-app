@@ -26,7 +26,7 @@ export default function ResumeEducation({ education, resumeId, onUpdate }: Resum
     );
     const [isLoading, setIsLoading] = useState(false);
 
-    if (!education || education.length === 0) return null;
+    const isEmpty = !education || education.length === 0;
 
     const handleEdit = () => {
         setEditedEducation(education);
@@ -77,6 +77,15 @@ export default function ResumeEducation({ education, resumeId, onUpdate }: Resum
                     onChange={setEditedEducation}
                     disabled={isLoading}
                 />
+            ) : isEmpty ? (
+                <div className="text-center py-8 px-4 bg-gray-50 rounded-lg border border-gray-200">
+                    <p className="mt-4 text-sm text-gray-600">
+                        No education information found in your resume.
+                    </p>
+                    <p className="mt-1 text-xs text-gray-500">
+                        Click the edit button to add your education details manually.
+                    </p>
+                </div>
             ) : (
                 <div className="space-y-3">
                     {education.map((edu, index) => (
