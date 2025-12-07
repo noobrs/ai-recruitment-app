@@ -142,7 +142,7 @@ export default function ResumeDropdown({
                             <div className="text-left">
                                 <div className="font-medium text-gray-900">
                                     {selectedResume
-                                        ? `Resume - ${formatDate(selectedResume.created_at)}`
+                                        ? `${selectedResume.filename || 'Resume'} - ${formatDate(selectedResume.created_at)}`
                                         : 'No default resume selected'}
                                     {selectedResume?.is_profile && (
                                         <span className="ml-2 px-2 py-0.5 bg-primary text-white text-xs rounded-full">
@@ -193,7 +193,7 @@ export default function ResumeDropdown({
                                                         />
                                                     </svg>
                                                     <span className="font-medium text-gray-900">
-                                                        Resume - {formatDate(resume.created_at)}
+                                                        {resume.filename || 'Resume'} - {formatDate(resume.created_at)}
                                                     </span>
                                                     {isDefault ? (
                                                         <span className="px-2 py-0.5 bg-primary text-white text-xs rounded-full">

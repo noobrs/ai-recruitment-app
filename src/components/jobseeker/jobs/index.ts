@@ -13,3 +13,4 @@ export { default as ResumeUploadStep } from './apply/ResumeUploadStep';
 export { default as ResumeReviewStep } from './apply/ResumeReviewStep';
 export { default as SuccessConfirmation } from './apply/SuccessConfirmation';
 export { default as JobHeader } from './apply/JobHeader';
+export { default as ResumeSelector } from './apply/ResumeSelector';

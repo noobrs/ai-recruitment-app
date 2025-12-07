@@ -22,12 +22,12 @@ function filterEmptySkills(skills: string[]): string[] {
  * Check if an experience entry is empty (all fields are null or empty)
  */
 function isExperienceEmpty(exp: ExperienceOut): boolean {
-    return !exp.job_title?.trim() && 
-           !exp.company?.trim() && 
-           !exp.location?.trim() && 
-           !exp.start_date?.trim() && 
-           !exp.end_date?.trim() && 
-           !exp.description?.trim();
+    return !exp.job_title?.trim() &&
+        !exp.company?.trim() &&
+        !exp.location?.trim() &&
+        !exp.start_date?.trim() &&
+        !exp.end_date?.trim() &&
+        !exp.description?.trim();
 }
 
 /**
@@ -41,12 +41,12 @@ function filterEmptyExperiences(experiences: ExperienceOut[]): ExperienceOut[] {
  * Check if an education entry is empty (all fields are null or empty)
  */
 function isEducationEmpty(edu: EducationOut): boolean {
-    return !edu.degree?.trim() && 
-           !edu.institution?.trim() && 
-           !edu.location?.trim() && 
-           !edu.start_date?.trim() && 
-           !edu.end_date?.trim() && 
-           !edu.description?.trim();
+    return !edu.degree?.trim() &&
+        !edu.institution?.trim() &&
+        !edu.location?.trim() &&
+        !edu.start_date?.trim() &&
+        !edu.end_date?.trim() &&
+        !edu.description?.trim();
 }
 
 /**
@@ -119,6 +119,7 @@ export async function saveResumeToDatabase(
             .from('resume')
             .insert({
                 job_seeker_id: jobSeekerId,
+                filename: file.name,
                 original_file_path: signedUrl,
                 redacted_file_path: redactedFileUrl || null,
                 extracted_skills: JSON.stringify(filteredSkills),

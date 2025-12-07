@@ -9,6 +9,7 @@ import {
   ResumeReviewStep,
   SuccessConfirmation,
 } from '@/components/jobseeker/jobs';
+import ApplyJobLoading from './loading';
 
 export type ApplicationStep = 1 | 2 | 3;
 
@@ -57,9 +58,7 @@ export default function ApplyJobPage() {
   // Loading job details
   if (!job) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen text-gray-600">
-        Loading job details...
-      </div>
+      <ApplyJobLoading />
     );
   }
 

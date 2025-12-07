@@ -9,6 +9,7 @@ import { ApiResponse, ResumeData, isSuccessResponse } from '@/types/fastapi.type
 import JobHeader from './JobHeader';
 import { JobDetails } from '@/types/job.types';
 import { Resume } from '@/types';
+import ResumeSelector from './ResumeSelector';
 
 interface ResumeUploadStepProps {
     job: JobDetails;
@@ -179,50 +180,14 @@ export default function ResumeUploadStep({
 
                 {mode === 'select' ? (
                     <>
-                        {existingResumes.length > 0 ? (
-                            <div className="space-y-3 mb-6 max-h-[300px] overflow-y-auto pr-2">
-                                {existingResumes.map((resume) => (
-                                    <div
-                                        key={resume.resume_id}
-                                        onClick={() => setSelectedResumeId(resume.resume_id)}
-                                        className={`p-4 border rounded-lg cursor-pointer transition-colors ${selectedResumeId === resume.resume_id
-                                            ? 'border-primary bg-primary-soft'
-                                            : 'border-gray-300 hover:border-primary/60'
-                                            }`}
-                                    >
-                                        <div className="flex items-center justify-between">
-                                            <div>
-                                                <p className="font-medium text-gray-900">
-                                                    Resume {resume.resume_id}
-                                                    {resume.is_profile && (
-                                                        <span className="ml-2 text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
-                                                            Your Default Resume
-                                                        </span>
-                                                    )}
-                                                </p>
-                                                <p className="text-sm text-gray-500">
-                                                    Uploaded {new Date(resume.created_at).toLocaleDateString()}
-                                                </p>
-                                            </div>
-                                            <div className={`w-5 h-5 rounded-full border-2 ${selectedResumeId === resume.resume_id
-                                                ? 'border-primary bg-primary'
-                                                : 'border-gray-300'
-                                                }`}>
-                                                {selectedResumeId === resume.resume_id && (
-                                                    <svg className="w-full h-full text-white" fill="currentColor" viewBox="0 0 20 20">
-                                                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                                    </svg>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="text-center py-8 text-gray-500">
-                                <p>No resumes found. Upload a new one below.</p>
-                            </div>
-                        )}
+                        <div className="mb-6">
+                            <ResumeSelector
+                                resumes={existingResumes}
+                                selectedResumeId={selectedResumeId}
+                                onSelectResume={setSelectedResumeId}
+                                disabled={isLoading}
+                            />
+                        </div>
 
                         {existingResumes.length > 0 && (
                             <ButtonFilledBlack
