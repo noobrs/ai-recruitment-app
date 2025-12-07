@@ -8,6 +8,7 @@ from .supabase_client import supabase
 
 # import pipeline stage functions
 from api.image.pipeline import process_image_resume
+from api.pdf.pipeline import process_pdf_resume
 
 from api.services.ranking_service import rank_application
 
@@ -92,10 +93,8 @@ async def api_process_image(file: UploadFile = File(...)):
 
 @app.post("/api/py/process-pdf")
 async def api_process_pdf(file: UploadFile = File(...)) -> ApiResponse:
-    """Full end-to-end pipeline for PDF: layout -> grouping -> GLiNER -> aggregate -> build json.
-    Accepts a file upload via multipart form data.
-    This endpoint only extracts data and does NOT save to database."""
-    from api.pdf.pipeline import process_pdf_resume
+    """Full end-to-end pipeline for PDF.
+    Accepts a file upload via multipart form data."""
 
     if not file:
         raise HTTPException(status_code=400, detail="File is required")
