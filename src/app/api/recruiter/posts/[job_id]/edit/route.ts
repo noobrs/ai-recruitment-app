@@ -19,7 +19,7 @@ export async function GET(
     if (authError || !user)
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const jobId = Number(params.job_id);
+    const jobId = await Number(params.job_id);
 
     // Fetch basic job details
     const job = await getJobById(jobId);
