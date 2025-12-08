@@ -4,13 +4,16 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Search, Filter } from "lucide-react";
 import LoadingPostDetailsPage from "./loading";
+import { ApplicationStatus } from "@/types";
+import StatusDropdown from "@/components/recruiter/StatusDropdown";
 
 interface Applicant {
     id: number;
     applicantName: string;
     date: string;
     score: number;
-    status: string;
+    status: ApplicationStatus;
+    redactedResumeUrl?: string | null;
 }
 
 export default function JobApplicantsPage() {
@@ -227,7 +230,7 @@ export default function JobApplicantsPage() {
                     );
                 })}
             </div>
-
+            
             {/* Grouped Applicants */}
             <div className="mt-10 space-y-12">
                 {["shortlisted", "received", "rejected", "withdrawn"].map((status) => {
@@ -283,13 +286,41 @@ export default function JobApplicantsPage() {
                                                 <td className="px-6 py-4">{a.date}</td>
 
                                                 {/* Status */}
-                                                <td className="px-6 py-4 capitalize font-medium">
-                                                    {a.status}
+                                                <td className="px-6 py-4">
+                                                    <StatusDropdown
+                                                        applicationId={a.id}
+                                                        currentStatus={a.status}
+                                                        onStatusChange={(newStatus) => {
+                                                            // update local state live
+                                                            setApplicants((prev) =>
+                                                                prev.map((p) =>
+                                                                    p.id === a.id ? { ...p, status: newStatus } : p
+                                                                )
+                                                            );
+
+                                                            setFilteredApplicants((prev) =>
+                                                                prev.map((p) =>
+                                                                    p.id === a.id ? { ...p, status: newStatus } : p
+                                                                )
+                                                            );
+                                                        }}
+                                                    />
                                                 </td>
 
                                                 {/* View Details */}
-                                                <td className="px-6 py-4 text-purple-600 font-medium cursor-pointer hover:underline text-right">
-                                                    View Details
+                                                <td className="px-6 py-4 text-right">
+                                                    {a.redactedResumeUrl ? (
+                                                        <a
+                                                            href={a.redactedResumeUrl}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="text-purple-600 font-medium hover:underline"
+                                                        >
+                                                            View Details
+                                                        </a>
+                                                    ) : (
+                                                        <span className="text-gray-400 font-medium">No Resume</span>
+                                                    )}
                                                 </td>
                                             </tr>
                                         ))}

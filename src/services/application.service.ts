@@ -553,7 +553,7 @@ export async function getApplicantsByJobIdForRecruiter(
       ),
       resume:resume_id (
         resume_id,
-        extracted_skills
+        redacted_file_path
       )
     `
     )
@@ -579,6 +579,7 @@ export async function getApplicantsByJobIdForRecruiter(
       }),
       score: a.match_score ?? 0,
       status: a.status || "received",
+      redactedResumeUrl: a.resume?.redacted_file_path || null,
     })) || []
   );
 }
