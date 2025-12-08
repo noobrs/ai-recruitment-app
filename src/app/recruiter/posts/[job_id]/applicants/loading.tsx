@@ -47,7 +47,7 @@ export default function LoadingPostDetailsPage() {
             </div>
 
             {/* Search Bar */}
-            <div className="flex items-center w-full border rounded-full px-4 py-3 bg-white shadow-sm mb-8">
+            <div className="flex items-center w-full border border-gray-200 rounded-full px-4 py-3 bg-white shadow-sm mb-8">
                 <div className="h-5 w-5 bg-gray-200 rounded-full mr-3"></div>
                 <div className="h-4 w-full bg-gray-100 rounded-md"></div>
             </div>
@@ -61,7 +61,7 @@ export default function LoadingPostDetailsPage() {
 
             {/* Table Skeleton */}
             <div className="bg-white shadow-sm rounded-xl border border-gray-200 overflow-hidden">
-                <div className="border-b bg-gray-50 p-4">
+                <div className="border-gray-200 bg-gray-50 p-4">
                     <div className="h-4 w-32 bg-gray-200 rounded-md"></div>
                 </div>
 

@@ -13,7 +13,7 @@ export async function GET(request: Request, { params }: { params: { job_id: stri
 
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const jobId = params.job_id;
+    const jobId = await String(params.job_id);
     const { searchParams } = new URL(request.url);
     const sortOrder = searchParams.get("sort") === "asc" ? "asc" : "desc";
 
