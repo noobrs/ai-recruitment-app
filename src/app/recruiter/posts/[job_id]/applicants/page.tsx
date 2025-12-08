@@ -248,8 +248,8 @@ export default function JobApplicantsPage() {
                             </h2>
 
                             {/* Table Container */}
-                            <div className="overflow-x-auto bg-white rounded-xl shadow-sm border border-gray-200">
-                                <table className="min-w-full table-fixed text-sm text-gray-700">
+                            <div className="bg-white rounded-xl shadow-sm">
+                                <table className="min-w-full text-sm text-gray-700">
                                     <thead>
                                         <tr className="bg-gray-50 text-purple-600">
                                             <th className="px-6 py-4 font-semibold w-[30%] text-left">Applicant</th>
