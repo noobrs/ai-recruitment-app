@@ -4,7 +4,7 @@ import type { Application } from "@/types";
 
 /**
  * GET /api/jobseeker/jobs
- * Returns all job listings with recruiter and company info.
+ * Returns all active (open status) job listings with recruiter and company info.
  * Accessible only to authenticated jobseekers.
  */
 export async function GET() {
@@ -35,7 +35,7 @@ export async function GET() {
       );
     }
 
-    // 3️⃣ Fetch jobs with recruiter + company + requirements
+    // 3️⃣ Fetch only open jobs with recruiter + company + requirements
     // Using deep joins — ensure FK recruiter.company_id → company.company_id exists
     const { data: jobs, error: jobError } = await supabase
       .from("job")
@@ -68,6 +68,7 @@ export async function GET() {
           status
         )
       `)
+      .eq("job_status", "open")
       .order("created_at", { ascending: false });
 
     if (jobError) {

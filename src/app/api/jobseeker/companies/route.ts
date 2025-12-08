@@ -3,8 +3,8 @@ import { createClient } from "@/utils/supabase/server";
 
 /**
  * GET /api/jobseeker/companies
- * - Returns all companies
- * - OR a single company with its jobs (if ?company_id provided)
+ * - Returns all companies with count of active (open) jobs
+ * - OR a single company with its active jobs (if ?company_id provided)
  */
 export async function GET(req: Request) {
   try {
@@ -53,8 +53,9 @@ export async function GET(req: Request) {
           created_at,
           recruiter (
             recruiter_id,
-            job:job (
-              job_id
+            job:job!inner (
+              job_id,
+              job_status
             )
           )
         `
@@ -64,10 +65,14 @@ export async function GET(req: Request) {
       if (companyError) throw companyError;
 
       const refined = (companies || []).map((comp: any) => {
-        const totalJobs = comp.recruiter?.reduce(
-          (sum: number, rec: any) => sum + (rec.job?.length || 0),
+        // Filter only open jobs
+        const openJobs = comp.recruiter?.reduce(
+          (sum: number, rec: any) => {
+            const openJobCount = rec.job?.filter((j: any) => j.job_status === "open").length || 0;
+            return sum + openJobCount;
+          },
           0
-        );
+        ) || 0;
 
         return {
           comp_id: comp.company_id,
@@ -82,8 +87,8 @@ export async function GET(req: Request) {
           comp_description:
             comp.comp_description || "No company description available.",
           comp_rating: comp.comp_rating || 0,
-          total_jobs: totalJobs || 0,
-          benefit_tag: totalJobs > 5 ? "High Benefit" : "Growing Team",
+          total_jobs: openJobs,
+          benefit_tag: openJobs > 5 ? "High Benefit" : "Growing Team",
         };
       });
 
@@ -129,8 +134,11 @@ export async function GET(req: Request) {
         );
       }
 
+      // Filter only open jobs
       const jobs =
-        company.recruiter?.flatMap((rec: any) => rec.job || []) || [];
+        company.recruiter?.flatMap((rec: any) => 
+          (rec.job || []).filter((j: any) => j.job_status === "open")
+        ) || [];
 
       return NextResponse.json(
         {
