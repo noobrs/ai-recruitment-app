@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ChevronDown, Search, Filter, ArrowUpDown } from "lucide-react";
+import { Search, Filter } from "lucide-react";
 import LoadingPostDetailsPage from "./loading";
 
 interface Applicant {
@@ -11,10 +11,6 @@ interface Applicant {
     date: string;
     score: number;
     status: string;
-}
-
-function generateAlias(id: number) {
-    return `Applicant #${id.toString().padStart(4, "0")}`;
 }
 
 export default function JobApplicantsPage() {
@@ -277,7 +273,7 @@ export default function JobApplicantsPage() {
                                                     >
                                                         {a.score}%
                                                     </div>
-                                                    {generateAlias(a.id)}
+                                                    {a.applicantName}
                                                 </td>
 
                                                 {/* Score */}
