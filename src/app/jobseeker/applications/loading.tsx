@@ -29,23 +29,6 @@ export default function ApplicationsLoading() {
             {/* Table Skeleton */}
             <div className="overflow-x-auto bg-white rounded-xl shadow-sm">
                 <table className="min-w-full text-sm">
-                    <thead className="bg-gray-50">
-                        <tr>
-                            <th className="px-6 py-3 text-left">
-                                <div className="h-4 w-20 bg-gray-200 rounded animate-pulse" />
-                            </th>
-                            <th className="px-6 py-3 text-left">
-                                <div className="h-4 w-20 bg-gray-200 rounded animate-pulse" />
-                            </th>
-                            <th className="px-6 py-3 text-left">
-                                <div className="h-4 w-32 bg-gray-200 rounded animate-pulse" />
-                            </th>
-                            <th className="px-6 py-3 text-left">
-                                <div className="h-4 w-16 bg-gray-200 rounded animate-pulse" />
-                            </th>
-                            <th className="px-6 py-3"></th>
-                        </tr>
-                    </thead>
                     <tbody>
                         {[...Array(10)].map((_, index) => (
                             <tr

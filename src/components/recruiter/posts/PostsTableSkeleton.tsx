@@ -2,17 +2,6 @@ export default function PostsTableSkeleton() {
     return (
         <div className="overflow-x-auto bg-white rounded-xl shadow-sm">
             <table className="min-w-full text-sm text-gray-700">
-                <thead className="bg-gray-50 text-purple-600 text-left">
-                    <tr>
-                        <th className="px-6 py-5 font-semibold">Job Title</th>
-                        <th className="px-6 py-5 font-semibold">Type</th>
-                        <th className="px-6 py-5 font-semibold">Location</th>
-                        <th className="px-6 py-5 font-semibold">Applicants</th>
-                        <th className="px-6 py-5 font-semibold">Date Posted</th>
-                        <th className="px-6 py-5 font-semibold">Status</th>
-                        <th className="px-6 py-5"></th>
-                    </tr>
-                </thead>
                 <tbody>
                     {[...Array(10)].map((_, i) => (
                         <tr

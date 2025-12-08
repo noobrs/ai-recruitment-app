@@ -2,15 +2,6 @@ export default function ApplicantsTableSkeleton() {
     return (
         <div className="bg-white rounded-xl shadow-sm">
             <table className="min-w-full text-sm text-gray-700">
-                <thead className="bg-gray-50 text-purple-600 text-left">
-                    <tr>
-                        <th className="px-6 py-3 font-semibold">Applicant</th>
-                        <th className="px-6 py-3 font-semibold">Job Title</th>
-                        <th className="px-6 py-3 font-semibold">Application Date</th>
-                        <th className="px-6 py-3 font-semibold">Status</th>
-                        <th className="px-6 py-3"></th>
-                    </tr>
-                </thead>
                 <tbody>
                     {[...Array(10)].map((_, i) => (
                         <tr
