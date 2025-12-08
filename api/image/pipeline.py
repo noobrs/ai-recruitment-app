@@ -8,7 +8,7 @@ from api.types.types import ApiResponse
 
 
 from .preprocessing import (
-    save_temp_image_bytes, mask_to_detected_boxes,
+    mask_segments_on_image, save_temp_image_bytes, mask_to_detected_boxes,
     remove_drawing_lines, remove_bullets_symbols,
     enhance_image_clahe
 )
@@ -61,23 +61,33 @@ def process_image_resume(file_bytes: bytes) -> ApiResponse:
                 "score": score,
                 "text": cleaned_text
             })
+            
+        # debug logging
+        for cs in classified_segments:
+            logger.info(f"[Pipeline] Classified Segment: id={cs['segment_id']}, "
+                        f"label={cs['label']}, score={cs['score']:.4f}, ")
+            
+        logger.info(predictions)
 
-        # 5. SEGMENT NER
+        # 5. MASK PI SEGMENTS
+        cleaned = mask_segments_on_image(cleaned, predictions, classified_segments)
+
+        # 6. SEGMENT NER
         clean_segments = []
         for seg in classified_segments:
             r = run_segment_ner(seg)
             clean_segments.append(r)
 
-        # 6. NORMALIZE OUTPUT (YOUR LOGIC)
+        # 7. NORMALIZE OUTPUT (YOUR LOGIC)
         normalized = normalize_output(clean_segments)
 
-        # 7. CONVERT TO ResumeData MODEL
+        # 8. CONVERT TO ResumeData MODEL
         resume_dict = build_final_response(normalized)
         resume_data = convert_image_resume_to_data(resume_dict)
         
         logging.info(f"[Pipeline] Normalized: {normalized}")
 
-        # 8. CREATE REDACTED JPG
+        # 9. CREATE REDACTED JPG
         cleaned_img = cv2.imread(cleaned)
 
         if cleaned_img is None:
@@ -86,7 +96,7 @@ def process_image_resume(file_bytes: bytes) -> ApiResponse:
         _, enc = cv2.imencode(".jpg", cleaned_img)
         cleaned_bytes = enc.tobytes()
 
-        # 9. UPLOAD REDACTED FILE
+        # 10. UPLOAD REDACTED FILE
         from api.supabase_client import upload_redacted_resume_to_storage
 
         upload_result = upload_redacted_resume_to_storage(file_bytes=cleaned_bytes, file_type="jpg")
@@ -96,7 +106,7 @@ def process_image_resume(file_bytes: bytes) -> ApiResponse:
         else:
             logger.warning(f"[Pipeline] Upload failed: {upload_result}")
 
-        # 10. RETURN FULL RESPONSE
+        # 11. RETURN FULL RESPONSE
         return ApiResponse(
             status="success",
             data=resume_data,
@@ -105,6 +115,8 @@ def process_image_resume(file_bytes: bytes) -> ApiResponse:
         )
 
     except Exception as e:
+        os.remove(tmp_path)
+        os.remove(cleaned)
         logger.error(f"[IMAGE] Pipeline error: {e}")
         return ApiResponse(status="error", data=None, message=str(e))
 

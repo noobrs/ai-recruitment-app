@@ -55,3 +55,4 @@ env/
 *.md
 !README.md
 environment.yml
+logs/pipeline.log

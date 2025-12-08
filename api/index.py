@@ -11,10 +11,10 @@ from api.pdf.pipeline import process_pdf_resume
 
 from api.services.ranking_service import rank_application
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
+from api.logging_config import setup_logging
+
+setup_logging(debug=True)
+
 logger = logging.getLogger("api.index")
 
 app = FastAPI(

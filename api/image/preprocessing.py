@@ -127,3 +127,40 @@ def enhance_image_clahe(img_path, cleaned_image_path=CLEANED_IMAGE_PATH):
     cv2.imwrite(cleaned_image_path, out)
     logger.info("[Preprocess] CLAHE + Sharpen applied")
     return cleaned_image_path
+
+def mask_segments_on_image(cleaned_image_path=CLEANED_IMAGE_PATH, predictions=None, classified_segments=None):
+    img = cv2.imread(cleaned_image_path)
+    if img is None:
+        raise Exception("Failed to load image for masking")
+
+    h, w = img.shape[:2]
+    masked = img.copy()
+
+    pi_segments = {seg["segment_id"] for seg in classified_segments if seg["label"].lower() == "pi"}
+
+    if not pi_segments:
+        logger.info("[Preprocess] No PI segments found. Skipping masking.")
+        return cleaned_image_path
+
+    for idx, pred in enumerate(predictions, start=1):
+        if idx not in pi_segments:
+            continue
+
+        logger.info(f"[Mask] Masking segment index={idx}: {pred}")
+
+        x = pred["x"]; y = pred["y"]
+        bw = pred["width"]; bh = pred["height"]
+
+        x_min = max(0, int(x - bw / 2))
+        y_min = max(0, int(y - bh / 2))
+        x_max = min(w, int(x + bw / 2))
+        y_max = min(h, int(y + bh / 2))
+
+        masked[y_min:y_max, x_min:x_max] = 255
+
+        logger.info(f"[Mask] Applied mask at bbox=({x_min},{y_min})→({x_max},{y_max})")
+    
+    os.makedirs(os.path.dirname(cleaned_image_path), exist_ok=True)
+    cv2.imwrite(cleaned_image_path, masked)
+    logger.info(f"[Preprocess] Masked image saved → {cleaned_image_path}")
+    return cleaned_image_path
