@@ -19,8 +19,8 @@ from api.pdf.config import (
 
 _EMAIL_RE = re.compile(EMAIL_PATTERN, re.IGNORECASE)
 _PHONE_RES = [re.compile(p) for p in PHONE_PATTERNS]
-_DEGREE_RES = [re.compile(p) for p in DEGREE_PATTERNS]
-_DATE_RES = [re.compile(p) for p in DATE_PATTERNS]
+_DEGREE_RES = [re.compile(p, re.IGNORECASE) for p in DEGREE_PATTERNS]
+_DATE_RES = [re.compile(p, re.IGNORECASE) for p in DATE_PATTERNS]
 
 
 # =============================================================================

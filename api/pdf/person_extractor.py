@@ -15,6 +15,10 @@ from api.pdf.models import (
     TextGroup,
     TextSegment,
 )
+from api.pdf.config import (
+    ENTITY_THRESHOLD,
+    ENTITY_LABELS_BY_SECTION,
+)
 from api.pdf.validators import (
     extract_emails,
     extract_phones,
@@ -124,8 +128,8 @@ def _extract_names_and_locations(
     try:
         entities = gliner.predict_entities(
             text,
-            ["Person", "Location"],
-            threshold=0.45,
+            ENTITY_LABELS_BY_SECTION.get("contact", ["person", "location"]),
+            threshold=ENTITY_THRESHOLD,
         )
     except Exception:
         return [], []

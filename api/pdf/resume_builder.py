@@ -165,7 +165,7 @@ def build_skills(groups: List[TextGroup]) -> List[str]:
     
     for group in groups:
         for entity in group.entities:
-            if entity.label.lower() in ("skill", "language"):
+            if entity.label.lower() in ("skill", "tool", "language"):
                 key = normalize_key(entity.text)
                 if key and len(entity.text.strip()) >= 1:
                     # Keep highest score
@@ -324,8 +324,8 @@ def _build_single_education_record(
     locations = get_entity_texts(entities, "location")
     location = locations[0].strip() if locations else None
     
-    # Extract dates
-    start_date, end_date = extract_date_from_entities(entities)
+    # Extract dates (with fallback to regex if GLiNER missed them)
+    start_date, end_date = extract_date_from_entities(entities, fallback_text=text)
     
     # Validate dates
     if start_date and not is_valid_date(start_date):
@@ -494,8 +494,8 @@ def _build_single_experience_record(
     locations = get_entity_texts(entities, "location")
     location = locations[0].strip() if locations else None
     
-    # Extract dates
-    start_date, end_date = extract_date_from_entities(entities)
+    # Extract dates (with fallback to regex if GLiNER missed them)
+    start_date, end_date = extract_date_from_entities(entities, fallback_text=text)
     
     # Validate dates
     if start_date and not is_valid_date(start_date):

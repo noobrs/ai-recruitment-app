@@ -43,38 +43,39 @@ SECTION_MERGE_MAP: Dict[str, str] = {
 # =============================================================================
 
 ENTITY_LABELS_BY_SECTION: Dict[str, List[str]] = {
-    "contact": ["Person", "Location"],
-    "experience": ["Job Title", "Company", "Organization", "Location", "Date"],
-    "education": ["Degree", "School", "University", "Organization", "Location", "Date"],
-    "skills": ["Skill", "Language"],
-    "projects": ["Project"],
-    "certifications": ["Certification"],
-    "activities": ["Activity"],
-    "summary": ["Person", "Skill", "Location"],
-    "awards": ["Award", "Date"],
-    "other": ["Person", "Skill", "Location", "Date"],
+    "contact": ["person", "location"],
+    "experience": ["job title", "company", "organization", "location", "date"],
+    "education": ["degree", "school", "university", "organization", "location", "date"],
+    "skills": ["skill", "tool", "language"],
+    "projects": ["project"],
+    "certifications": ["certification"],
+    "activities": ["activity"],
+    "summary": ["person", "location"],
+    "awards": ["award", "date"],
+    "other": ["person", "skill", "location", "date"],
 }
 
 # All possible entity labels (fallback)
 ALL_ENTITY_LABELS: List[str] = [
-    "Person",
-    "Skill",
-    "Language",
-    "Degree",
-    "Job Title",
-    "Organization",
-    "Company",
-    "School",
-    "University",
-    "Location",
-    "Certification",
-    "Award",
-    "Activity",
-    "Date",
+    "person",
+    "skill",
+    "tool",
+    "language",
+    "degree",
+    "job title",
+    "organization",
+    "company",
+    "school",
+    "university",
+    "location",
+    "certification",
+    "award",
+    "activity",
+    "date",
 ]
 
 # Entity confidence threshold
-ENTITY_THRESHOLD: float = 0.30
+ENTITY_THRESHOLD: float = 0.50
 
 # =============================================================================
 # Common Section Headers (Fast-path classification)

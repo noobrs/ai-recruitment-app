@@ -324,32 +324,101 @@ def get_entity_texts(
 
 def extract_date_from_entities(
     entities: List[Entity],
+    fallback_text: Optional[str] = None,
 ) -> Tuple[Optional[str], Optional[str]]:
     """
     Extract start and end dates from Date entities.
+    Falls back to regex extraction if GLiNER misses dates like "Present".
     
     Args:
         entities: List of entities
+        fallback_text: Optional text to search for dates if entities are incomplete
         
     Returns:
         Tuple of (start_date, end_date)
     """
+    from api.pdf.validators import _DATE_RES
+    
     date_entities = [e for e in entities if e.label.lower() == "date"]
     
-    if not date_entities:
-        return None, None
-    
     # Sort by position in document
-    date_entities.sort(key=lambda e: e.start_char if e.start_char >= 0 else 999999)
+    if date_entities:
+        date_entities.sort(key=lambda e: e.start_char if e.start_char >= 0 else 999999)
+    
+    # Try to extract from entities first
+    start_from_entities = None
+    end_from_entities = None
     
     if len(date_entities) >= 2:
-        return date_entities[0].text.strip(), date_entities[1].text.strip()
-    
-    if len(date_entities) == 1:
+        start_from_entities = date_entities[0].text.strip()
+        end_from_entities = date_entities[1].text.strip()
+    elif len(date_entities) == 1:
         date_text = date_entities[0].text.strip()
         # Check if it contains a range
         start, end = split_duration(date_text)
-        return start, end
+        if start and end:
+            return start, end
+        start_from_entities = date_text
     
-    return None, None
+    # If we have complete dates from entities, return them
+    if start_from_entities and end_from_entities:
+        return start_from_entities, end_from_entities
+    
+    # Otherwise, use regex fallback to find missing dates (especially "Present")
+    if fallback_text:
+        found_dates = []
+        present_like_dates = []
+        
+        for pattern in _DATE_RES:
+            matches = pattern.findall(fallback_text)
+            for match in matches:
+                match_lower = match.strip().lower()
+                # Separate "Present" like keywords
+                if match_lower in ['present', 'current', 'now', 'ongoing']:
+                    present_like_dates.append(match.strip())
+                else:
+                    found_dates.append(match.strip())
+        
+        # Remove duplicates while preserving order
+        def dedupe(dates):
+            seen = set()
+            unique = []
+            for date in dates:
+                date_normalized = date.strip().lower()
+                if date_normalized not in seen:
+                    seen.add(date_normalized)
+                    unique.append(date.strip())
+            return unique
+        
+        found_dates = dedupe(found_dates)
+        present_like_dates = dedupe(present_like_dates)
+        
+        # If we have a start date from entities and found a "Present" keyword
+        if start_from_entities and present_like_dates:
+            return start_from_entities, present_like_dates[0]
+        
+        # If we have start from entities and found another date
+        if start_from_entities and found_dates:
+            # Check if any found date is different from start
+            for date in found_dates:
+                if date.lower() != start_from_entities.lower():
+                    # Use this as end date, but prefer "Present" if available
+                    if present_like_dates:
+                        return start_from_entities, present_like_dates[0]
+                    return start_from_entities, date
+        
+        # Combine all found dates for complete fallback
+        all_dates = found_dates + present_like_dates
+        
+        if len(all_dates) >= 2:
+            return all_dates[0], all_dates[1]
+        elif len(all_dates) == 1:
+            # Check if single date contains a range
+            start, end = split_duration(all_dates[0])
+            if start and end:
+                return start, end
+            return all_dates[0], None
+    
+    # Return whatever we found from entities (might be incomplete)
+    return start_from_entities, end_from_entities
 
