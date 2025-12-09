@@ -181,7 +181,7 @@ def _is_valid_name(text: str) -> bool:
         return False
     
     # Shouldn't contain @ or other special characters
-    if any(c in text for c in "@#$%^&*()=+[]{}|\\<>"):
+    if any(c in text for c in "@#$%^&*()=+[]{}|\\<>."):
         return False
     
     return True
@@ -235,6 +235,10 @@ def _find_redaction_regions(
             )
             if region:
                 regions.append(region)
+
+                print(f"[Redaction] Found {region.info_type} region at {region.bbox}")
+                print(f"           Segment text: {segment.text}")
+                print(f"           Segment text bbox: {segment.bbox.to_tuple()}\n")
     
     return regions
 
@@ -312,8 +316,8 @@ def _check_segment_for_pii(
         round(bbox.y1, 1),
     )
     
-    # if region_key in seen_regions:
-    #     return None
+    if region_key in seen_regions:
+        return None
     seen_regions.add(region_key)
     
     return RedactionRegion(

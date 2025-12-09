@@ -185,7 +185,8 @@ def process_pdf_resume(file_bytes: bytes) -> ApiResponse:
         print("[Pipeline] Step 5: Extracting person information...")
         person_info = extract_person_info(groups)
         print(f"[Pipeline] Found: names={person_info.names}, emails={person_info.emails}, "
-              f"phones={person_info.phones}, locations={person_info.locations}")
+              f"phones={person_info.phones}, locations={person_info.locations}\n")
+        _log_person_info(person_info)
         
         print("[Pipeline] Step 6: Building structured resume data...")
         skills = build_skills(groups)
@@ -289,3 +290,7 @@ def _log_heading_groups(heading_groups: List[HeadingGroup]):
     """Log heading groups for debugging."""
     for group in heading_groups:
         print(f"[Pipeline]   Heading Group '{group.heading}'\n {group.text}\n")
+
+def _log_person_info(person_info):
+    for redaction_region in person_info.redaction_regions:
+        print(f"[Pipeline]   Redaction Region: {redaction_region.info_type} at {redaction_region.bbox}")

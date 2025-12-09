@@ -60,6 +60,9 @@ def load_pdf_first_page(pdf_path: str) -> spacy.tokens.Doc:
         else:
             # If no layout info, include by default
             first_page_spans.append(span)
+
+        print(span.text)
+        print(f"x0: {layout_obj.x}, y0: {layout_obj.y}, x1: {layout_obj.x + layout_obj.width}, y1: {layout_obj.y + layout_obj.height}")
     
     # Update the doc's spans (create a new span group)
     doc.spans["layout"] = first_page_spans
