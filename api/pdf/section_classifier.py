@@ -188,12 +188,49 @@ def classify_heading_groups(heading_groups: List[HeadingGroup]) -> Dict[str, str
 # Merge Groups by Section Type
 # =============================================================================
 
+def _remove_duplicate_headings(
+    text: str,
+    headings_to_remove: List[str]
+) -> str:
+    """
+    Remove duplicate heading texts from the given text.
+    
+    Args:
+        text: Text content to clean
+        headings_to_remove: List of heading strings to remove
+        
+    Returns:
+        Cleaned text with duplicate headings removed
+    """
+    if not headings_to_remove:
+        return text
+    
+    lines = text.split('\n')
+    cleaned_lines = []
+    
+    for line in lines:
+        line_stripped = line.strip()
+        # Check if this line matches any heading to remove
+        is_duplicate = False
+        for heading in headings_to_remove:
+            if line_stripped == heading.strip():
+                is_duplicate = True
+                print(f"[SectionClassifier] Removing duplicate heading: '{line_stripped}'")
+                break
+        
+        if not is_duplicate:
+            cleaned_lines.append(line)
+    
+    return '\n'.join(cleaned_lines)
+
+
 def merge_groups_by_section(
     heading_groups: List[HeadingGroup],
     heading_to_section: Dict[str, str],
 ) -> List[TextGroup]:
     """
     Merge heading groups that have the same section type.
+    Also removes duplicate headings from NO_HEADING groups.
     
     Args:
         heading_groups: List of HeadingGroup from layout parser
@@ -202,6 +239,13 @@ def merge_groups_by_section(
     Returns:
         List of merged TextGroup objects
     """
+    # Collect all actual headings (non-NO_HEADING)
+    all_headings = [
+        group.heading 
+        for group in heading_groups 
+        if group.heading != "NO_HEADING"
+    ]
+    
     section_to_groups: Dict[str, List[HeadingGroup]] = defaultdict(list)
     
     for group in heading_groups:
@@ -221,13 +265,25 @@ def merge_groups_by_section(
                 combined_text_parts.append(group.heading)
             
             for segment in group.segments:
-                combined_text_parts.append(segment.text)
+                segment_text = segment.text
+                
+                # If this is from NO_HEADING group, remove duplicate headings
+                if group.heading == "NO_HEADING":
+                    segment_text = _remove_duplicate_headings(segment_text, all_headings)
+                
+                if segment_text.strip():  # Only add non-empty segments
+                    combined_text_parts.append(segment_text)
             
             combined_segments.extend(group.segments)
         
+        # Also clean the combined text
+        combined_text = " ".join(combined_text_parts)
+        if section_type == "contact":  # NO_HEADING typically becomes contact
+            combined_text = _remove_duplicate_headings(combined_text, all_headings)
+        
         merged_group = TextGroup(
             heading=section_type,
-            text=" ".join(combined_text_parts),
+            text=combined_text,
             segments=combined_segments,
             entities=[],
         )
