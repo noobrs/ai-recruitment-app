@@ -17,6 +17,7 @@ interface ProfilePictureUploadProps {
     previewUrl: string | null;
     initials: string;
     isEditing: boolean;
+    isSaving: boolean;
     onFileChange: (file: File | null, previewUrl: string | null) => void;
 }
 
@@ -32,6 +33,7 @@ export default function ProfilePictureUpload({
     previewUrl,
     initials,
     isEditing,
+    isSaving,
     onFileChange,
 }: ProfilePictureUploadProps) {
     const router = useRouter();
@@ -150,13 +152,18 @@ export default function ProfilePictureUpload({
                 {isEditing && (
                     <>
                         {/* Upload overlay */}
-                        <label className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center cursor-pointer">
+                        <label className={`absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center ${
+                            isSaving ? 'cursor-not-allowed' : 'cursor-pointer'
+                        }`}>
                             <Camera className="h-8 w-8 text-white mb-1" />
-                            <span className="text-xs text-white font-medium">Change Photo</span>
+                            <span className="text-xs text-white font-medium">
+                                {isSaving ? 'Saving...' : 'Change Photo'}
+                            </span>
                             <input
                                 type="file"
                                 accept={ALLOWED_FILE_TYPES.join(',')}
                                 onChange={handleFileChange}
+                                disabled={isSaving}
                                 className="hidden"
                             />
                         </label>

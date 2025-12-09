@@ -58,6 +58,7 @@ export default function ProfileHeader({
                     profilePicturePath={user.profile_picture_path || undefined}
                     initials={getInitials()}
                     isEditing={isEditing}
+                    isSaving={isSaving}
                     previewUrl={profilePicturePreview}
                     onFileChange={onProfilePictureChange}
                 />

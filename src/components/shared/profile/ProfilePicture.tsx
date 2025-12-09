@@ -6,6 +6,7 @@ interface ProfilePictureProps {
     profilePicturePath?: string;
     initials: string;
     isEditing: boolean;
+    isSaving: boolean;
     previewUrl: string | null;
     onFileChange: (file: File | null, previewUrl: string | null) => void;
 }
@@ -21,6 +22,7 @@ export default function ProfilePicture({
     profilePicturePath,
     initials,
     isEditing,
+    isSaving,
     previewUrl,
     onFileChange
 }: ProfilePictureProps) {
@@ -30,6 +32,7 @@ export default function ProfilePicture({
             previewUrl={previewUrl}
             initials={initials}
             isEditing={isEditing}
+            isSaving={isSaving}
             onFileChange={onFileChange}
         />
     );

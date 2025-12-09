@@ -170,6 +170,7 @@ export default function RecruiterOnboarding({
                         previewUrl={previewUrl}
                         initials={initials}
                         isEditing={true}
+                        isSaving={isLoading}
                         onFileChange={handleProfilePictureChange}
                     />
                     <p className="mt-2 text-xs text-neutral-500 text-center">
