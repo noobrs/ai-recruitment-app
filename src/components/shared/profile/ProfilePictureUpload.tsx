@@ -152,9 +152,8 @@ export default function ProfilePictureUpload({
                 {isEditing && (
                     <>
                         {/* Upload overlay */}
-                        <label className={`absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center ${
-                            isSaving ? 'cursor-not-allowed' : 'cursor-pointer'
-                        }`}>
+                        <label className={`absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center ${isSaving ? 'cursor-not-allowed' : 'cursor-pointer'
+                            }`}>
                             <Camera className="h-8 w-8 text-white mb-1" />
                             <span className="text-xs text-white font-medium">
                                 {isSaving ? 'Saving...' : 'Change Photo'}
