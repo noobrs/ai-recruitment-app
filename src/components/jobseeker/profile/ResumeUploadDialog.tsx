@@ -9,6 +9,7 @@ import SkillsEditor from '../shared/editors/SkillsEditor';
 import ExperienceEditor from '../shared/editors/ExperienceEditor';
 import EducationEditor from '../shared/editors/EducationEditor';
 import ResumeValidationWarning from '@/components/jobseeker/jobs/apply/ResumeValidationWarning';
+import toast from 'react-hot-toast';
 
 interface ResumeUploadDialogProps {
     jobSeekerId: number;
@@ -50,6 +51,7 @@ export default function ResumeUploadDialog({
         if (file) {
             const validationError = validateResumeFile(file);
             if (validationError) {
+                toast.error(validationError);
                 setError(validationError);
                 setSelectedFile(null);
                 event.target.value = '';

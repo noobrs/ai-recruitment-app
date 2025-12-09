@@ -1,6 +1,7 @@
 import { createClient } from '@/utils/supabase/server';
 import { createAdminClient } from '@/utils/supabase/admin';
 import { Application, ApplicationStatus, ApplicationInsert } from '@/types';
+import { notifyApplicationWithdrawn } from '@/utils/notification-helper';
 
 /**
  * Get an application by ID
@@ -244,11 +245,36 @@ export async function updateApplicationStatus(applicationId: number, status: App
  */
 export async function withdrawApplication(applicationId: number, jobSeekerId: number): Promise<Application | null> {
   const supabase = await createClient();
+  const supabaseAdmin = await createAdminClient();
 
-  // Verify ownership and current status
+  // Verify ownership and current status, fetch related data for notification
   const { data: existing, error: fetchError } = await supabase
     .from('application')
-    .select('application_id, status, job_seeker_id')
+    .select(`
+      application_id, 
+      status, 
+      job_seeker_id,
+      created_at,
+      job:job_id (
+        job_id,
+        job_title,
+        recruiter:recruiter_id (
+          recruiter_id,
+          user_id,
+          company:company_id (
+            comp_name
+          )
+        )
+      ),
+      job_seeker:job_seeker_id (
+        job_seeker_id,
+        user:user_id (
+          id,
+          first_name,
+          last_name
+        )
+      )
+    `)
     .eq('application_id', applicationId)
     .eq('job_seeker_id', jobSeekerId)
     .single();
@@ -276,6 +302,56 @@ export async function withdrawApplication(applicationId: number, jobSeekerId: nu
     console.error('Error withdrawing application:', error);
     return null;
   }
+
+  // Send notification and email to recruiter
+  try {
+    const job = existing.job as any;
+    const jobSeeker = existing.job_seeker as any;
+    const recruiter = job?.recruiter as any;
+    const user = jobSeeker?.user as any;
+
+    if (recruiter?.user_id && job?.job_title && user?.id) {
+      // Get recruiter's email and name
+      const { data: recruiterAuthUser, error: recruiterAuthError } = await supabaseAdmin.auth.admin.getUserById(
+        recruiter.user_id
+      );
+
+      if (!recruiterAuthError && recruiterAuthUser?.user?.email) {
+        // Get recruiter's name from recruiter table
+        const { data: recruiterData } = await supabase
+          .from('recruiter')
+          .select('user:user_id(first_name, last_name)')
+          .eq('recruiter_id', recruiter.recruiter_id)
+          .single();
+
+        const recruiterUserData = recruiterData?.user as any;
+        const recruiterName = recruiterUserData
+          ? `${recruiterUserData.first_name || ''} ${recruiterUserData.last_name || ''}`.trim() || 'Recruiter'
+          : 'Recruiter';
+
+        const applicantName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Job Seeker';
+
+        await notifyApplicationWithdrawn({
+          userId: recruiter.user_id,
+          userEmail: recruiterAuthUser.user.email,
+          type: 'application',
+          applicationId: applicationId,
+          recruiterName: recruiterName,
+          jobTitle: job.job_title,
+          applicantName: applicantName,
+          withdrawnDate: new Date().toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+          }),
+        });
+      }
+    }
+  } catch (notifyError) {
+    console.error('Failed to send withdrawal notification to recruiter:', notifyError);
+    // Don't fail the withdrawal if notification fails
+  }
+
   return data;
 }
 

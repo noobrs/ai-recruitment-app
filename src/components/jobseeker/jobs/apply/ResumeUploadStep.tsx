@@ -10,6 +10,7 @@ import JobHeader from './JobHeader';
 import { JobDetails } from '@/types/job.types';
 import { Resume } from '@/types';
 import ResumeSelector from './ResumeSelector';
+import toast from 'react-hot-toast';
 
 interface ResumeUploadStepProps {
     job: JobDetails;
@@ -97,6 +98,7 @@ export default function ResumeUploadStep({
         // Validate file before processing
         const validationError = validateResumeFile(cvFile);
         if (validationError) {
+            toast.error(validationError);
             setErrorMessage(validationError);
             return;
         }

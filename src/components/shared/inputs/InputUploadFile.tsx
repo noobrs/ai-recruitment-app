@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import InputLabel from "./InputLabel";
+import toast from 'react-hot-toast';
 
 interface InputUploadFileProps {
   label: string;
@@ -34,7 +35,7 @@ export default function InputUploadFile({
 
     if (file) {
       if (file.size > maxSizeMB * 1024 * 1024) {
-        alert(`File exceeds ${maxSizeMB} MB limit.`);
+        toast.error(`File exceeds ${maxSizeMB} MB limit.`);
         e.target.value = "";
         return;
       }
