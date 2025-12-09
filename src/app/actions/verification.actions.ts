@@ -15,7 +15,7 @@ import type { UserRole } from "@/types";
 export async function resendVerificationAction(email: string, role: UserRole) {
     try {
         // Validate email format
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
         if (!emailRegex.test(email)) {
             return {
                 success: false,

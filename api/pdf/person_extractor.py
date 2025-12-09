@@ -312,8 +312,8 @@ def _check_segment_for_pii(
         round(bbox.y1, 1),
     )
     
-    if region_key in seen_regions:
-        return None
+    # if region_key in seen_regions:
+    #     return None
     seen_regions.add(region_key)
     
     return RedactionRegion(

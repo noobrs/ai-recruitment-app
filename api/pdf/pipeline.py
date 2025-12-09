@@ -20,7 +20,9 @@ import os
 import tempfile
 import traceback
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, List
+
+from sympy import group
 
 from api.types.types import ApiResponse
 
@@ -39,7 +41,7 @@ from api.pdf.resume_builder import (
     build_skills,
 )
 from api.pdf.redaction import redact_pdf
-from api.pdf.models import ExtractedResume
+from api.pdf.models import ExtractedResume, HeadingGroup
 
 
 logger = logging.getLogger(__name__)
@@ -169,6 +171,7 @@ def process_pdf_resume(file_bytes: bytes) -> ApiResponse:
         print("[Pipeline] Step 2: Grouping spans by heading...")
         heading_groups = group_spans_by_heading(doc)
         print(f"[Pipeline] Found {len(heading_groups)} heading groups")
+        _log_heading_groups(heading_groups)
         
         print("[Pipeline] Step 3: Classifying and merging by section...")
         groups = classify_and_merge_sections(heading_groups)
@@ -269,7 +272,7 @@ def process_pdf_resume(file_bytes: bytes) -> ApiResponse:
 def _log_groups(groups):
     """Log section groups."""
     for group in groups:
-        print(f"[Pipeline]   Section '{group.heading}': {len(group.text)} chars, {len(group.segments)} segments")
+        print(f"[Pipeline]   Section '{group.heading}'\n {group.text}\n {len(group.segments)} segments\n\n")
 
 
 def _log_entity_counts(groups):
@@ -277,5 +280,12 @@ def _log_entity_counts(groups):
     for group in groups:
         entity_count = len(group.entities)
         if entity_count > 0:
-            labels = set(e.label for e in group.entities)
-            print(f"[Pipeline]   Section '{group.heading}': {entity_count} entities ({', '.join(labels)})")
+            print(f"[Pipeline]   Section '{group.heading}'")
+            for e in group.entities:
+                print(f"    - {e.label}: {e.text} (conf={e.score:.2f})")
+            print("")
+
+def _log_heading_groups(heading_groups: List[HeadingGroup]):
+    """Log heading groups for debugging."""
+    for group in heading_groups:
+        print(f"[Pipeline]   Heading Group '{group.heading}'\n {group.text}\n")

@@ -50,7 +50,7 @@ export async function registerAction(formData: FormData) {
     }
 
     // Validation: Check if email is valid format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     if (!emailRegex.test(email)) {
         return { errorMessage: "Please enter a valid email address" };
     }
@@ -140,7 +140,7 @@ export async function forgotPasswordAction(formData: FormData) {
     const email = String(formData.get("email") ?? "");
 
     // Validation: Check if email is valid format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     if (!emailRegex.test(email)) {
         return { errorMessage: "Please enter a valid email address" };
     }

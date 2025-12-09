@@ -237,7 +237,7 @@ SKIP_SPAN_LABELS: Set[str] = {"table", "picture", "equation", "figure"}
 # Regex Patterns
 # =============================================================================
 
-EMAIL_PATTERN: str = r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}"
+EMAIL_PATTERN: str = r"\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b"
 
 PHONE_PATTERNS: List[str] = [
     r"\+60\s*[\d\s\-()]{8,12}",
