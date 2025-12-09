@@ -3,6 +3,7 @@
 interface ProfileAboutSectionProps {
     position?: string | null;
     isEditing: boolean;
+    isSaving?: boolean;
     value: string;
     onChange: (value: string) => void;
 }
@@ -15,6 +16,7 @@ interface ProfileAboutSectionProps {
 export default function ProfileAboutSection({
     position,
     isEditing,
+    isSaving = false,
     value,
     onChange,
 }: ProfileAboutSectionProps) {
@@ -31,7 +33,8 @@ export default function ProfileAboutSection({
                     value={value}
                     onChange={(e) => onChange(e.target.value)}
                     placeholder="e.g., Senior Talent Acquisition Specialist, HR Manager, etc."
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-secondary"
+                    disabled={isSaving}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-secondary disabled:opacity-50 disabled:cursor-not-allowed"
                 />
             )}
         </div>

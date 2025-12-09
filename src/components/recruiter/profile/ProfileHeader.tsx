@@ -68,6 +68,7 @@ export default function ProfileHeader({
                     companyName={user.recruiter.company?.comp_name}
                     memberSince={memberSince}
                     isEditing={isEditing}
+                    isSaving={isSaving}
                     formData={formData}
                     onFormChange={onFormChange}
                 />

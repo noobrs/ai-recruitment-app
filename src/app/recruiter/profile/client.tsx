@@ -60,6 +60,16 @@ export default function ProfileClient({ user }: ProfileClientProps) {
     };
 
     const handleSave = async () => {
+        // Validate required fields
+        if (!formData.first_name.trim()) {
+            toast.error('First name is required');
+            return;
+        }
+        if (!formData.last_name.trim()) {
+            toast.error('Last name is required');
+            return;
+        }
+
         setIsSaving(true);
         try {
             // Upload profile picture if changed
@@ -72,8 +82,6 @@ export default function ProfileClient({ user }: ProfileClientProps) {
                 if (uploadResult.error) {
                     throw new Error(uploadResult.error);
                 }
-
-                toast.success('Profile picture updated!');
             }
 
             await updateUserProfile(user.id, {
@@ -84,6 +92,7 @@ export default function ProfileClient({ user }: ProfileClientProps) {
                 position: formData.position,
             });
 
+            toast.success('Profile updated successfully!');
             setIsEditing(false);
             setProfilePicture(null);
             setProfilePicturePreview(null);
@@ -124,6 +133,7 @@ export default function ProfileClient({ user }: ProfileClientProps) {
                 <ProfileAboutSection
                     position={formData.position}
                     isEditing={isEditing}
+                    isSaving={isSaving}
                     value={formData.position}
                     onChange={(v: string) => handleFormChange('position', v)}
                 />

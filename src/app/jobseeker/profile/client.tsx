@@ -93,6 +93,16 @@ export default function ProfileClient({ user, profileResume, allResumes }: Profi
     };
 
     const handleSave = async () => {
+        // Validate required fields
+        if (!formData.first_name.trim()) {
+            toast.error('First name is required');
+            return;
+        }
+        if (!formData.last_name.trim()) {
+            toast.error('Last name is required');
+            return;
+        }
+
         setIsSaving(true);
         try {
             // Upload profile picture if changed
@@ -105,8 +115,6 @@ export default function ProfileClient({ user, profileResume, allResumes }: Profi
                 if (uploadResult.error) {
                     throw new Error(uploadResult.error);
                 }
-
-                toast.success('Profile picture updated!');
             }
 
             await updateUserProfile(user.id, {
@@ -118,6 +126,7 @@ export default function ProfileClient({ user, profileResume, allResumes }: Profi
                 about_me: formData.about_me,
             });
 
+            toast.success('Profile updated successfully!');
             setIsEditing(false);
             setProfilePicture(null);
             setProfilePicturePreview(null);

@@ -6,6 +6,7 @@ interface ProfileBasicInfoProps {
     companyName?: string;
     memberSince: string;
     isEditing: boolean;
+    isSaving?: boolean;
     formData: {
         first_name: string;
         last_name: string;
@@ -24,6 +25,7 @@ export default function ProfileBasicInfo({
     companyName,
     memberSince,
     isEditing,
+    isSaving = false,
     formData,
     onFormChange,
 }: ProfileBasicInfoProps) {
@@ -47,20 +49,34 @@ export default function ProfileBasicInfo({
             ) : (
                 <>
                     <div className="flex gap-3">
-                        <input
-                            type="text"
-                            value={formData.first_name}
-                            onChange={(e) => onFormChange('first_name', e.target.value)}
-                            placeholder="First Name"
-                            className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-secondary"
-                        />
-                        <input
-                            type="text"
-                            value={formData.last_name}
-                            onChange={(e) => onFormChange('last_name', e.target.value)}
-                            placeholder="Last Name"
-                            className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-secondary"
-                        />
+                        <div className="flex-1">
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                First Name <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                                type="text"
+                                value={formData.first_name}
+                                onChange={(e) => onFormChange('first_name', e.target.value)}
+                                placeholder="First Name"
+                                required
+                                disabled={isSaving}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-secondary disabled:opacity-50 disabled:cursor-not-allowed"
+                            />
+                        </div>
+                        <div className="flex-1">
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Last Name <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                                type="text"
+                                value={formData.last_name}
+                                onChange={(e) => onFormChange('last_name', e.target.value)}
+                                placeholder="Last Name"
+                                required
+                                disabled={isSaving}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-secondary disabled:opacity-50 disabled:cursor-not-allowed"
+                            />
+                        </div>
                     </div>
                     {companyName && <p className="text-sm text-gray-500">Company: {companyName}</p>}
                     <p className="text-sm text-gray-500">Member since {memberSince}</p>

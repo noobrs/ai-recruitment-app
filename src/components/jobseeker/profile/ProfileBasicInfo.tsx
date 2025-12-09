@@ -71,22 +71,34 @@ export default function ProfileBasicInfo({
     return (
         <div className="space-y-3">
             <div className="flex gap-3">
-                <input
-                    type="text"
-                    value={formData.first_name}
-                    onChange={(e) => onFormChange('first_name', e.target.value)}
-                    placeholder="First Name"
-                    disabled={isSaving}
-                    className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
-                />
-                <input
-                    type="text"
-                    value={formData.last_name}
-                    onChange={(e) => onFormChange('last_name', e.target.value)}
-                    placeholder="Last Name"
-                    disabled={isSaving}
-                    className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
-                />
+                <div className="flex-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                        First Name <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                        type="text"
+                        value={formData.first_name}
+                        onChange={(e) => onFormChange('first_name', e.target.value)}
+                        placeholder="First Name"
+                        required
+                        disabled={isSaving}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                    />
+                </div>
+                <div className="flex-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Last Name <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                        type="text"
+                        value={formData.last_name}
+                        onChange={(e) => onFormChange('last_name', e.target.value)}
+                        placeholder="Last Name"
+                        required
+                        disabled={isSaving}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                    />
+                </div>
             </div>
             <input
                 type="text"
