@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
+import { Share2 } from "lucide-react";
 
 import CompanyCard from "@/components/jobseeker/companies/CompanyCard";
 import ButtonFilledPrimary from "@/components/shared/buttons/ButtonFilledPrimary";
@@ -339,18 +340,24 @@ export default function CompaniesPage() {
                     </div>
 
                     <div className="flex items-center gap-4">
-                      <Image
-                        src="/more-options.svg"
-                        alt="More Options"
-                        width={28}
-                        height={28}
-                        className="cursor-pointer hover:scale-110 transition-transform"
-                      />
+                      <button
+                        onClick={() => {
+                          const url = window.location.href;
+                          navigator.clipboard.writeText(url);
+                          alert("Link copied to clipboard!");
+                        }}
+                        className="p-1 rounded-full hover:bg-gray-100 transition cursor-pointer"
+                        title="Copy company page link"
+                      >
+                        <Share2 className="w-7 h-7 transition-transform hover:scale-110" />
+                      </button>
+
                       <button
                         onClick={() => setIsExpanded(!isExpanded)}
-                        className="transition-transform hover:scale-110"
+                        className="transition-transform hover:scale-110 hover:bg-gray-100 rounded-full cursor-pointer p-1"
                       >
                         <Image
+                          className=""
                           src={isExpanded ? "/collapse.svg" : "/expand.svg"}
                           alt="Toggle View"
                           width={24}
@@ -383,6 +390,7 @@ export default function CompaniesPage() {
 
                     <ButtonFilledPrimary
                       text={selectedCompany.comp_website ? "Visit Website" : "No Website"}
+                      disabled={selectedCompany.comp_website ? false : true}
                       onClick={() => {
                         if (selectedCompany.comp_website)
                           window.open(selectedCompany.comp_website, "_blank");

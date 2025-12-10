@@ -10,6 +10,7 @@ import JobCard from "@/components/jobseeker/jobs/JobCard";
 import ButtonFilledPrimary from "@/components/shared/buttons/ButtonFilledPrimary";
 import SearchBar from "@/components/jobseeker/shared/SearchBar";
 import JobsLoading from "./loading";
+import { Share2 } from "lucide-react";
 
 export default function JobPage() {
   const router = useRouter();
@@ -272,6 +273,18 @@ export default function JobPage() {
                   </div>
 
                   <div className="flex items-center gap-4">
+                    <button
+                        onClick={() => {
+                          const url = window.location.href;
+                          navigator.clipboard.writeText(url);
+                          alert("Link copied to clipboard!");
+                        }}
+                        className="rounded-full text-gray-600 hover:bg-gray-100 transition cursor-pointer"
+                        title="Copy company page link"
+                      >
+                        <Share2 className="w-6 h-6 transition-transform hover:scale-110" />
+                      </button>
+                      
                     <Image
                       src={
                         selectedJob.is_bookmark
@@ -292,8 +305,8 @@ export default function JobPage() {
                       <Image
                         src={isExpanded ? "/collapse.svg" : "/expand.svg"}
                         alt="Toggle View"
-                        width={24}
-                        height={24}
+                        width={22}
+                        height={22}
                       />
                     </button>
                   </div>
