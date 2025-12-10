@@ -175,14 +175,14 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
                             onClick={() =>
                                 router.push(`/jobseeker/jobs/view/${application.job.jobId}`)
                             }
-                            className="inline-flex items-center gap-2 px-4 py-2 rounded-full border text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
+                            className="inline-flex items-center gap-2 px-4 py-2 rounded-full border text-sm font-medium text-gray-700 hover:bg-gray-100 transition"
                         >
                             View Job
                             <ExternalLink className="w-4 h-4" />
                         </button>
                     </div>
 
-                    <div className="border-t pt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div className="border-t border-gray-300 pt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                         {/* Applied date */}
                         <div className="flex items-center gap-2 text-sm text-gray-700">
                             <Calendar className="w-4 h-4 text-gray-400" />
@@ -209,7 +209,7 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
 
                     {/* Withdraw button - only show if status allows */}
                     {application.status !== 'withdrawn' && application.status !== 'rejected' && (
-                        <div className="border-t pt-4">
+                        <div className="border-t border-gray-300 pt-4">
                             <button
                                 onClick={() => setShowWithdrawConfirm(true)}
                                 className="w-full sm:w-auto px-6 py-2 rounded-full border border-red-500 text-red-500 text-sm font-medium hover:bg-red-50 transition"

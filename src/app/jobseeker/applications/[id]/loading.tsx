@@ -50,7 +50,7 @@ export default function ApplicationDetailLoading() {
                     </div>
 
                     {/* Divider */}
-                    <div className="border-t pt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div className="border-t pt-4 flex text-gray-300 flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                         {/* Applied date skeleton */}
                         <div className="flex items-center gap-2">
                             <div className="w-4 h-4 bg-gray-200 rounded animate-pulse" />

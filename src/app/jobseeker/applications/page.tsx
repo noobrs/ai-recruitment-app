@@ -89,7 +89,7 @@ export default function ApplicationsPage() {
 
                 <button
                     onClick={() => router.push('/jobseeker/jobs')}
-                    className="flex items-center px-5 py-2 border rounded-full font-medium hover:bg-gray-50 transition"
+                    className="flex items-center px-5 py-2 border rounded-full font-medium hover:bg-gray-100 transition text-gray-700"
                 >
                     Browse Jobs
                 </button>
@@ -97,7 +97,7 @@ export default function ApplicationsPage() {
 
             {/* Search & Filter */}
             <div className="flex items-center gap-3 mb-8">
-                <div className="flex items-center w-full border rounded-full px-4 py-3 bg-white shadow-sm">
+                <div className="flex items-center w-full border border-gray-300 rounded-full px-4 py-3 bg-white shadow-sm hover:shadow-md transition-shadow duration-200">
                     <Search className="w-5 h-5 text-gray-400 mr-2" />
                     <input
                         type="text"
