@@ -81,7 +81,6 @@ async def api_process_image(file: UploadFile = File(...)) -> ApiResponse:
 # ----------------------
 @app.post("/api/py/process-pdf")
 async def api_process_pdf(file: UploadFile = File(...)) -> ApiResponse:
-    from api.pdf.pipeline import process_pdf_resume
     
     if not file:
         raise HTTPException(status_code=400, detail="File is required")

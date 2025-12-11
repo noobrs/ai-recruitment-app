@@ -3,7 +3,8 @@ Configuration for PDF resume extraction pipeline.
 Uses BERT for section classification and GLiNER for entity extraction.
 """
 
-from typing import Dict, List, Set
+import re
+from typing import Dict, List, Pattern, Set
 
 # =============================================================================
 # Model Configuration
@@ -264,3 +265,19 @@ DATE_PATTERNS: List[str] = [
     r"\b(?:0?[1-9]|1[0-2])\s*[/\-]\s*(?:19|20)\d{2}\b",
     r"(?i)\b(?:Present|Current|Now|Ongoing)\b",
 ]
+
+# =============================================================================
+# Compiled Regex Patterns (for performance)
+# =============================================================================
+
+# Pre-compiled email pattern
+EMAIL_RE: Pattern[str] = re.compile(EMAIL_PATTERN, re.IGNORECASE)
+
+# Pre-compiled phone patterns
+PHONE_RES: List[Pattern[str]] = [re.compile(p, re.IGNORECASE) for p in PHONE_PATTERNS]
+
+# Pre-compiled degree patterns
+DEGREE_RES: List[Pattern[str]] = [re.compile(p, re.IGNORECASE) for p in DEGREE_PATTERNS]
+
+# Pre-compiled date patterns
+DATE_RES: List[Pattern[str]] = [re.compile(p, re.IGNORECASE) for p in DATE_PATTERNS]

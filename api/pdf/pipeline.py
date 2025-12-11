@@ -1,20 +1,3 @@
-"""
-Main PDF resume extraction pipeline.
-Orchestrates layout parsing, section classification, entity extraction, and redaction.
-
-Features:
-- Uses spacy-layout for PDF text extraction
-- Groups text by headings
-- Uses BERT (has-abi/bert-finetuned-resumes-sections) for section classification
-- Uses GLiNER for entity extraction
-- Merges groups by section type
-- Section-type-specific entity extraction
-- Multiple education/experience record handling
-- Person info extraction for redaction
-- Haar Cascade face detection
-- Regex validation for emails, phones, degrees, dates
-"""
-
 import logging
 import os
 import tempfile
@@ -33,104 +16,12 @@ from api.pdf.layout_parser import (
 from api.pdf.section_classifier import classify_and_merge_sections
 from api.pdf.entity_extraction import extract_entities_for_all_sections
 from api.pdf.person_extractor import extract_person_info
-from api.pdf.resume_builder import (
-    build_activities,
-    build_certifications,
-    build_education,
-    build_experience,
-    build_skills,
-)
+from api.pdf.resume_builder import build_resume_data
 from api.pdf.redaction import redact_pdf
-from api.pdf.models import ExtractedResume, HeadingGroup
+from api.pdf.models import HeadingGroup
 
 
 logger = logging.getLogger(__name__)
-
-
-# =============================================================================
-# Result Conversion
-# =============================================================================
-
-def _convert_to_api_response(resume: ExtractedResume) -> Dict[str, Any]:
-    """
-    Convert ExtractedResume to the API response format.
-    Matches the existing API contract for backward compatibility.
-    
-    Args:
-        resume: ExtractedResume object
-        
-    Returns:
-        Dict compatible with ResumeData Pydantic model
-    """
-    from api.types.types import (
-        ResumeData,
-        CandidateOut,
-        EducationOut,
-        ExperienceOut,
-        CertificationOut,
-        ActivityOut,
-    )
-    
-    # Build candidate
-    candidate = CandidateOut(
-        name=resume.person.primary_name,
-        email=resume.person.primary_email,
-        phone=resume.person.primary_phone,
-        location=resume.person.primary_location,
-    )
-    
-    # Build education records
-    education_out = [
-        EducationOut(
-            degree=e.degree,
-            institution=e.institution,
-            location=e.location,
-            start_date=e.start_date,
-            end_date=e.end_date,
-            description=e.description,
-        )
-        for e in resume.education
-    ]
-    
-    # Build experience records
-    experience_out = [
-        ExperienceOut(
-            job_title=e.job_title,
-            company=e.company,
-            location=e.location,
-            start_date=e.start_date,
-            end_date=e.end_date,
-            description=e.description,
-        )
-        for e in resume.experience
-    ]
-    
-    # Build certifications
-    certifications_out = [
-        CertificationOut(
-            name=c.name,
-            description=c.description,
-        )
-        for c in resume.certifications
-    ]
-    
-    # Build activities
-    activities_out = [
-        ActivityOut(
-            name=a.name,
-            description=a.description,
-        )
-        for a in resume.activities
-    ]
-    
-    return ResumeData(
-        candidate=candidate,
-        education=education_out,
-        experience=experience_out,
-        skills=resume.skills,
-        certifications=certifications_out,
-        activities=activities_out,
-    )
 
 
 # =============================================================================
@@ -189,28 +80,7 @@ def process_pdf_resume(file_bytes: bytes) -> ApiResponse:
         _log_person_info(person_info)
         
         print("[Pipeline] Step 6: Building structured resume data...")
-        skills = build_skills(groups)
-        education = build_education(groups)
-        experience = build_experience(groups)
-        certifications = build_certifications(groups)
-        activities = build_activities(groups)
-        
-        print(f"[Pipeline] Built: {len(skills)} skills, {len(education)} education, "
-              f"{len(experience)} experience, {len(certifications)} certs, {len(activities)} activities")
-        
-        # Create ExtractedResume
-        resume = ExtractedResume(
-            person=person_info,
-            education=education,
-            experience=experience,
-            skills=skills,
-            certifications=certifications,
-            activities=activities,
-            raw_groups=groups,
-        )
-        
-        # Convert to API format
-        resume_data = _convert_to_api_response(resume)
+        resume_data = build_resume_data(groups, person_info)
         
         print("[Pipeline] Step 7: Redacting sensitive information...")
         redaction_result = redact_pdf(file_bytes, person_info)

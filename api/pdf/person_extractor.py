@@ -18,11 +18,34 @@ from api.pdf.models import (
 from api.pdf.config import (
     ENTITY_THRESHOLD,
     ENTITY_LABELS_BY_SECTION,
+    EMAIL_RE,
 )
-from api.pdf.validators import (
-    extract_emails,
-    extract_phones,
-)
+
+
+# =============================================================================
+# Email Extraction
+# =============================================================================
+
+def extract_emails(text: str) -> List[str]:
+    """Extract all email addresses from text."""
+    if not text:
+        return []
+    
+    matches = EMAIL_RE.findall(text)
+    # Deduplicate while preserving order
+    seen = set()
+    result = []
+    for email in matches:
+        email_lower = email.lower()
+        if email_lower not in seen:
+            seen.add(email_lower)
+            result.append(email)
+    return result
+
+
+def extract_phones(text: str) -> List[str]:
+    """Placeholder for phone extraction - function not yet implemented."""
+    return []
 
 
 # =============================================================================

@@ -8,6 +8,7 @@ from typing import Dict, List, Optional, Tuple
 from rapidfuzz import fuzz
 
 from api.pdf.models import Entity
+from api.pdf.config import DATE_RES
 
 
 # =============================================================================
@@ -289,8 +290,6 @@ def extract_date_from_entities(
     Returns:
         Tuple of (start_date, end_date)
     """
-    from api.pdf.validators import _DATE_RES
-    
     date_entities = [e for e in entities if e.label.lower() == "date"]
     
     # Sort by position in document
@@ -321,7 +320,7 @@ def extract_date_from_entities(
         found_dates = []
         present_like_dates = []
         
-        for pattern in _DATE_RES:
+        for pattern in DATE_RES:
             matches = pattern.findall(fallback_text)
             for match in matches:
                 match_lower = match.strip().lower()

@@ -12,22 +12,73 @@ from typing import Dict, List, Optional, Tuple
 logger = logging.getLogger(__name__)
 
 from api.pdf.models import (
-    ActivityRecord,
-    CertificationRecord,
-    EducationRecord,
     Entity,
-    ExperienceRecord,
+    PersonInfo,
     TextGroup,
 )
+from api.types.types import (
+    ActivityOut,
+    CertificationOut,
+    EducationOut,
+    ExperienceOut,
+)
+from api.pdf.config import (
+    DEGREE_RES,
+    DATE_RES,
+)
 from api.pdf.utils import (
-    clean_description,
     deduplicate_by_key,
     extract_date_from_entities,
     get_entity_texts,
     normalize_key,
     remove_fields_from_description,
 )
-from api.pdf.validators import is_valid_degree, is_valid_date
+from api.types.types import (
+    ResumeData,
+    CandidateOut,
+    EducationOut,
+    ExperienceOut,
+    CertificationOut,
+    ActivityOut,
+)
+
+
+# =============================================================================
+# Degree and Date Validation
+# =============================================================================
+
+def is_valid_degree(text: str) -> bool:
+    """Check if text looks like a valid degree title."""
+    if not text:
+        return False
+    
+    text = text.strip()
+    
+    # Too short to be a degree
+    if len(text) < 3:
+        return False
+    
+    # Check against degree patterns
+    for pattern in DEGREE_RES:
+        if pattern.search(text):
+            return True
+    
+    return False
+
+
+def is_valid_date(text: str) -> bool:
+    """Check if text looks like a valid date or date indicator."""
+    if not text:
+        return False
+    
+    text = text.strip()
+    
+    # Check against date patterns
+    for pattern in DATE_RES:
+        if pattern.search(text):
+            return True
+    
+    return False
 
 
 # =============================================================================
@@ -183,7 +234,7 @@ def build_skills(groups: List[TextGroup]) -> List[str]:
 # Education Building
 # =============================================================================
 
-def build_education(groups: List[TextGroup]) -> List[EducationRecord]:
+def build_education(groups: List[TextGroup]) -> List[EducationOut]:
     """
     Build education records from education sections.
     Handles multiple degrees within a single section.
@@ -192,7 +243,7 @@ def build_education(groups: List[TextGroup]) -> List[EducationRecord]:
         groups: List of TextGroup objects (heading = section type)
         
     Returns:
-        List of EducationRecord objects
+        List of EducationOut objects
     """
     records = []
     
@@ -214,14 +265,14 @@ def build_education(groups: List[TextGroup]) -> List[EducationRecord]:
     records = [r for r in records if r.degree]
     
     # Deduplicate
-    record_dicts = [r.to_dict() for r in records]
+    record_dicts = [r.model_dump() for r in records]
     unique_dicts = deduplicate_by_key(
         record_dicts,
         ("degree", "institution", "start_date", "end_date"),
     )
     
     return [
-        EducationRecord(
+        EducationOut(
             degree=d.get("degree"),
             institution=d.get("institution"),
             location=d.get("location"),
@@ -236,7 +287,7 @@ def build_education(groups: List[TextGroup]) -> List[EducationRecord]:
 def _build_education_records_from_group(
     group: TextGroup,
     degree_entities: List[Entity],
-) -> List[EducationRecord]:
+) -> List[EducationOut]:
     """
     Build education records from a single group using sequential clustering.
     Each degree entity becomes an anchor, and subsequent entities are grouped
@@ -247,7 +298,7 @@ def _build_education_records_from_group(
         degree_entities: List of degree entities found in this group
         
     Returns:
-        List of EducationRecord objects
+        List of EducationOut objects
     """
     if not degree_entities:
         # No specific degrees found, create one record for the whole group
@@ -289,7 +340,7 @@ def _build_single_education_record(
     entities: List[Entity],
     degree: Optional[str] = None,
     context_text: Optional[str] = None,
-) -> EducationRecord:
+) -> EducationOut:
     """
     Build a single education record from entities.
     
@@ -300,7 +351,7 @@ def _build_single_education_record(
         context_text: Text context for this record (optional)
         
     Returns:
-        EducationRecord object
+        EducationOut object
     """
     text = context_text or group.text
     
@@ -345,7 +396,7 @@ def _build_single_education_record(
     
     description = remove_fields_from_description(text, fields_to_remove)
     
-    return EducationRecord(
+    return EducationOut(
         degree=degree,
         institution=institution,
         location=location,
@@ -359,7 +410,7 @@ def _build_single_education_record(
 # Experience Building
 # =============================================================================
 
-def build_experience(groups: List[TextGroup]) -> List[ExperienceRecord]:
+def build_experience(groups: List[TextGroup]) -> List[ExperienceOut]:
     """
     Build experience records from experience sections.
     Handles multiple job titles within a single section.
@@ -368,7 +419,7 @@ def build_experience(groups: List[TextGroup]) -> List[ExperienceRecord]:
         groups: List of TextGroup objects (heading = section type)
         
     Returns:
-        List of ExperienceRecord objects
+        List of ExperienceOut objects
     """
     records = []
     
@@ -390,14 +441,14 @@ def build_experience(groups: List[TextGroup]) -> List[ExperienceRecord]:
     records = [r for r in records if r.job_title]
     
     # Deduplicate
-    record_dicts = [r.to_dict() for r in records]
+    record_dicts = [r.model_dump() for r in records]
     unique_dicts = deduplicate_by_key(
         record_dicts,
         ("job_title", "company", "start_date", "end_date"),
     )
     
     return [
-        ExperienceRecord(
+        ExperienceOut(
             job_title=d.get("job_title"),
             company=d.get("company"),
             location=d.get("location"),
@@ -412,7 +463,7 @@ def build_experience(groups: List[TextGroup]) -> List[ExperienceRecord]:
 def _build_experience_records_from_group(
     group: TextGroup,
     title_entities: List[Entity],
-) -> List[ExperienceRecord]:
+) -> List[ExperienceOut]:
     """
     Build experience records from a single group using sequential clustering.
     Each job title entity becomes an anchor, and subsequent entities are grouped
@@ -423,7 +474,7 @@ def _build_experience_records_from_group(
         title_entities: List of job title entities
         
     Returns:
-        List of ExperienceRecord objects
+        List of ExperienceOut objects
     """
     if not title_entities:
         # No specific titles found, create one record for the whole group
@@ -461,7 +512,7 @@ def _build_single_experience_record(
     entities: List[Entity],
     job_title: Optional[str] = None,
     context_text: Optional[str] = None,
-) -> ExperienceRecord:
+) -> ExperienceOut:
     """
     Build a single experience record from entities.
     
@@ -472,7 +523,7 @@ def _build_single_experience_record(
         context_text: Text context for this record (optional)
         
     Returns:
-        ExperienceRecord object
+        ExperienceOut object
     """
     text = context_text or group.text
     
@@ -515,7 +566,7 @@ def _build_single_experience_record(
     
     description = remove_fields_from_description(text, fields_to_remove)
     
-    return ExperienceRecord(
+    return ExperienceOut(
         job_title=job_title,
         company=company,
         location=location,
@@ -529,7 +580,7 @@ def _build_single_experience_record(
 # Certifications Building
 # =============================================================================
 
-def build_certifications(groups: List[TextGroup]) -> List[CertificationRecord]:
+def build_certifications(groups: List[TextGroup]) -> List[CertificationOut]:
     """
     Build certification records from certification sections.
     
@@ -537,7 +588,7 @@ def build_certifications(groups: List[TextGroup]) -> List[CertificationRecord]:
         groups: List of TextGroup objects (heading = section type)
         
     Returns:
-        List of CertificationRecord objects
+        List of CertificationOut objects
     """
     records = []
     seen_names = set()
@@ -560,7 +611,7 @@ def build_certifications(groups: List[TextGroup]) -> List[CertificationRecord]:
                     continue
                 seen_names.add(name_key)
                 
-                records.append(CertificationRecord(
+                records.append(CertificationOut(
                     name=name,
                     description=None,
                 ))
@@ -574,7 +625,7 @@ def build_certifications(groups: List[TextGroup]) -> List[CertificationRecord]:
                         continue
                     seen_names.add(name_key)
                     
-                    records.append(CertificationRecord(
+                    records.append(CertificationOut(
                         name=line,
                         description=line,
                     ))
@@ -586,7 +637,7 @@ def build_certifications(groups: List[TextGroup]) -> List[CertificationRecord]:
 # Activities Building
 # =============================================================================
 
-def build_activities(groups: List[TextGroup]) -> List[ActivityRecord]:
+def build_activities(groups: List[TextGroup]) -> List[ActivityOut]:
     """
     Build activity/project records from activities/projects sections.
     
@@ -594,7 +645,7 @@ def build_activities(groups: List[TextGroup]) -> List[ActivityRecord]:
         groups: List of TextGroup objects (heading = section type)
         
     Returns:
-        List of ActivityRecord objects
+        List of ActivityOut objects
     """
     records = []
     
@@ -618,12 +669,56 @@ def build_activities(groups: List[TextGroup]) -> List[ActivityRecord]:
             first_line = text.splitlines()[0].strip() if text else None
             name = first_line
         
-        # Clean description
-        description = clean_description(text)
-        
-        records.append(ActivityRecord(
+        records.append(ActivityOut(
             name=name,
-            description=description if description else None,
+            description=text if text else None,
         ))
     
     return records
+
+
+# =============================================================================
+# Main Resume Building Function
+# =============================================================================
+
+def build_resume_data(groups: List[TextGroup], person_info: PersonInfo) -> ResumeData:
+    """
+    Main function to build complete resume data from classified sections.
+    Extracts and structures skills, education, experience, certifications, and activities.
+    
+    Args:
+        groups: List of TextGroup objects (heading = section type)
+        person_info: Extracted person information for candidate details
+        
+    Returns:
+        ResumeData object containing all structured resume information
+    """
+    logger.info("Building structured resume data...")
+    
+    # Build all sections
+    skills = build_skills(groups)
+    education = build_education(groups)
+    experience = build_experience(groups)
+    certifications = build_certifications(groups)
+    activities = build_activities(groups)
+    
+    logger.info(f"Built: {len(skills)} skills, {len(education)} education records, "
+                f"{len(experience)} experience records, {len(certifications)} certifications, "
+                f"{len(activities)} activities")
+    
+    # Create ResumeData with all structured information
+    resume_data = ResumeData(
+        candidate=CandidateOut(
+            name=person_info.primary_name,
+            email=person_info.primary_email,
+            phone=person_info.primary_phone,
+            location=person_info.primary_location,
+        ),
+        education=education,
+        experience=experience,
+        skills=skills,
+        certifications=certifications,
+        activities=activities,
+    )
+    
+    return resume_data
