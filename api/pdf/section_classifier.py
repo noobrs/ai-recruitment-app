@@ -14,19 +14,6 @@ from api.pdf.models import HeadingGroup, TextGroup, TextSegment
 
 
 # =============================================================================
-# Optimization: Pre-compute Lookup Map
-# =============================================================================
-
-# Flatten the config dict (Type -> [Headers]) into a lookup map (Header -> Type)
-# This ensures O(1) lookup speed in match_common_header
-_HEADER_LOOKUP: Dict[str, str] = {
-    header: section_type
-    for section_type, headers in COMMON_SECTION_HEADERS.items()
-    for header in headers
-}
-
-
-# =============================================================================
 # Model Singleton
 # =============================================================================
 
@@ -54,6 +41,13 @@ def load_section_classifier() -> Tuple[AutoModelForSequenceClassification, AutoT
 # =============================================================================
 # Fast-path Header Matching
 # =============================================================================
+
+# Flatten the config dict (Type -> [Headers]) into a lookup map (Header -> Type)
+_HEADER_LOOKUP: Dict[str, str] = {
+    header: section_type
+    for section_type, headers in COMMON_SECTION_HEADERS.items()
+    for header in headers
+}
 
 def match_common_header(heading: str) -> Optional[str]:
     """

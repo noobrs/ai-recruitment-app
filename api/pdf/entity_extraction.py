@@ -49,77 +49,56 @@ def load_gliner_model(model_name: str = GLINER_MODEL_NAME) -> GLiNER:
 # Entity Extraction
 # =============================================================================
 
-def extract_entities_from_text(
-    gliner: GLiNER,
-    text: str,
-    labels: Optional[List[str]] = None,
-    min_threshold: float = ENTITY_THRESHOLD,
-) -> List[Entity]:
-    """
-    Extract entities from text using GLiNER.
-    
-    Args:
-        gliner: GLiNER model instance
-        text: Text to extract entities from
-        labels: List of entity labels to extract (defaults to ALL_ENTITY_LABELS)
-        min_threshold: Minimum confidence threshold for GLiNER (defaults to ENTITY_THRESHOLD)
-        
-    Returns:
-        List of validated Entity objects
-    """
-    if not text or not text.strip():
-        return []
-    
-    if labels is None:
-        labels = ALL_ENTITY_LABELS
-    
-    try:
-        raw_entities = gliner.predict_entities(text, labels, threshold=min_threshold)
-    except Exception as e:
-        print(f"[GLiNER] Error extracting entities: {e}")
-        return []
-    
-    # Convert to Entity objects and filter
-    entities = []
-    for raw in raw_entities:
-        label = (raw.get("label") or "").strip()
-        score = float(raw.get("score", 0.0))
-        
-        entity = Entity(
-            text=raw["text"],
-            label=label,
-            score=score,
-            start_char=int(raw.get("start", -1)),
-            end_char=int(raw.get("end", -1)),
-        )
-
-        entities.append(entity)
-    
-    return entities
-
-
 def extract_entities_for_all_sections(
     groups: List[TextGroup],
+    min_threshold: float = ENTITY_THRESHOLD,
 ) -> List[TextGroup]:
     """
-    Extract entities for all sections, using section-type-specific labels.
+    Extract entities for all sections using GLiNER, applying section-specific labels.
     Updates each group's entities field in place.
-    
+
     Args:
         groups: List of TextGroup objects (heading = section type)
-        
+        min_threshold: Minimum confidence threshold for GLiNER
+
     Returns:
         Same groups list with entities field updated
     """
     gliner = load_gliner_model()
-    
+
     for group in groups:
+        # 1. Validation: Skip empty text immediately
+        if not group.text or not group.text.strip():
+            group.entities = []
+            continue
+
+        # 2. Determine Labels: Use section-specific labels or fallback to ALL
         section_type = group.heading
-        
-        # Get relevant labels for this section type
         labels = ENTITY_LABELS_BY_SECTION.get(section_type.lower(), ALL_ENTITY_LABELS)
-        
-        # Extract from the full text
-        group.entities = extract_entities_from_text(gliner, group.text, labels)
-    
+
+        # 3. Prediction
+        try:
+            raw_entities = gliner.predict_entities(group.text, labels, threshold=min_threshold)
+        except Exception as e:
+            print(f"[GLiNER] Error extracting entities for section '{section_type}': {e}")
+            group.entities = []
+            continue
+
+        # 4. Conversion: Transform raw output into validated Entity objects
+        entities = []
+        for raw in raw_entities:
+            label = (raw.get("label") or "").strip()
+            score = float(raw.get("score", 0.0))
+
+            entity = Entity(
+                text=raw["text"],
+                label=label,
+                score=score,
+                start_char=int(raw.get("start", -1)),
+                end_char=int(raw.get("end", -1)),
+            )
+            entities.append(entity)
+
+        group.entities = entities
+
     return groups

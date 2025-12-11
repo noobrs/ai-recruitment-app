@@ -49,43 +49,6 @@ def is_similar(a: str, b: str, threshold: int = 92) -> bool:
     return fuzz.token_sort_ratio(a, b) >= threshold
 
 
-def is_substring_match(short: str, long: str) -> bool:
-    """Check if short is a meaningful substring of long."""
-    short_norm = normalize_key(short)
-    long_norm = normalize_key(long)
-    return short_norm in long_norm
-
-
-# =============================================================================
-# Text Validation
-# =============================================================================
-
-def is_valid_text(text: str, min_len: int = 3, max_len: int = 150) -> bool:
-    """
-    Basic validation for extracted text.
-    
-    Args:
-        text: Text to validate
-        min_len: Minimum length
-        max_len: Maximum length
-        
-    Returns:
-        True if text passes validation
-    """
-    if not text:
-        return False
-    t = text.strip()
-    
-    if len(t) < min_len or len(t) > max_len:
-        return False
-    
-    # Skip single all-caps tokens (often noise)
-    if t.isupper() and len(t.split()) == 1:
-        return False
-    
-    return True
-
-
 # =============================================================================
 # Duration/Date Parsing
 # =============================================================================
@@ -300,17 +263,6 @@ def deduplicate_by_key(
 # =============================================================================
 # Entity Helpers
 # =============================================================================
-
-def get_best_entity_by_label(
-    entities: List[Entity],
-    label: str,
-) -> Optional[Entity]:
-    """Get the highest-scoring entity with a specific label."""
-    matching = [e for e in entities if e.label.lower() == label.lower()]
-    if not matching:
-        return None
-    return max(matching, key=lambda e: e.score)
-
 
 def get_entity_texts(
     entities: List[Entity],
