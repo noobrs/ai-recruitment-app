@@ -19,6 +19,7 @@ from api.pdf.config import (
     ENTITY_THRESHOLD,
     ENTITY_LABELS_BY_SECTION,
     EMAIL_RE,
+    PHONE_RES
 )
 
 
@@ -45,7 +46,17 @@ def extract_emails(text: str) -> List[str]:
 
 def extract_phones(text: str) -> List[str]:
     """Placeholder for phone extraction - function not yet implemented."""
-    return []
+    if not text:
+        return []
+    
+    results = []
+    
+    for pattern in PHONE_RES:
+        for match in pattern.finditer(text):
+            phone = match.group(0).strip()
+            results.append(phone)
+    
+    return results
 
 
 # =============================================================================
