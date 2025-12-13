@@ -1,11 +1,4 @@
-"""
-PDF redaction functionality for candidate information and face detection.
-Removes sensitive information from resume PDFs.
-"""
-
-import os
-import tempfile
-from collections import defaultdict
+import re
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -13,253 +6,260 @@ import cv2
 import fitz  # PyMuPDF
 import numpy as np
 
-from api.pdf.models import PersonInfo, RedactionRegion
+from api.pdf.config import EMAIL_RE, PHONE_RES
+from api.pdf.entity_extraction import load_ner_model
+from api.types.types import TextGroup, TextSpan
+from api.supabase_client import upload_redacted_resume_to_storage
+
+
+# =============================================================================
+# Validation Helpers
+# =============================================================================
+
+def is_email(text: str) -> bool:
+    if not text:
+        return False
+    
+    matches = EMAIL_RE.findall(text)
+    return len(matches) > 0
+
+
+def is_phone(text: str) -> bool:
+    if not text:
+        return False
+    
+    for pattern in PHONE_RES:
+        # We only need to find one match to return True
+        if pattern.search(text): 
+            return True
+            
+    return False
+
+def is_valid_person(text: str) -> bool:
+    # 1. Check if empty or None
+    if not text:
+        return False
+    
+    # 2. Check length (e.g., reject if over 50 characters)
+    if len(text) > 50:
+        return False
+
+    # 3. Check if it contains any digits (0-9)
+    # This covers "123" (all digits) and "John123" (mixed)
+    if any(char.isdigit() for char in text):
+        return False
+
+    # 4. Check for valid characters
+    # Allows: a-z, A-Z, spaces (\s), hyphens (-), and apostrophes (')
+    # Disallows: @, !, #, $, etc.
+    if not re.match(r"^[a-zA-Z\s'-]+$", text):
+        return False
+
+    return True
+
+
+# =============================================================================
+# Person Detection
+# =============================================================================
+
+def detect_person_spans(groups: List[TextGroup]) -> List[TextSpan]:
+    # 1. Collect ALL groups that match "contact" or "summary"
+    contact_groups = [group for group in groups if group.heading in ["contact", "NO_HEADING"]]
+    
+    spans_need_redaction = []
+
+    ner_model = load_ner_model()
+
+    # 2. Iterate through every matching group
+    for group in contact_groups:
+        print(f"Processing group: {group.heading}")
+        person_spans = group.spans
+        spans_needing_ner = []
+
+        # --- Regex Pass ---
+        for span in person_spans:
+            if is_email(span.text):
+                print(f"      • Regex Detected -> [Email] {span.text}")
+                span.label = "email"
+                spans_need_redaction.append(span)
+                continue
+            
+            if is_phone(span.text):
+                print(f"      • Regex Detected -> [Phone] {span.text}")
+                span.label = "phone number"
+                spans_need_redaction.append(span)
+                continue
+            
+            spans_needing_ner.append(span)
+
+        # --- NER Pass ---
+        for span in spans_needing_ner:
+            entities = ner_model.predict_entities(span.text, ["location", "person", "designation"])
+            
+            # Print findings for debugging
+            for entity in entities:
+                print(f"      • [{entity['label']}] \"{entity['text']}\" (Score: {entity['score']:.2f})")
+            
+            # Determine redaction logic based on the top entity found
+            if entities:
+                top_entity = entities[0]
+                if top_entity['label'] == "person" and not is_valid_person(top_entity['text']):
+                    print(f"      • Skipping invalid person name: {top_entity['text']}")
+                    continue
+                # If the top entity is a designation
+                if top_entity['label'] == "designation": 
+                    continue
+                span.label = top_entity['label']
+                spans_need_redaction.append(span)
+
+    return spans_need_redaction
 
 
 # =============================================================================
 # Face Detection
 # =============================================================================
 
-def detect_face_regions(pdf_doc: fitz.Document) -> List[RedactionRegion]:
-    """
-    Detect faces in PDF pages using OpenCV Haar Cascade.
-    Only processes the first page (as per requirements).
-    
-    Args:
-        pdf_doc: PyMuPDF Document object
+def detect_face_regions(pdf_path: str) -> List[TextSpan]:
+
+    pdf_doc = fitz.open(str(pdf_path))
+    try:
+        cascade_path = cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
+        face_cascade = cv2.CascadeClassifier(cascade_path)
         
-    Returns:
-        List of RedactionRegion objects for detected faces
-    """
-    cascade_path = cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
-    face_cascade = cv2.CascadeClassifier(cascade_path)
-    
-    regions = []
-    
-    # Only process first page (index 0)
-    if len(pdf_doc) < 1:
+        regions = []
+        
+        page = pdf_doc[0]
+        pix = page.get_pixmap()
+        
+        # Convert pixmap to numpy array
+        img = np.frombuffer(pix.samples, dtype=np.uint8)
+        img = img.reshape(pix.height, pix.width, pix.n)
+        
+        if pix.n == 4:
+            img = cv2.cvtColor(img, cv2.COLOR_BGRA2BGR)
+        
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        
+        # Detect faces
+        faces = face_cascade.detectMultiScale(
+            gray,
+            scaleFactor=1.1,
+            minNeighbors=5,
+            minSize=(40, 40),
+        )
+        
+        # Convert pixel coordinates to PDF coordinates
+        page_rect = page.rect
+        img_h, img_w = gray.shape[:2]
+        scale_x = page_rect.width / img_w
+        scale_y = page_rect.height / img_h
+        
+        for (x, y, w, h) in faces:
+            x0 = page_rect.x0 + x * scale_x
+            y0 = page_rect.y0 + y * scale_y
+            x1 = page_rect.x0 + (x + w) * scale_x
+            y1 = page_rect.y0 + (y + h) * scale_y
+            regions.append(TextSpan(
+                text="face",
+                label="face",
+                bbox=(x0, y0, x1, y1)
+            ))
+        
         return regions
-    
-    page = pdf_doc[0]
-    pix = page.get_pixmap()
-    
-    # Convert pixmap to numpy array
-    img = np.frombuffer(pix.samples, dtype=np.uint8)
-    img = img.reshape(pix.height, pix.width, pix.n)
-    
-    if pix.n == 4:
-        img = cv2.cvtColor(img, cv2.COLOR_BGRA2BGR)
-    
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    
-    # Detect faces
-    faces = face_cascade.detectMultiScale(
-        gray,
-        scaleFactor=1.1,
-        minNeighbors=5,
-        minSize=(40, 40),
-    )
-    
-    # Convert pixel coordinates to PDF coordinates
-    page_rect = page.rect
-    img_h, img_w = gray.shape[:2]
-    scale_x = page_rect.width / img_w
-    scale_y = page_rect.height / img_h
-    
-    for (x, y, w, h) in faces:
-        x0 = page_rect.x0 + x * scale_x
-        y0 = page_rect.y0 + y * scale_y
-        x1 = page_rect.x0 + (x + w) * scale_x
-        y1 = page_rect.y0 + (y + h) * scale_y
-        
-        regions.append(RedactionRegion(
-            page_index=0,
-            bbox=(float(x0), float(y0), float(x1), float(y1)),
-            info_type="face",
-        ))
-    
-    return regions
 
-
-# =============================================================================
-# Text Redaction
-# =============================================================================
-
-def apply_text_redactions(
-    pdf_doc: fitz.Document,
-    regions: List[RedactionRegion],
-) -> None:
-    """
-    Apply text redactions to PDF by adding redaction annotations and applying them.
-    
-    Args:
-        pdf_doc: PyMuPDF Document object
-        regions: List of RedactionRegion objects to redact
-    """
-    if not regions:
-        return
-    
-    # Group regions by page
-    by_page: Dict[int, List[tuple]] = defaultdict(list)
-    for region in regions:
-        if region.bbox is not None:
-            by_page[region.page_index].append(region.bbox)
-    
-    # Apply redactions page by page
-    for page_index, bboxes in by_page.items():
-        try:
-            page = pdf_doc[page_index]
-        except IndexError:
-            continue
+    except Exception as e:
+        import logging
+        import traceback
+        logger = logging.getLogger(__name__)
+        logger.error(f"Error in detect_face_regions: {str(e)}")
+        logger.error(traceback.format_exc())
         
-        for bbox in bboxes:
-            rect = fitz.Rect(*bbox)
-            page.add_redact_annot(rect, fill=(0, 0, 0))
-        
-        page.apply_redactions()
+        return []
+    
+    finally:
+        pdf_doc.close()
 
 
 # =============================================================================
 # Face/Image Removal
 # =============================================================================
 
-def apply_face_removal(
-    pdf_doc: fitz.Document,
-    regions: List[RedactionRegion],
-) -> None:
-    """
-    Remove images containing detected faces from the PDF.
-    Deletes the underlying image objects instead of just covering them.
+def remove_face_image(target_bbox: tuple, page: fitz.Page):
+    target_rect = fitz.Rect(target_bbox)
+    image_list = page.get_images()
+    images_found = 0
     
-    Args:
-        pdf_doc: PyMuPDF Document object
-        regions: List of RedactionRegion objects for faces
-    """
-    if not regions:
-        return
-    
-    # Group face regions by page
-    pages_to_process: Dict[int, List[fitz.Rect]] = {}
-    for region in regions:
-        page_idx = region.page_index
-        if region.bbox:
-            if page_idx not in pages_to_process:
-                pages_to_process[page_idx] = []
-            pages_to_process[page_idx].append(fitz.Rect(region.bbox))
-    
-    # Process each page
-    for page_index, face_rects in pages_to_process.items():
-        try:
-            page = pdf_doc[page_index]
-        except IndexError:
-            continue
+    for img in image_list:
+        xref = img[0]  # The unique reference ID of the image object
         
-        # Get image info including xrefs
-        image_infos = page.get_image_info(xrefs=True)
-        xrefs_to_delete = set()
-        
-        for img_info in image_infos:
-            img_bbox = fitz.Rect(img_info["bbox"])
-            img_xref = img_info["xref"]
-            
-            # Check if any face region overlaps with this image
-            for face_rect in face_rects:
-                if img_bbox.intersects(face_rect):
-                    xrefs_to_delete.add(img_xref)
-                    break
-        
-        # Delete images containing faces
-        for xref in xrefs_to_delete:
-            try:
+        # Find where this image is drawn on the page
+        image_rects = page.get_image_rects(xref)
+        for rect in image_rects:
+            # Check if the image location matches or intersects your target BBox
+            if rect.intersects(target_rect):
                 page.delete_image(xref)
-            except Exception as e:
-                print(f"[Redaction] Failed to delete image xref {xref}: {e}")
+                images_found += 1
+                break 
+
+    return images_found
+
+
+# =============================================================================
+# Span Redaction Function
+# =============================================================================
+
+def redact_spans(spans: List[TextSpan], pdf_doc: fitz.Document) -> fitz.Document:
+    page = pdf_doc[0]
+    for span in spans:
+        if span.label == "face":
+            remove_face_image(span.bbox, page)
+        elif span.bbox:
+            page.add_redact_annot(span.bbox, fill=(0, 0, 0))
+
+    page.apply_redactions()
+    return pdf_doc
 
 
 # =============================================================================
 # Main Redaction Function
 # =============================================================================
 
-def redact_pdf(
-    file_bytes: bytes,
-    person_info: Optional[PersonInfo] = None,
-) -> Dict[str, Any]:
-    """
-    Redact candidate information and faces from a PDF.
-    
-    Args:
-        file_bytes: PDF file as bytes
-        person_info: PersonInfo object containing redaction regions
-        
-    Returns:
-        Dict with:
-        - status: "success", "no_redaction_needed", or "error"
-        - redacted_resume_file: Redacted PDF bytes (or original if no redaction)
-        - message: Error message if applicable
-    """
-    fd, tmp_path = tempfile.mkstemp(suffix=".pdf", prefix="resume_redact_")
-    pdf_path = Path(tmp_path)
-    out_path: Optional[Path] = None
-    
+def redact_pdf(pdf_path: str, redacted_spans: List[TextSpan]) -> Dict[str, Any]:
+    out_path = None
     try:
-        # Write input PDF to temp file
-        with os.fdopen(fd, "wb") as f:
-            f.write(file_bytes)
-        
-        # Open PDF
-        pdf_doc = fitz.open(str(pdf_path))
-        
-        # Detect faces on first page
-        face_regions = detect_face_regions(pdf_doc)
-        
-        # Get text redaction regions from person info
-        text_regions = []
-        if person_info and person_info.redaction_regions:
-            # Filter to only text regions (not face)
-            text_regions = [
-                r for r in person_info.redaction_regions
-                if r.info_type != "face"
-            ]
-        
-        # Check if any redactions are needed
-        if not text_regions and not face_regions:
-            pdf_doc.close()
-            return {
-                "status": "no_redaction_needed",
-                "redacted_resume_file": file_bytes,
-                "message": "No candidate info or faces detected; original file returned.",
-            }
-        
-        # Apply text redactions
-        if text_regions:
-            apply_text_redactions(pdf_doc, text_regions)
-        
-        # Apply face removal
-        if face_regions:
-            apply_face_removal(pdf_doc, face_regions)
-        
-        # Update PDF metadata
-        pdf_doc.set_metadata({
+        pdf_doc = fitz.open(pdf_path)
+        redacted_doc = redact_spans(redacted_spans, pdf_doc)
+
+        redacted_doc.set_metadata({
             "title": "redacted-resume.pdf",
             "author": "",
             "subject": "Redacted Resume",
             "creator": "",
             "producer": "",
         })
-        
+
         # Save redacted PDF
-        out_path = pdf_path.with_name(pdf_path.stem + "_redacted.pdf")
-        pdf_doc.save(str(out_path))
-        pdf_doc.close()
+        pdf_path_obj = Path(pdf_path)
+        out_path = pdf_path_obj.with_name(pdf_path_obj.stem + "_redacted.pdf")
+        redacted_doc.save(str(out_path))
+        redacted_doc.close()
         
         redacted_bytes = out_path.read_bytes()
-        
-        return {
-            "status": "success",
-            "redacted_resume_file": redacted_bytes,
-            "message": None,
-        }
-    
+        upload_result = upload_redacted_resume_to_storage(file_bytes=redacted_bytes, file_type="pdf")
+
+        if upload_result.get("status") == "success":
+            redacted_file_url = upload_result.get("signed_url")
+            return {
+                "status": "success",
+                "redacted_file_url": redacted_file_url,
+                "message": "Redaction and upload successful",
+            }
+        else:
+            return {
+                "status": "error",
+                "redacted_file_url": None
+            }
+
     except Exception as e:
         import logging
         import traceback
@@ -270,7 +270,7 @@ def redact_pdf(
         
         return {
             "status": "error",
-            "redacted_resume_file": None,
+            "redacted_file_url": None,
             "message": str(e),
         }
     

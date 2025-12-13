@@ -1,8 +1,3 @@
-"""
-Configuration for PDF resume extraction pipeline.
-Uses BERT for section classification and GLiNER for entity extraction.
-"""
-
 import re
 from typing import Dict, List, Pattern, Set
 
@@ -46,7 +41,7 @@ SECTION_MERGE_MAP: Dict[str, str] = {
 ENTITY_LABELS_BY_SECTION: Dict[str, List[str]] = {
     "contact": ["person", "location"],
     "experience": ["job title", "company", "organization", "location", "date"],
-    "education": ["degree", "school", "university", "organization", "location", "date"],
+    "education": ["academic degree", "school", "university", "organization", "location", "date"],
     "skills": ["skill", "tool", "language"],
     "projects": ["project"],
     "certifications": ["certification"],
@@ -131,6 +126,7 @@ COMMON_SECTION_HEADERS: Dict[str, List[str]] = {
         "technical skills",
         "core skills",
         "key skills",
+        "professional skill",
         "professional skills",
         "competencies",
         "core competencies",
@@ -150,6 +146,7 @@ COMMON_SECTION_HEADERS: Dict[str, List[str]] = {
     ],
     "summary": [
         "summary",
+        "profile summary",
         "professional summary",
         "executive summary",
         "career summary",
@@ -226,6 +223,12 @@ COMMON_SECTION_HEADERS: Dict[str, List[str]] = {
         "presentations",
         "references",
         "reference",
+        "additional information",
+        "additional informations",
+        "miscellaneous",
+        "other",
+        "other information",
+        "further information",
     ],
 }
 
@@ -233,7 +236,7 @@ COMMON_SECTION_HEADERS: Dict[str, List[str]] = {
 # Layout Parser Configuration
 # =============================================================================
 
-SKIP_SPAN_LABELS: Set[str] = {"table", "picture", "equation", "figure"}
+SKIP_SPAN_LABELS: Set[str] = {"table", "picture", "formula", "checkbox_selected", "checkbox_unselected"}
 
 # =============================================================================
 # Regex Patterns

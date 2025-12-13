@@ -2,8 +2,20 @@
 Pydantic models for API responses.
 """
 
-from typing import Dict, List, Optional
+from typing import Dict, Tuple, List, Optional
 from pydantic import BaseModel
+from dataclasses import field
+
+class TextSpan(BaseModel):
+    text: str
+    label: str
+    heading: Optional[str] = None
+    bbox: Optional[Tuple[float, float, float, float]] = None
+
+class TextGroup(BaseModel):
+    heading: str
+    text: str
+    spans: List[TextSpan] = field(default_factory=list)
 
 
 class CandidateOut(BaseModel):
