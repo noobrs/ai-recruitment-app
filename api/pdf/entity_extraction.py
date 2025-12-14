@@ -1,5 +1,5 @@
 import re
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 from gliner import GLiNER
 
@@ -30,39 +30,39 @@ def load_ner_model():
 # =============================================================================
 
 def split_text_by_headers(full_text: str, headers: List[str]) -> List[str]:
-    # 1. Find the starting index of each header in the text
     found_headers = []
     
-    for header in headers:
-        index = full_text.find(header)
-        if index != -1: # -1 means the header was not found
-            found_headers.append((index, header))
+    # Track where we stopped searching last time
+    current_search_position = 0
     
-    # 2. Sort the found headers by their index (position in text)
-    # This ensures we process the text in the correct order
+    for header in headers:
+        # 1. Start searching ONLY from the current position onwards
+        index = full_text.find(header, current_search_position)
+        
+        if index != -1:
+            found_headers.append((index, header))
+            # 2. Update position so the next search starts AFTER this header
+            current_search_position = index + 1
+        else:
+            # Fallback: If not found forward, try from scratch (just in case)
+            # or simply skip. Usually, skip is safer to avoid duplicates.
+            pass
+    
+    # The rest of your logic remains exactly the same...
     found_headers.sort(key=lambda x: x[0])
     
     result = []
     
-    # 3. Loop through the sorted headers and slice the text
     for i in range(len(found_headers)):
         current_start_index = found_headers[i][0]
         
-        # Determine the end index:
-        # If this is the last header, the end is the length of the full text
-        # Otherwise, the end is the start of the NEXT header
         if i < len(found_headers) - 1:
             next_start_index = found_headers[i+1][0]
         else:
             next_start_index = len(full_text)
             
-        # Extract the segment
         segment = full_text[current_start_index:next_start_index]
-        
-        # Optional: .strip() removes extra spaces or newlines at start/end
-        # .rstrip(',') removes trailing commas if necessary
         clean_segment = segment.strip().rstrip(',')
-        
         result.append(clean_segment)
         
     return result
@@ -172,6 +172,49 @@ def parse_date_string_to_pair(date_string: str) -> List[Optional[str]]:
     return [cleaned_date, None]
 
 
+# NEW DATE FUNCTION
+def extract_dates_from_text(text: str) -> Tuple[Optional[str], Optional[str]]:
+    if not text:
+        return None, None
+
+    # Regex patterns (Same as before)
+    months_alpha = r"(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)"
+    months_digit = r"(?:0?[1-9]|1[0-2])"
+    year = r"\b(?:19|20)\d{2}\b"
+    separator = r"\s*(?:-|–|—|to|until)\s*"
+    
+    # Updated: "Present" keywords now included in extraction but NOT normalized later
+    present = r"(?:present|current|now|date)"
+    date_pattern = f"(?:(?:{months_alpha}|{months_digit})[-/.\s,]+{year}|{year})"
+
+    # 1. Range Scenario
+    range_regex = re.compile(
+        f"(?P<start>{date_pattern}){separator}(?P<end>{date_pattern}|{present})", 
+        re.IGNORECASE
+    )
+    match = range_regex.search(text)
+    if match:
+        # Return the RAW text found (just stripped of whitespace)
+        return match.group("start").strip(), match.group("end").strip()
+
+    # 2. Graduation Context Scenario
+    grad_context_regex = re.compile(
+        f"(?:graduat(?:ion|ed|ing)|class of|expected|est\.?)[^0-9]*(?P<end>{date_pattern})", 
+        re.IGNORECASE
+    )
+    match = grad_context_regex.search(text)
+    if match:
+        return None, match.group("end").strip()
+
+    # 3. Single Date Scenario
+    single_date_regex = re.compile(f"(?P<start>{date_pattern})", re.IGNORECASE)
+    match = single_date_regex.search(text)
+    if match:
+        return match.group("start").strip(), None
+
+    return None, None
+
+
 def clean_and_remove_target(full_string: str, target_string: str) -> str:
     if not full_string:
         return ""
@@ -197,6 +240,50 @@ def clean_and_remove_target(full_string: str, target_string: str) -> str:
     clean_text = re.sub(r"(^[^\w\s]+\s+)|(\s+[^\w\s]+$)", "", temp_text)
     
     return clean_text.strip()
+
+
+#=============================================================================
+# New Clean Date Range Function
+#=============================================================================
+
+def clean_date_range_from_text(full_text: str, start: Optional[str], end: Optional[str]) -> str:
+    if not full_text:
+        return ""
+
+    temp_text = full_text
+
+    # CASE A: We have both a Start and an End date
+    if start and end:
+        # 1. Build a pattern that looks for: START + (SEPARATORS) + END
+        # We use re.escape to ensure symbols in the date (like dots or slashes) don't break regex
+        # The middle part (\s*(?:-|–|—|to|until)\s*) defines the "Reasonable Connection"
+        connection_pattern = re.escape(start) + r"\s*(?:-|–|—|to|until)\s*" + re.escape(end)
+        
+        # 2. Check if this exact connected range exists in the text
+        match = re.search(connection_pattern, temp_text, re.IGNORECASE)
+        
+        if match:
+            # OPTION 1: It is a reasonable range (e.g., "Jan 2020 - Now")
+            # Remove the ENTIRE matched block (Start, Separator, and End) at once.
+            print(f"Removing connected range: '{match.group(0)}'")
+            # Replace with empty string (or single space if you prefer)
+            temp_text = temp_text.replace(match.group(0), "")
+        else:
+            # OPTION 2: They exist, but not as a connected range (e.g., "Started: Jan 2020. Status: Current")
+            # Fallback: Delete them individually
+            print(f"Removing individually: '{start}' and '{end}'")
+            temp_text = clean_and_remove_target(temp_text, start)
+            temp_text = clean_and_remove_target(temp_text, end)
+
+    # CASE B: Only Start Date exists
+    elif start:
+        temp_text = clean_and_remove_target(temp_text, start)
+
+    # CASE C: Only End Date exists
+    elif end:
+        temp_text = clean_and_remove_target(temp_text, end)
+
+    return clean_and_remove_target(temp_text, "")  # Final cleanup
 
 
 def is_valid_degree(text: str) -> bool:
@@ -320,7 +407,7 @@ def build_educations(groups: List[TextGroup]) -> List[EducationOut]:
         # Re-run NER on this specific segment to get precise associations
         segment_entities = ner_model.predict_entities(
             record, 
-            ["academic degree", "school", "university", "organization", "location", "date"]
+            ["academic degree", "school", "university", "organization", "location"]
         )
         
         # Initialize a temporary dictionary to hold our best candidates
@@ -333,9 +420,7 @@ def build_educations(groups: List[TextGroup]) -> List[EducationOut]:
             "description": None
         }
 
-        # Helper lists to catch dates
-        dates_found = []
-        clean_desc = ""
+        clean_desc = record
 
         for entity in segment_entities:
             label = entity['label']
@@ -345,7 +430,7 @@ def build_educations(groups: List[TextGroup]) -> List[EducationOut]:
             if label == "academic degree" and not current_data["degree"]:
                 if is_valid_degree(text):
                     current_data["degree"] = text
-                    clean_desc = clean_and_remove_target(record, text)
+                    clean_desc = clean_and_remove_target(clean_desc, text)
             
             elif label in ["school", "university", "organization"] and not current_data["institution"]:
                 current_data["institution"] = text
@@ -354,19 +439,17 @@ def build_educations(groups: List[TextGroup]) -> List[EducationOut]:
             elif label == "location" and not current_data["location"]:
                 current_data["location"] = text
                 clean_desc = clean_and_remove_target(clean_desc, text)
-                
-            elif label == "date":
-                dates_found.append(text)
 
         # 3. Handle Dates
-        extract_date_context_result = extract_date_context(record, dates_found)
-        start_date, end_date = parse_date_string_to_pair(extract_date_context_result)
-        clean_desc = clean_and_remove_target(clean_desc, extract_date_context_result) if extract_date_context_result else clean_desc
+        start_date, end_date = extract_dates_from_text(record)
+
+        # Remove the dates from the description text so they don't appear twice
+        clean_desc = clean_date_range_from_text(clean_desc, start_date, end_date)
 
         current_data["start_date"] = start_date
         current_data["end_date"] = end_date
 
-        current_data["description"] = clean_desc
+        current_data["description"] = " ".join(clean_desc.split()).strip() if clean_desc else None
 
         # 4. Create the Pydantic Object
         edu_entry = EducationOut(**current_data)
@@ -427,7 +510,7 @@ def build_experiences(groups: List[TextGroup]) -> List[ExperienceOut]:
         # Re-run NER on this specific segment to get precise associations
         segment_entities = ner_model.predict_entities(
             record, 
-            ["job title", "company", "organization", "location", "date"]
+            ["job title", "company", "organization", "location"]
         )
         
         # Initialize a temporary dictionary to hold our best candidates
@@ -440,9 +523,7 @@ def build_experiences(groups: List[TextGroup]) -> List[ExperienceOut]:
             "description": None
         }
 
-        # Helper lists to catch dates
-        dates_found = []
-        clean_desc = ""
+        clean_desc = record
 
         for entity in segment_entities:
             label = entity['label']
@@ -451,7 +532,7 @@ def build_experiences(groups: List[TextGroup]) -> List[ExperienceOut]:
             # Simple heuristic: Pick the first valid occurrence of each type in this segment
             if label == "job title" and not current_data["job_title"]:
                 current_data["job_title"] = text
-                clean_desc = clean_and_remove_target(record, text)
+                clean_desc = clean_and_remove_target(clean_desc, text)
             
             elif label in ["company", "organization"] and not current_data["company"]:
                 current_data["company"] = text
@@ -460,19 +541,16 @@ def build_experiences(groups: List[TextGroup]) -> List[ExperienceOut]:
             elif label == "location" and not current_data["location"]:
                 current_data["location"] = text
                 clean_desc = clean_and_remove_target(clean_desc, text)
-                
-            elif label == "date":
-                dates_found.append(text)
 
         # 3. Handle Dates
-        extract_date_context_result = extract_date_context(record, dates_found)
-        start_date, end_date = parse_date_string_to_pair(extract_date_context_result)
-        clean_desc = clean_and_remove_target(clean_desc, extract_date_context_result) if extract_date_context_result else clean_desc
+        start_date, end_date = extract_dates_from_text(record)
 
+        # Remove the dates from the description text so they don't appear twice
+        clean_desc = clean_date_range_from_text(clean_desc, start_date, end_date)
         current_data["start_date"] = start_date
         current_data["end_date"] = end_date
 
-        current_data["description"] = clean_desc
+        current_data["description"] = " ".join(clean_desc.split()).strip() if clean_desc else None
 
         # 4. Create the Pydantic Object
         exp_entry = ExperienceOut(**current_data)

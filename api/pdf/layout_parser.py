@@ -56,6 +56,10 @@ def load_pdf(pdf_path: str) -> spacy.tokens.Doc:
 # Preprocess PDF
 # =============================================================================
 
+import spacy
+from typing import Set, List, Any, Optional
+from pydantic import BaseModel
+
 def preprocess_layout_doc(doc: spacy.tokens.Doc) -> List[TextSpan]:
     
     # 1) Filter out skipped labels + non-first-page spans
@@ -101,25 +105,40 @@ def preprocess_layout_doc(doc: spacy.tokens.Doc) -> List[TextSpan]:
 
 
 # =============================================================================
-# Group Spans by Heading (Initial TextGroups)
+# Sequentially Group Spans by Heading (Initial TextGroups)
 # =============================================================================
 
 def group_spans_by_heading(spans: List[TextSpan]) -> List[TextGroup]:
-    text_groups: Dict[str, TextGroup] = {}
+    if not spans:
+        return []
 
+    grouped_list: List[TextGroup] = []
+    
+    # Initialize the first group
+    current_group = TextGroup(
+        heading=spans[0].heading,
+        text="",
+        spans=[]
+    )
+    
     for span in spans:
-        heading = span.heading
-        text = span.text
-
-        if heading not in text_groups:
-            text_groups[heading] = TextGroup(
-                heading=heading,
+        # If the heading changes, we close the current group and start a new one
+        if span.heading != current_group.heading:
+            # 1. Save the finished group
+            grouped_list.append(current_group)
+            
+            # 2. Start a new group
+            current_group = TextGroup(
+                heading=span.heading,
                 text="",
                 spans=[]
             )
+        
+        # Add span to the current active group
+        current_group.spans.append(span)
+        current_group.text += (span.text + " ")
 
-        text_group = text_groups[heading]
-        text_group.spans.append(span)
-        text_group.text += (text + " ")
+    # Don't forget to append the final group after the loop finishes
+    grouped_list.append(current_group)
 
-    return list(text_groups.values())
+    return grouped_list

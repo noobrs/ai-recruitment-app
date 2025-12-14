@@ -12,6 +12,8 @@ from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
 from api.types.types import TextGroup
 from api.pdf.config import COMMON_SECTION_HEADERS, SECTION_CLASSIFIER_MODEL, SECTION_MERGE_MAP
+from api.pdf.redaction import is_email, is_phone
+from api.pdf.entity_extraction import load_ner_model
 
 
 # =============================================================================
@@ -102,6 +104,52 @@ def process_no_heading(group: TextGroup) -> Optional[TextGroup]:
 
 
 # =============================================================================
+# NER to heading for section classification
+# =============================================================================
+
+def resolve_heading_via_ner(group: TextGroup) -> bool:
+    # Run NER on the heading text
+    ner_model = load_ner_model()
+    entities = ner_model.predict_entities(
+        group.heading, 
+        ["person name", "university", "company", "job title", "academic degree", "skill"]
+    )
+    
+    # Check entities to determine section
+    for entity in entities:
+        label = entity['label']
+        
+        # 1. Contact Info / Header Detection
+        # If the heading is a person's name, it's the Contact section.
+        if label == "person name":
+            group.heading = "contact"
+            print(f"[NER Match] '{entity['text']}' is a Name -> Set as 'contact'")
+            return True
+            
+        # If heading is a Job Title BUT the text contains email/phone, 
+        # it is likely the resume header (e.g., "Software Engineer | yong@email.com"), not Experience.
+        elif label == "job title" and (is_email(group.text) or is_phone(group.text)):
+            group.heading = "contact"
+            print(f"[NER Match] '{entity['text']}' (Job Title + Contact Info) -> Set as 'contact'")
+            return True
+
+        # 2. Experience Detection
+        # Standard Job Titles or Company names usually denote Experience sections
+        elif label in ["company", "job title"]:
+            group.heading = "experience"
+            print(f"[NER Match] '{entity['text']}' is {label} -> Set as 'experience'")
+            return True
+
+        # 3. Education Detection
+        elif label in ["university", "academic degree"]:
+            group.heading = "education"
+            print(f"[NER Match] '{entity['text']}' is {label} -> Set as 'education'")
+            return True
+
+    return False
+
+
+# =============================================================================
 # BERT Classification
 # =============================================================================
 
@@ -135,56 +183,61 @@ def classify_text(model, tokenizer, text: str) -> Optional[str]:
 # =============================================================================
 
 def classify_text_groups(groups: List[TextGroup]) -> List[TextGroup]:
-    
     final_groups: List[TextGroup] = []
-    groups_needing_bert: List[TextGroup] = []
-    
-    print(f"[SectionClassifier] Classifying {len(groups)} heading groups...")
-    
-    # First pass: Filter NO_HEADING and Try fast-path header matching
+    model, tokenizer = load_section_classifier()
+
     for group in groups:
+        # -----------------------------------------------------------
+        # Step 1: Handle 'NO_HEADING' Special Case
+        # -----------------------------------------------------------
         if group.heading == "NO_HEADING":
-            # Process the group to filter spans
             group = process_no_heading(group)
-            
-            if not group:
-                continue  # Skip adding this group to final_groups
-            
-            # If group remains, add to final list
-            final_groups.append(group)
+            if group: 
+                final_groups.append(group)
             continue 
 
-        else:
-            # Add to final list immediately, we are just updating the heading in place
+        # We will modify 'group' in place and add to final list at the end
+        
+        # -----------------------------------------------------------
+        # Step 2: Fast-Path (Dictionary Match)
+        # -----------------------------------------------------------
+        # Fastest check. O(1) lookup.
+        matched_section = match_common_header(group.heading)
+        if matched_section:
+            print(f"[Fast Match] '{group.heading}' -> {matched_section}")
+            group.heading = matched_section
             final_groups.append(group)
+            continue
 
-            # Try fast-path matching against common headers
-            matched_section = match_common_header(group.heading)
-            if matched_section:
-                print(f"[SectionClassifier] '{group.heading}' -> {matched_section} (fast-match)")
-                group.heading = matched_section
-                continue
+        # -----------------------------------------------------------
+        # Step 3: NER Resolution (Heuristic)
+        # -----------------------------------------------------------
+        # Slower than dict, faster than BERT. Good for "University of X".
+        if resolve_heading_via_ner(group):
+            # If function returns True, group.heading is already updated
+            final_groups.append(group)
+            continue
+
+        # -----------------------------------------------------------
+        # Step 4: BERT Classification (Deep Learning Fallback)
+        # -----------------------------------------------------------
+        # Slowest. Use context from the body text to help classification.
+        classification_text = group.heading
+        if group.text:
+            classification_text = f"{classification_text} {group.text[:300]}".strip()
         
-        # Queue for BERT classification if it wasn't a fast match
-        groups_needing_bert.append(group)
-
-    # Second pass: Use NER to classify sections (placeholder)
-
-    # Third pass: Use BERT only for unmatched headings
-    if groups_needing_bert:
-        model, tokenizer = load_section_classifier()
+        section_type = classify_text(model, tokenizer, classification_text)
         
-        for group in groups_needing_bert:
-            classification_text = group.heading
-            if group.text:
-                classification_text = f"{classification_text} {group.text[:300]}".strip()
-            
-            section_type = classify_text(model, tokenizer, classification_text)
-            print(f"[SectionClassifier] '{group.heading}' -> {section_type} (BERT)")
-            
-            if section_type:
-                 group.heading = SECTION_MERGE_MAP.get(section_type, section_type)
-    
+        if section_type:
+             # Normalize the BERT output using your mapping
+             final_heading = SECTION_MERGE_MAP.get(section_type, section_type)
+             print(f"[BERT] '{group.heading}' -> {final_heading}")
+             group.heading = final_heading
+        else:
+             print(f"[Unclassified] Could not classify '{group.heading}'")
+
+        final_groups.append(group)
+
     return final_groups
 
 
