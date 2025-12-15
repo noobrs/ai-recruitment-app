@@ -4,7 +4,7 @@ from typing import List, Optional, Tuple
 from gliner import GLiNER
 
 from api.pdf.config import GLINER_MODEL_NAME, DEGREE_RES
-from api.types.types import TextGroup, EducationOut, ExperienceOut, CertificationOut, ActivityOut
+from api.types.types import ResumeData, TextGroup, EducationOut, ExperienceOut, CertificationOut, ActivityOut
 
 
 # =============================================================================
@@ -26,7 +26,7 @@ def load_ner_model():
 
 
 # =============================================================================
-# Helpers
+# Record Splitting (split by headers)
 # =============================================================================
 
 def split_text_by_headers(full_text: str, headers: List[str]) -> List[str]:
@@ -68,6 +68,56 @@ def split_text_by_headers(full_text: str, headers: List[str]) -> List[str]:
     return result
 
 
+# =============================================================================
+# Record Splitting (split by span labels)
+# =============================================================================
+
+def split_group_by_span_labels(group: TextGroup, trigger_labels: List[str]) -> List[str]:
+    """
+    Splits a TextGroup into records ONLY if the first span is a trigger.
+    
+    Rules:
+    1. If the first span's label is NOT in trigger_labels, return [] (Signal Fallback).
+    2. If the first span IS a trigger, start the first record.
+    3. Any subsequent span with a trigger label starts a new record.
+    """
+    if not group.spans:
+        return []
+        
+    # STRICT CHECK: The group must strictly start with a trigger (e.g., Company Name)
+    # If it starts with plain text/dates, the structure is too loose -> Return empty for fallback.
+    if group.spans[0].label not in trigger_labels:
+        return []
+
+    records = []
+    current_spans = []
+    
+    for span in group.spans:
+        # If we hit a trigger label AND we already have content in the buffer
+        # This indicates the start of a subsequent record.
+        if span.label in trigger_labels and current_spans:
+            # 1. Finish the previous record
+            record_text = " ".join([s.text for s in current_spans]).strip()
+            records.append(record_text)
+            
+            # 2. Start the new record with this trigger span
+            current_spans = [span]
+        else:
+            # Add to current buffer
+            current_spans.append(span)
+
+    # Append the final record remaining in the buffer
+    if current_spans:
+        record_text = " ".join([s.text for s in current_spans]).strip()
+        records.append(record_text)
+
+    return records
+
+
+# =============================================================================
+# Helpers
+# =============================================================================
+
 def find_first_occurring_string(full_text: str, string_list: List[str]) -> str:
     first_string = None
     min_index = len(full_text) # Start with a max index value
@@ -83,96 +133,33 @@ def find_first_occurring_string(full_text: str, string_list: List[str]) -> str:
     return first_string
 
 
-def extract_date_context(full_text: str, date_list: List[str]) -> Optional[str]:
-    if not date_list or not full_text:
-        return None
-
-    # Common separators (hyphen, en-dash, 'to')
-    sep_pattern = r"\s*(?:-|–|to)\s*"
-
-    # SCENARIO 1: List contains exactly one date
-    if len(date_list) == 1:
-        target_date = re.escape(date_list[0])
-        
-        # 1. Check for "Date - Present/Now/Current"
-        present_pattern = f"({target_date}{sep_pattern}(?:present|current|now))"
-        match = re.search(present_pattern, full_text, re.IGNORECASE)
-        if match:
-            return match.group(1)
-            
-        # 2. Check for "Expected Graduation: Date" or "Est: Date"
-        context_keywords = r"(?:expected graduation|graduating|est\.?|class of)"
-        context_pattern = f"({context_keywords}:?\s*{target_date})"
-        match = re.search(context_pattern, full_text, re.IGNORECASE)
-        if match:
-            return match.group(1)
-            
-        # 3. Fallback: If the date exists in text but has no context, return just the date
-        if target_date.lower() in full_text.lower():
-            return date_list[0]
-
-    # SCENARIO 2: List contains two dates
-    elif len(date_list) >= 2:
-        # We take the first two dates to form a range
-        start_date = re.escape(date_list[0])
-        end_date = re.escape(date_list[1])
-        
-        # Check for "Start - End"
-        # Matches: "2025 - 2026", "Jan 2025 to Feb 2026"
-        range_pattern = f"({start_date}{sep_pattern}{end_date})"
-        match = re.search(range_pattern, full_text, re.IGNORECASE)
-        if match:
-            return match.group(1)
-
-    return None
-
-
-def parse_date_string_to_pair(date_string: str) -> List[Optional[str]]:
-    if not date_string:
-        return [None, None]
-
-    # Normalize string: lowercase and remove extra spaces
-    clean_text = date_string.strip()
+def clean_and_remove_target(full_string: str, target_string: str) -> str:
+    if not full_string:
+        return ""
     
-    # 1. Handle "Present" / "Current" cases
-    # Matches: "Jan 2025 - Present", "2024 to Now"
-    present_pattern = r"(.*?)\s*(?:-|–|to)\s*(present|current|now)"
-    match_present = re.search(present_pattern, clean_text, re.IGNORECASE)
-    if match_present:
-        start_part = match_present.group(1).strip()
-        return [start_part, "Present"]
-
-    # 2. Handle standard ranges "Date - Date"
-    # Matches: "2020 - 2022", "Jan 2024 to Feb 2025"
-    # We split by the separator, but only if it looks like a separator between two data points
-    sep_pattern = r"\s+(?:-|–|to)\s+"
-    parts = re.split(sep_pattern, clean_text)
+    # 1. Remove the target string
+    temp_text = full_string.replace(target_string, "")
     
-    if len(parts) == 2:
-        return [parts[0].strip(), parts[1].strip()]
-
-    # 3. Handle "Expected Graduation" / Single Date context
-    # We want to remove the noise words and extract just the date.
+    # 2. Strip standard whitespace first
+    #    This ensures "  | abc  " becomes "| abc" so our regex can work on the edges
+    temp_text = temp_text.strip()
     
-    # Noise words to remove
-    noise_pattern = r"(?:expected graduation[:\s]*|graduating[:\s]*|est\.?[:\s]*|class of[:\s]*)"
+    # 3. Apply the specific regex rules:
+    #    Rule A (Leading): (^[^\w\s]+\s+)
+    #          - Start (^) -> Symbols ([^\w\s]+) -> Space (\s+)
+    #          - Matches "| abc" -> Removes "| "
+    #          - Ignores "(abc"
+    #
+    #    Rule B (Trailing): (\s+[^\w\s]+$)
+    #          - Space (\s+) -> Symbols ([^\w\s]+) -> End ($)
+    #          - Matches "abc !" -> Removes " !"
+    #          - Ignores "abc!"
     
-    # Remove the noise, leaving only the date
-    cleaned_date = re.sub(noise_pattern, "", clean_text, flags=re.IGNORECASE).strip()
+    clean_text = re.sub(r"(^[^\w\s]+\s+)|(\s+[^\w\s]+$)", "", temp_text)
     
-    # If the input was "Expected Graduation: May 2026", cleaned_date is "May 2026".
-    # Since this is a specific point in time (usually an end goal), 
-    # we can return it as the End Date, or just a single date.
-    # LOGIC DECISION: If it explicitly says "Graduation", it is usually an End Date.
-    if re.search(r"graduation|graduating|class of", clean_text, re.IGNORECASE):
-        return [None, cleaned_date]
-
-    # 4. Default Fallback (Standard single date)
-    # If it's just "Jan 2025", we treat it as a start date (or a single point).
-    return [cleaned_date, None]
+    return clean_text.strip()
 
 
-# NEW DATE FUNCTION
 def extract_dates_from_text(text: str) -> Tuple[Optional[str], Optional[str]]:
     if not text:
         return None, None
@@ -214,37 +201,6 @@ def extract_dates_from_text(text: str) -> Tuple[Optional[str], Optional[str]]:
 
     return None, None
 
-
-def clean_and_remove_target(full_string: str, target_string: str) -> str:
-    if not full_string:
-        return ""
-    
-    # 1. Remove the target string
-    temp_text = full_string.replace(target_string, "")
-    
-    # 2. Strip standard whitespace first
-    #    This ensures "  | abc  " becomes "| abc" so our regex can work on the edges
-    temp_text = temp_text.strip()
-    
-    # 3. Apply the specific regex rules:
-    #    Rule A (Leading): (^[^\w\s]+\s+)
-    #          - Start (^) -> Symbols ([^\w\s]+) -> Space (\s+)
-    #          - Matches "| abc" -> Removes "| "
-    #          - Ignores "(abc"
-    #
-    #    Rule B (Trailing): (\s+[^\w\s]+$)
-    #          - Space (\s+) -> Symbols ([^\w\s]+) -> End ($)
-    #          - Matches "abc !" -> Removes " !"
-    #          - Ignores "abc!"
-    
-    clean_text = re.sub(r"(^[^\w\s]+\s+)|(\s+[^\w\s]+$)", "", temp_text)
-    
-    return clean_text.strip()
-
-
-#=============================================================================
-# New Clean Date Range Function
-#=============================================================================
 
 def clean_date_range_from_text(full_text: str, start: Optional[str], end: Optional[str]) -> str:
     if not full_text:
@@ -332,12 +288,10 @@ def build_skills(groups: List[TextGroup]) -> List[str]:
     for span in skill_group.spans:
         if span.label == "list_item" and not is_skill_sentence(span.text):
             skills.append(span.text.strip())
-            print(f"      • [list_item] \"{span.text.strip()}\"")
         else:
             entities = ner_model.predict_entities(span.text, ["skill", "tool", "language"])
             for entity in entities:
                 skills.append(entity['text'].strip())
-                print(f"      • [{entity['label']}] \"{entity['text']}\" (Score: {entity['score']:.2f})")
 
     return skills
 
@@ -351,55 +305,64 @@ def build_educations(groups: List[TextGroup]) -> List[EducationOut]:
     if not edu_group:
         return []
     edu_group = edu_group[0]
-    edu_text = edu_group.text
-
     ner_model = load_ner_model()
-    entities = ner_model.predict_entities(edu_text, ["academic degree", "school", "university", "organization"])
-    for entity in entities:
-        print(f"      • [{entity['label']}] \"{entity['text']}\" (Score: {entity['score']:.2f})")
 
-    print(f"\n\n[Degree Validation] Checking extracted degrees...")
-    # Create a new list for valid entities
-    valid_entities = []
+    # =========================================================================
+    # STEP 1: Strict Structural Split (Span Labels)
+    # =========================================================================
+    split_triggers = ["university", "school", "academic degree", "organization"]
+    
+    records = split_group_by_span_labels(edu_group, split_triggers)
 
-    for entity in entities:
-        # If it's a degree, run the validation check
-        if entity['label'] == "academic degree":
-            if is_valid_degree(entity['text']):
-                valid_entities.append(entity)
+    # =========================================================================
+    # STEP 2: Fallback (NER Text Search)
+    # =========================================================================
+    if not records:
+        edu_text = edu_group.text
+
+        entities = ner_model.predict_entities(edu_text, ["academic degree", "school", "university", "organization"])
+
+        # Create a new list for valid entities
+        valid_entities = []
+
+        for entity in entities:
+            # If it's a degree, run the validation check
+            if entity['label'] == "academic degree":
+                if is_valid_degree(entity['text']):
+                    valid_entities.append(entity)
+                    
+            # If it's NOT a degree (e.g., school, org), keep it automatically
             else:
-                # Optional: Log that we dropped it
-                print(f"Dropped invalid degree: {entity['text']}")
-                
-        # If it's NOT a degree (e.g., school, org), keep it automatically
+                valid_entities.append(entity)
+
+        # Replace the old list with the filtered one
+        entities = valid_entities
+
+        degrees = [e["text"] for e in entities if e['label'] == 'academic degree']
+        schools = [e["text"] for e in entities if e['label'] in {'school', 'university', 'organization'}]
+
+        degrees_len = len(degrees)
+        schools_len = len(schools)
+
+        # 1. Determine if we have multiple records or just one
+        # (Your existing logic determines `records` list)
+        if degrees_len == schools_len and degrees_len > 1:
+            print(f"Detected multiple entries. Splitting by headers...")
+            first_degree_text = degrees[0]
+            first_school_text = schools[0]
+            
+            # Determine which appears first to decide the split strategy
+            first_occur = find_first_occurring_string(edu_group.text, [first_degree_text, first_school_text])
+            
+            # Split the text
+            records = split_text_by_headers(edu_group.text, degrees if first_occur == first_degree_text else schools)
         else:
-            valid_entities.append(entity)
+            # Fallback: If we couldn't split cleanly, treat the entire section as one record
+            records = [edu_group.text]
 
-    # Replace the old list with the filtered one
-    entities = valid_entities
-
-    degrees = [e["text"] for e in entities if e['label'] == 'academic degree']
-    schools = [e["text"] for e in entities if e['label'] in {'school', 'university', 'organization'}]
-
-    degrees_len = len(degrees)
-    schools_len = len(schools)
-
-    # 1. Determine if we have multiple records or just one
-    # (Your existing logic determines `records` list)
-    if degrees_len == schools_len and degrees_len > 1:
-        print(f"Detected multiple entries. Splitting by headers...")
-        first_degree_text = degrees[0]
-        first_school_text = schools[0]
-        
-        # Determine which appears first to decide the split strategy
-        first_occur = find_first_occurring_string(edu_group.text, [first_degree_text, first_school_text])
-        
-        # Split the text
-        records = split_text_by_headers(edu_group.text, degrees if first_occur == first_degree_text else schools)
-    else:
-        # Fallback: If we couldn't split cleanly, treat the entire section as one record
-        records = [edu_group.text]
-
+    # =========================================================================
+    # STEP 3: Process Records into Objects
+    # =========================================================================
     final_education_entries = []
 
     # 2. Process each record to build the Object
@@ -469,40 +432,47 @@ def build_experiences(groups: List[TextGroup]) -> List[ExperienceOut]:
         return []
     
     exp_group = exp_groups[0]
-    exp_text = exp_group.text
     ner_model = load_ner_model()
 
-    entities = ner_model.predict_entities(exp_text, ["job title", "company", "organization"])
-    for entity in entities:
-        print(f"      • [{entity['label']}] \"{entity['text']}\" (Score: {entity['score']:.2f})")
-
-    # Print results to verify
-    print(f"\n[Final List] {len(entities)} entities remaining:")
-    for entity in entities:
-        print(f"   • [{entity['label']}] \"{entity['text']}\"")
-
-    job_titles = [e["text"] for e in entities if e['label'] == 'job title']
-    companies = [e["text"] for e in entities if e['label'] in {'company', 'organization'}]
-
-    job_titles_len = len(job_titles)
-    companies_len = len(companies)
+    # =========================================================================
+    # STEP 1: Strict Structural Split (Span Labels)
+    # =========================================================================
+    split_triggers = ["company", "job title", "organization"]
     
-    # 1. Determine if we have multiple records or just one
-    # (Your existing logic determines `records` list)
-    if job_titles_len == companies_len and job_titles_len > 1:
-        print(f"Detected multiple entries. Splitting by headers...")
-        first_job_title_text = job_titles[0]
-        first_company_text = companies[0]
-        
-        # Determine which appears first to decide the split strategy
-        first_occur = find_first_occurring_string(exp_group.text, [first_job_title_text, first_company_text])
-        
-        # Split the text
-        records = split_text_by_headers(exp_group.text, job_titles if first_occur == first_job_title_text else companies)
-    else:
-        # Fallback: If we couldn't split cleanly, treat the entire section as one record
-        records = [exp_group.text]
+    records = split_group_by_span_labels(exp_group, split_triggers)
 
+    # =========================================================================
+    # STEP 2: Fallback (NER Text Search)
+    # =========================================================================
+    if not records:
+        exp_text = exp_group.text
+
+        entities = ner_model.predict_entities(exp_text, ["job title", "company", "organization"])
+
+        job_titles = [e["text"] for e in entities if e['label'] == 'job title']
+        companies = [e["text"] for e in entities if e['label'] in {'company', 'organization'}]
+
+        job_titles_len = len(job_titles)
+        companies_len = len(companies)
+        
+        # 1. Determine if we have multiple records or just one
+        # (Your existing logic determines `records` list)
+        if job_titles_len == companies_len and job_titles_len > 1:
+            first_job_title_text = job_titles[0]
+            first_company_text = companies[0]
+            
+            # Determine which appears first to decide the split strategy
+            first_occur = find_first_occurring_string(exp_group.text, [first_job_title_text, first_company_text])
+            
+            # Split the text
+            records = split_text_by_headers(exp_group.text, job_titles if first_occur == first_job_title_text else companies)
+        else:
+            # Fallback: If we couldn't split cleanly, treat the entire section as one record
+            records = [exp_group.text]
+
+    # =========================================================================
+    # STEP 3: Process Records into Objects
+    # =========================================================================
     final_experience_entries = []
 
     # 2. Process each record to build the Object
@@ -563,9 +533,8 @@ def build_experiences(groups: List[TextGroup]) -> List[ExperienceOut]:
 # Certifications Building
 # =============================================================================
 
-# --- Process Certifications ---
 def build_certifications(groups: List[TextGroup]) -> List[CertificationOut]:
-    cert_groups = [group for group in groups if group.heading == "certifications" or group.heading == "awards"]
+    cert_groups = [group for group in groups if group.heading == "certifications"]
     cert_out = []
 
     if not cert_groups:
@@ -574,8 +543,6 @@ def build_certifications(groups: List[TextGroup]) -> List[CertificationOut]:
     ner_model = load_ner_model()
 
     for cert_group in cert_groups:
-        print(f"• Certification/Award Record: {cert_group.text}")
-        
         # 1. Extract entities
         entities = ner_model.predict_entities(cert_group.text, ["certification", "description"])
         
@@ -584,8 +551,6 @@ def build_certifications(groups: List[TextGroup]) -> List[CertificationOut]:
         found_descriptions = []
 
         for entity in entities:
-            print(f"      • [{entity['label']}] \"{entity['text']}\" (Score: {entity['score']:.2f})")
-            
             # Map labels to Pydantic fields
             if entity['label'] == "certification":
                 # If we already found a name, this group might contain multiple items. 
@@ -596,8 +561,6 @@ def build_certifications(groups: List[TextGroup]) -> List[CertificationOut]:
                 found_descriptions.append(entity['text'])
 
         # 3. Build the object if valid data exists
-        # Fallback: if no specific "certification" entity was found, but the group exists,
-        # you might sometimes want to use the raw text or skip. Here we skip if no name is found.
         if found_name:
             cert_obj = CertificationOut(
                 name=found_name,
@@ -612,14 +575,12 @@ def build_certifications(groups: List[TextGroup]) -> List[CertificationOut]:
 # =============================================================================
 
 def build_activities(groups: List[TextGroup]) -> List[ActivityOut]:
-    act_groups = [group for group in groups if group.heading == "activities" or group.heading == "projects"]
+    act_groups = [group for group in groups if group.heading == "activities"]
     act_out = []
     if not act_groups:
         return act_out
     
     for act_group in act_groups:
-        print(f"• Activity/Project Record: {act_group.text}")
-
         # 1. Extract entities
         entities = ner_model.predict_entities(act_group.text, ["project", "activity", "title", "description"])
         
@@ -628,8 +589,6 @@ def build_activities(groups: List[TextGroup]) -> List[ActivityOut]:
         found_descriptions = []
 
         for entity in entities:
-            print(f"      • [{entity['label']}] \"{entity['text']}\" (Score: {entity['score']:.2f})")
-
             # Map labels to Pydantic fields
             # 'project', 'activity', and 'title' all act as the 'name' of the entry
             if entity['label'] in ["project", "activity", "title"]:
@@ -646,3 +605,55 @@ def build_activities(groups: List[TextGroup]) -> List[ActivityOut]:
             )
             act_out.append(act_obj)
     return act_out
+
+
+# =============================================================================
+# Other Section Building (Skills, Certifications, Activities)
+# =============================================================================
+
+def build_other(groups: List[TextGroup], data: ResumeData) -> ResumeData:
+    other_groups = [group for group in groups if group.heading == "other"]
+    if not other_groups:
+        return data
+
+    # Define the specific label lists
+    skill_labels = ["skill", "tool", "language"]
+    cert_labels = ["certification", "award"]
+    activity_labels = ["activity", "project"]
+
+    ner_model = load_ner_model()
+
+    for other_group in other_groups:
+        print(f"\n[Processing 'other' section: {other_group.text[:50]}...]")
+
+        # --- Pass 1: Predict Skills ---
+        skill_entities = ner_model.predict_entities(other_group.text, skill_labels)
+        for entity in skill_entities:
+            print(f"      • [{entity['label']}] \"{entity['text']}\" (Score: {entity['score']:.2f})")
+            # Logic: Add to skills list if not unique
+            if entity['text'] not in data.skills:
+                data.skills.append(entity['text'])
+
+        # --- Pass 2: Predict Certifications ---
+        cert_entities = ner_model.predict_entities(other_group.text, cert_labels)
+        for entity in cert_entities:
+            print(f"      • [{entity['label']}] \"{entity['text']}\" (Score: {entity['score']:.2f})")
+            # Logic: Create Certification object
+            cert_obj = CertificationOut(
+                name=entity['text'],
+                description=None
+            )
+            data.certifications.append(cert_obj)
+
+        # --- Pass 3: Predict Activities ---
+        activity_entities = ner_model.predict_entities(other_group.text, activity_labels)
+        for entity in activity_entities:
+            print(f"      • [{entity['label']}] \"{entity['text']}\" (Score: {entity['score']:.2f})")
+            # Logic: Create Activity object
+            act_obj = ActivityOut(
+                name=entity['text'],
+                description=None
+            )
+            data.activities.append(act_obj)
+
+    return data

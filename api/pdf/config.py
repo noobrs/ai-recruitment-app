@@ -15,63 +15,25 @@ GLINER_MODEL_NAME: str = "urchade/gliner_small-v2.1"
 # Section Merge Mapping
 # =============================================================================
 
-# Maps BERT model labels to canonical section names used in the pipeline
 # Model labels: awards, certificates, contact/name/title, education, interests,
 #               languages, para, professional_experiences, projects, skills,
 #               soft_skills, summary
+# Canonical section names: contact, education, experience, skills, certifications, activities, summary, other
 SECTION_MERGE_MAP: Dict[str, str] = {
-    "awards": "awards",
-    "certificates": "certifications",
     "contact/name/title": "contact",
     "education": "education",
-    "interests": "activities",
-    "languages": "skills",
-    "para": "other",
     "professional_experiences": "experience",
-    "projects": "projects",
+    "languages": "skills",
     "skills": "skills",
     "soft_skills": "skills",
+    "awards": "certifications",
+    "certificates": "certifications",
+    "projects": "activities",
+    "interests": "activities",
     "summary": "summary",
+    "para": "other",
 }
 
-# =============================================================================
-# Entity Labels by Section Type (for GLiNER)
-# =============================================================================
-
-ENTITY_LABELS_BY_SECTION: Dict[str, List[str]] = {
-    "contact": ["person", "location"],
-    "experience": ["job title", "company", "organization", "location", "date"],
-    "education": ["academic degree", "school", "university", "organization", "location", "date"],
-    "skills": ["skill", "tool", "language"],
-    "projects": ["project"],
-    "certifications": ["certification"],
-    "activities": ["activity"],
-    "summary": ["person", "location"],
-    "awards": ["award", "date"],
-    "other": ["person", "skill", "location", "date"],
-}
-
-# All possible entity labels (fallback)
-ALL_ENTITY_LABELS: List[str] = [
-    "person",
-    "skill",
-    "tool",
-    "language",
-    "degree",
-    "job title",
-    "organization",
-    "company",
-    "school",
-    "university",
-    "location",
-    "certification",
-    "award",
-    "activity",
-    "date",
-]
-
-# Entity confidence threshold
-ENTITY_THRESHOLD: float = 0.50
 
 # =============================================================================
 # Common Section Headers (Fast-path classification)
@@ -147,32 +109,6 @@ COMMON_SECTION_HEADERS: Dict[str, List[str]] = {
         "it skills",
         "computer skills",
     ],
-    "summary": [
-        "summary",
-        "profile summary",
-        "professional summary",
-        "executive summary",
-        "career summary",
-        "profile",
-        "professional profile",
-        "about me",
-        "about",
-        "objective",
-        "career objective",
-        "professional objective",
-        "introduction",
-        "overview",
-    ],
-    "projects": [
-        "projects",
-        "project",
-        "personal projects",
-        "academic projects",
-        "key projects",
-        "selected projects",
-        "portfolio",
-        "work samples",
-    ],
     "certifications": [
         "certifications",
         "certification",
@@ -186,8 +122,6 @@ COMMON_SECTION_HEADERS: Dict[str, List[str]] = {
         "training",
         "professional training",
         "courses",
-    ],
-    "awards": [
         "awards",
         "award",
         "honors",
@@ -217,15 +151,37 @@ COMMON_SECTION_HEADERS: Dict[str, List[str]] = {
         "memberships",
         "professional affiliations",
         "organizations",
-    ],
-    "other": [
         "publications",
         "research",
         "research experience",
         "papers",
         "presentations",
-        "references",
-        "reference",
+        "projects",
+        "project",
+        "personal projects",
+        "academic projects",
+        "key projects",
+        "selected projects",
+        "portfolio",
+        "work samples",
+    ],
+    "summary": [
+        "summary",
+        "profile summary",
+        "professional summary",
+        "executive summary",
+        "career summary",
+        "profile",
+        "professional profile",
+        "about me",
+        "about",
+        "objective",
+        "career objective",
+        "professional objective",
+        "introduction",
+        "overview",
+    ],
+    "other": [
         "additional information",
         "additional informations",
         "miscellaneous",
@@ -235,11 +191,6 @@ COMMON_SECTION_HEADERS: Dict[str, List[str]] = {
     ],
 }
 
-# =============================================================================
-# Layout Parser Configuration
-# =============================================================================
-
-SKIP_SPAN_LABELS: Set[str] = {"table", "picture", "formula", "checkbox_selected", "checkbox_unselected"}
 
 # =============================================================================
 # Regex Patterns
@@ -265,13 +216,6 @@ DEGREE_PATTERNS: List[str] = [
     r"(?i)\bAssociate(?:'s)?\s+(?:Degree|of|in)\b",
 ]
 
-DATE_PATTERNS: List[str] = [
-    r"(?i)(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s*[,.]?\s*\d{4}",
-    r"\b(?:19|20)\d{2}\b",
-    r"\b(?:0?[1-9]|1[0-2])\s*[/\-]\s*(?:19|20)\d{2}\b",
-    r"(?i)\b(?:Present|Current|Now|Ongoing)\b",
-]
-
 # =============================================================================
 # Compiled Regex Patterns (for performance)
 # =============================================================================
@@ -284,6 +228,3 @@ PHONE_RES: List[Pattern[str]] = [re.compile(p, re.IGNORECASE) for p in PHONE_PAT
 
 # Pre-compiled degree patterns
 DEGREE_RES: List[Pattern[str]] = [re.compile(p, re.IGNORECASE) for p in DEGREE_PATTERNS]
-
-# Pre-compiled date patterns
-DATE_RES: List[Pattern[str]] = [re.compile(p, re.IGNORECASE) for p in DATE_PATTERNS]

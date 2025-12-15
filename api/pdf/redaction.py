@@ -1,6 +1,6 @@
 import re
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 import cv2
 import fitz  # PyMuPDF
@@ -72,20 +72,17 @@ def detect_person_spans(groups: List[TextGroup]) -> List[TextSpan]:
 
     # 2. Iterate through every matching group
     for group in contact_groups:
-        print(f"Processing group: {group.heading}")
         person_spans = group.spans
         spans_needing_ner = []
 
         # --- Regex Pass ---
         for span in person_spans:
             if is_email(span.text):
-                print(f"      • Regex Detected -> [Email] {span.text}")
                 span.label = "email"
                 spans_need_redaction.append(span)
                 continue
             
             if is_phone(span.text):
-                print(f"      • Regex Detected -> [Phone] {span.text}")
                 span.label = "phone number"
                 spans_need_redaction.append(span)
                 continue
@@ -96,15 +93,10 @@ def detect_person_spans(groups: List[TextGroup]) -> List[TextSpan]:
         for span in spans_needing_ner:
             entities = ner_model.predict_entities(span.text, ["location", "person", "designation"])
             
-            # Print findings for debugging
-            for entity in entities:
-                print(f"      • [{entity['label']}] \"{entity['text']}\" (Score: {entity['score']:.2f})")
-            
             # Determine redaction logic based on the top entity found
             if entities:
                 top_entity = entities[0]
                 if top_entity['label'] == "person" and not is_valid_person(top_entity['text']):
-                    print(f"      • Skipping invalid person name: {top_entity['text']}")
                     continue
                 # If the top entity is a designation
                 if top_entity['label'] == "designation": 

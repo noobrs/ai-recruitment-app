@@ -1,10 +1,4 @@
-"""
-Section classification using BERT fine-tuned on resume sections.
-Classifies resume text into section types: education, experience, skills, etc.
-"""
-
 import re
-from collections import defaultdict
 from typing import Dict, List, Optional, Tuple
 
 import torch
@@ -17,7 +11,7 @@ from api.pdf.entity_extraction import load_ner_model
 
 
 # =============================================================================
-# Model Singleton
+# Model Loading
 # =============================================================================
 
 _MODEL = None
@@ -35,6 +29,17 @@ def load_section_classifier() -> Tuple[AutoModelForSequenceClassification, AutoT
         print("[SectionClassifier] BERT model loaded successfully.")
     
     return _MODEL, _TOKENIZER
+
+
+# =============================================================================
+# Helper
+# =============================================================================
+
+def set_first_span_label(group: TextGroup, new_label: str) -> bool:
+    if group.spans:
+        group.spans[0].label = new_label
+        return True
+    return False
 
 
 # =============================================================================
@@ -123,27 +128,27 @@ def resolve_heading_via_ner(group: TextGroup) -> bool:
         # If the heading is a person's name, it's the Contact section.
         if label == "person name":
             group.heading = "contact"
-            print(f"[NER Match] '{entity['text']}' is a Name -> Set as 'contact'")
             return True
             
         # If heading is a Job Title BUT the text contains email/phone, 
         # it is likely the resume header (e.g., "Software Engineer | yong@email.com"), not Experience.
         elif label == "job title" and (is_email(group.text) or is_phone(group.text)):
             group.heading = "contact"
-            print(f"[NER Match] '{entity['text']}' (Job Title + Contact Info) -> Set as 'contact'")
             return True
 
         # 2. Experience Detection
         # Standard Job Titles or Company names usually denote Experience sections
         elif label in ["company", "job title"]:
             group.heading = "experience"
-            print(f"[NER Match] '{entity['text']}' is {label} -> Set as 'experience'")
+            # set the first span label to match the NER label (for record indication purposes)
+            set_first_span_label(group, label)
             return True
 
         # 3. Education Detection
         elif label in ["university", "academic degree"]:
             group.heading = "education"
-            print(f"[NER Match] '{entity['text']}' is {label} -> Set as 'education'")
+            # set the first span label to match the NER label (for record indication purposes)
+            set_first_span_label(group, label)
             return True
 
     return False
@@ -204,7 +209,6 @@ def classify_text_groups(groups: List[TextGroup]) -> List[TextGroup]:
         # Fastest check. O(1) lookup.
         matched_section = match_common_header(group.heading)
         if matched_section:
-            print(f"[Fast Match] '{group.heading}' -> {matched_section}")
             group.heading = matched_section
             final_groups.append(group)
             continue
@@ -231,10 +235,7 @@ def classify_text_groups(groups: List[TextGroup]) -> List[TextGroup]:
         if section_type:
              # Normalize the BERT output using your mapping
              final_heading = SECTION_MERGE_MAP.get(section_type, section_type)
-             print(f"[BERT] '{group.heading}' -> {final_heading}")
              group.heading = final_heading
-        else:
-             print(f"[Unclassified] Could not classify '{group.heading}'")
 
         final_groups.append(group)
 
@@ -246,15 +247,7 @@ def classify_text_groups(groups: List[TextGroup]) -> List[TextGroup]:
 # =============================================================================
 
 def remove_common_span_label(groups: List[TextGroup]) -> List[TextGroup]:
-    """
-    Iterates through groups and removes spans that are labeled as 'section_header'
-    AND match a common header keyword.
-    
-    Reconstructs group.text afterwards to ensure clean content.
-    """
     cleaned_groups = []
-    
-    print(f"[Cleaner] Checking {len(groups)} groups for redundant internal headers...")
 
     for group in groups:
         valid_spans = []
@@ -264,7 +257,6 @@ def remove_common_span_label(groups: List[TextGroup]) -> List[TextGroup]:
             # 1. Check if the span is labeled as a header
             # 2. Check if the text actually matches a known common header
             if span.label == "section_header" and match_common_header(span.text):
-                print(f"   -> Removing span: '{span.text}' (Matched Common Header)")
                 has_changes = True
                 continue  # Skip this span (effectively deleting it)
             
@@ -279,8 +271,6 @@ def remove_common_span_label(groups: List[TextGroup]) -> List[TextGroup]:
         # Only keep the group if it still has text left
         if group.text:
             cleaned_groups.append(group)
-        else:
-            print(f"   -> Dropping group '{group.heading}' (became empty after cleaning)")
 
     return cleaned_groups
 
@@ -300,8 +290,7 @@ def merge_text_groups(groups: List[TextGroup]) -> List[TextGroup]:
             merged_dict[heading] = TextGroup(
                 heading=heading,
                 text=group.text,
-                spans=group.spans.copy(),
-                # entities=group.entities.copy() if group.entities else None
+                spans=group.spans.copy()
             )
         else:
             # Merge with existing group
@@ -312,11 +301,5 @@ def merge_text_groups(groups: List[TextGroup]) -> List[TextGroup]:
             
             # Extend spans list
             existing.spans.extend(group.spans)
-            
-            # # Merge entities
-            # if group.entities:
-            #     if existing.entities is None:
-            #         existing.entities = []
-            #     existing.entities.extend(group.entities)
     
     return list(merged_dict.values())

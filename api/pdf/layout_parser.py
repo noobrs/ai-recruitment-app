@@ -1,11 +1,9 @@
-from typing import Set, Dict, Tuple, List, Optional
+from typing import Set, Tuple, List, Optional
 
 import spacy
 from spacy_layout import spaCyLayout
 from spacy_layout.types import SpanLayout
 from api.types.types import TextSpan, TextGroup
-
-from api.pdf.config import SKIP_SPAN_LABELS
 
 
 # =============================================================================
@@ -56,16 +54,12 @@ def load_pdf(pdf_path: str) -> spacy.tokens.Doc:
 # Preprocess PDF
 # =============================================================================
 
-import spacy
-from typing import Set, List, Any, Optional
-from pydantic import BaseModel
-
 def preprocess_layout_doc(doc: spacy.tokens.Doc) -> List[TextSpan]:
     
-    # 1) Filter out skipped labels + non-first-page spans
+    # 1) Filter out non-first-page spans
     raw_kept_spans = [
         s for s in doc.spans["layout"]
-        if s.label_ not in SKIP_SPAN_LABELS and s._.layout.page_no == 1
+        if s._.layout.page_no == 1
     ]
 
     # 2) Collect headings that already exist on remaining spans

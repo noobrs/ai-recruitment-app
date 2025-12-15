@@ -34,33 +34,29 @@ def process_pdf_resume(file_bytes: bytes) -> ApiResponse:
         with os.fdopen(fd, "wb") as f:
             f.write(file_bytes)
         
-        print("[Pipeline] Step 1: Loading PDF layout...")
+        print("[PDF Pipeline] Step 1: Loading PDF layout...")
         doc = load_pdf(str(pdf_path))
         text_spans = preprocess_layout_doc(doc)
         
-        print("[Pipeline] Step 2: Grouping spans by heading...")
+        print("[PDF Pipeline] Step 2: Grouping spans by heading (Initial TextGroups)...")
         groups = group_spans_by_heading(text_spans)
         
-        print("[Pipeline] Step 3: Classifying text groups by section...")
+        print("[PDF Pipeline] Step 3: Classifying text groups by section...")
         groups = classify_text_groups(groups)
-
-        print(f"[Pipeline] Step 4: Removing common span labels from {len(groups)} text groups...")
         groups = remove_common_span_label(groups)
 
-        print(f"[Pipeline] Step 5: Merging text groups...")
+        print(f"[PDF Pipeline] Step 4: Merging text groups...")
         groups = merge_text_groups(groups)
         
-        print("[Pipeline] Step 6: Extracting person information and face regions...")
+        print("[PDF Pipeline] Step 5: Redacting person information and face regions...")
         redaction_spans = detect_person_spans(groups)
         redaction_spans.extend(detect_face_regions(str(pdf_path)))
-        
-        print("[Pipeline] Step 7: Building structured resume data...")
-        resume_data = build_resume_data(groups, redaction_spans)
-        
-        print("[Pipeline] Step 8: Redacting sensitive information...")
         redaction_result = redact_pdf(str(pdf_path), redaction_spans)
         
-        print("[Pipeline] Complete!")
+        print("[PDF Pipeline] Step 6: Building structured resume data...")
+        resume_data = build_resume_data(groups, redaction_spans)
+        
+        print("[PDF Pipeline] Complete!")
         
         return ApiResponse(
             status="success",
