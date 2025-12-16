@@ -86,17 +86,22 @@ def detect_person_spans(groups: List[TextGroup]) -> List[TextSpan]:
                 span.label = "phone number"
                 spans_need_redaction.append(span)
                 continue
+
+            # come from resolve_heading_via_ner at section classification step
+            if span.label == "person name" and is_valid_person(span.text):
+                spans_need_redaction.append(span)
+                continue
             
             spans_needing_ner.append(span)
 
         # --- NER Pass ---
         for span in spans_needing_ner:
-            entities = ner_model.predict_entities(span.text, ["location", "person", "designation"])
+            entities = ner_model.predict_entities(span.text, ["location", "person name", "designation"])
             
             # Determine redaction logic based on the top entity found
             if entities:
                 top_entity = entities[0]
-                if top_entity['label'] == "person" and not is_valid_person(top_entity['text']):
+                if top_entity['label'] == "person name" and not is_valid_person(top_entity['text']):
                     continue
                 # If the top entity is a designation
                 if top_entity['label'] == "designation": 

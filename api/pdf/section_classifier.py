@@ -41,6 +41,14 @@ def set_first_span_label(group: TextGroup, new_label: str) -> bool:
         return True
     return False
 
+def set_section_header_label(group: TextGroup, new_label: str) -> bool:
+    if group.spans:
+        for span in group.spans:
+            if span.label == "section_header":
+                span.label = new_label
+                return True
+    return False
+
 
 # =============================================================================
 # Fast-path Header Matching
@@ -128,6 +136,7 @@ def resolve_heading_via_ner(group: TextGroup) -> bool:
         # If the heading is a person's name, it's the Contact section.
         if label == "person name":
             group.heading = "contact"
+            set_section_header_label(group, label)
             return True
             
         # If heading is a Job Title BUT the text contains email/phone, 
@@ -140,15 +149,15 @@ def resolve_heading_via_ner(group: TextGroup) -> bool:
         # Standard Job Titles or Company names usually denote Experience sections
         elif label in ["company", "job title"]:
             group.heading = "experience"
-            # set the first span label to match the NER label (for record indication purposes)
-            set_first_span_label(group, label)
+            # set the span label to match the NER label (for record indication purposes)
+            set_section_header_label(group, label)
             return True
 
         # 3. Education Detection
         elif label in ["university", "academic degree"]:
             group.heading = "education"
-            # set the first span label to match the NER label (for record indication purposes)
-            set_first_span_label(group, label)
+            # set the span label to match the NER label (for record indication purposes)
+            set_section_header_label(group, label)
             return True
 
     return False
