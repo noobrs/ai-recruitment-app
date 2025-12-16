@@ -274,7 +274,7 @@ def is_skill_sentence(text: str) -> bool:
 # Skills Building
 # =============================================================================
 
-def build_skills(groups: List[TextGroup]) -> List[str]:
+def build_skills(groups: List['TextGroup']) -> List[str]:
     skill_groups = [group for group in groups if group.heading == "skills"]
     
     if not skill_groups:
@@ -282,16 +282,33 @@ def build_skills(groups: List[TextGroup]) -> List[str]:
         return []
     
     skill_group = skill_groups[0]
+    
+    # 1. Initialize containers
     skills = []
-    ner_model = load_ner_model()
+    seen_skills = set()  # Stores lowercased versions for deduplication
 
     for span in skill_group.spans:
+        # --- Path A: Simple List Items ---
         if span.label == "list_item" and not is_skill_sentence(span.text):
-            skills.append(span.text.strip())
+            clean_text = span.text.strip()
+            lower_text = clean_text.lower()
+            
+            # Check for duplicates (case-insensitive)
+            if lower_text and lower_text not in seen_skills:
+                seen_skills.add(lower_text)
+                skills.append(clean_text)
+
+        # --- Path B: Complex Sentences (NER) ---
         else:
             entities = ner_model.predict_entities(span.text, ["skill", "tool", "language"])
             for entity in entities:
-                skills.append(entity['text'].strip())
+                clean_text = entity['text'].strip()
+                lower_text = clean_text.lower()
+                
+                # Check for duplicates (case-insensitive)
+                if lower_text and lower_text not in seen_skills:
+                    seen_skills.add(lower_text)
+                    skills.append(clean_text)
 
     return skills
 
