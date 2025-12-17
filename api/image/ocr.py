@@ -31,7 +31,7 @@ def crop_and_ocr_boxes(image_path, predictions, conf_threshold=0.6):
         y_max = min(h, int(pred["y"] + pred["height"] / 2))
 
         crop = image[y_min:y_max, x_min:x_max]
-        text = pytesseract.image_to_string(crop, lang="eng").strip()
+        text = pytesseract.image_to_string(crop, lang="eng", config="--psm 6").strip()
 
         if text:
             logger.info(f"[OCR] Segment {i}: Extracted {len(text)} chars ✓")

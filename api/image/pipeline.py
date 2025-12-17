@@ -10,7 +10,7 @@ from api.types.types import ApiResponse
 from .preprocessing import (
     mask_segments_on_image, save_temp_image_bytes, mask_to_detected_boxes,
     remove_drawing_lines, remove_bullets_symbols,
-    enhance_image_clahe
+    adaptive_binarize_for_ocr, upscale_image_for_detection
 )
 from .segmentation import run_detection, detections_to_predictions
 from .ocr import crop_and_ocr_boxes
@@ -27,6 +27,8 @@ def process_image_resume(file_bytes: bytes) -> ApiResponse:
     redacted_file_url = None
 
     try:
+        tmp_path = upscale_image_for_detection(tmp_path, scale=2.0)
+        
         # 1. YOLO LAYOUT DETECTION
         detection_result = run_detection(tmp_path)
         predictions = detections_to_predictions(detection_result)
@@ -35,10 +37,10 @@ def process_image_resume(file_bytes: bytes) -> ApiResponse:
         segmented_path = mask_to_detected_boxes(tmp_path, predictions)
         cleaned = remove_drawing_lines(segmented_path)
 
-        for _ in range(5):
+        for _ in range(3):
             cleaned = remove_bullets_symbols(cleaned)
 
-        cleaned = enhance_image_clahe(cleaned)
+        cleaned = adaptive_binarize_for_ocr(cleaned)
 
         # 3. OCR PER SEGMENT
         ocr_segments = crop_and_ocr_boxes(cleaned, predictions)

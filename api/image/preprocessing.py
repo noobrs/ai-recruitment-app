@@ -1,4 +1,4 @@
-import os
+import os, re
 import cv2
 import numpy as np
 import pytesseract
@@ -24,6 +24,23 @@ def save_temp_image_bytes(file_bytes: bytes, ext="jpg"):
     with open(path, "wb") as f:
         f.write(file_bytes)
     return path
+
+def upscale_image_for_detection(img_path, scale=2.0, interpolation=cv2.INTER_CUBIC):
+    img = cv2.imread(img_path)
+    if img is None:
+        raise ValueError("cannot read image for resizing")
+
+    resized = cv2.resize(
+        img,
+        None,
+        fx=scale,
+        fy=scale,
+        interpolation=interpolation
+    )
+
+    logger.info(f"[Preprocess] Resized image saved → {img_path}")
+    cv2.imwrite(img_path, resized)
+    return img_path
 
 def mask_to_detected_boxes(img_path, predictions, output_path=CLEANED_IMAGE_PATH):
     image = cv2.imread(img_path)
@@ -60,7 +77,7 @@ def remove_bullets_symbols(img_path, cleaned_image_path=CLEANED_IMAGE_PATH):
         raise ValueError("cannot read image")
 
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    ocr_df = pytesseract.image_to_data(gray, output_type=pytesseract.Output.DATAFRAME)
+    ocr_df = pytesseract.image_to_data(gray, output_type=pytesseract.Output.DATAFRAME, config="--psm 3")
     ocr_df = ocr_df.dropna()
     ocr_df = ocr_df[ocr_df['text'].notna()]
 
@@ -77,8 +94,20 @@ def remove_bullets_symbols(img_path, cleaned_image_path=CLEANED_IMAGE_PATH):
             conf = int(float(row['conf']))
         except:
             conf = 0
+            
+        is_small_lowconf = (len(text) <= 2 and conf < 80)
+        is_bullet = text in bullet_symbols
+        has_repeated_e = bool(re.search(r"e{3,}", text.lower()))
+        has_repeated_at = bool(re.search(r"@{2,}", text))
 
-        if (len(text) <= 2 and conf < 70) or (text in bullet_symbols):
+        should_remove = (
+            is_small_lowconf
+            or is_bullet
+            or has_repeated_e
+            or has_repeated_at
+        )
+
+        if should_remove:
             cv2.rectangle(out, (x, y), (x + w, y + h), (255, 255, 255), -1)
 
     os.makedirs(os.path.dirname(cleaned_image_path), exist_ok=True)
@@ -112,21 +141,34 @@ def remove_drawing_lines(img_path, cleaned_image_path=CLEANED_IMAGE_PATH):
     logger.info("[Preprocess] Lines removed")
     return cleaned_image_path
 
-def enhance_image_clahe(img_path, cleaned_image_path=CLEANED_IMAGE_PATH):
+def adaptive_binarize_for_ocr(img_path, cleaned_image_path=CLEANED_IMAGE_PATH):
     img = cv2.imread(img_path)
     if img is None:
         raise ValueError("cannot read image")
 
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8,8))
-    enhanced = clahe.apply(gray)
+    denoised = cv2.fastNlMeansDenoising(gray, h=7)
 
-    out = cv2.cvtColor(enhanced, cv2.COLOR_GRAY2BGR)
+    clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
+    enhanced = clahe.apply(denoised)
+    blurred = cv2.GaussianBlur(enhanced, (5, 5), 0)
+    
+    _, bw = cv2.threshold(
+        blurred,
+        0,
+        255,
+        cv2.THRESH_BINARY + cv2.THRESH_OTSU
+    )
+
+    if np.mean(bw) < 127:
+        bw = 255 - bw
 
     os.makedirs(os.path.dirname(cleaned_image_path), exist_ok=True)
-    cv2.imwrite(cleaned_image_path, out)
-    logger.info("[Preprocess] CLAHE + Sharpen applied")
+    cv2.imwrite(cleaned_image_path, bw)
+
+    logger.info("[Preprocess] OCR binarization applied")
     return cleaned_image_path
+
 
 def mask_segments_on_image(cleaned_image_path=CLEANED_IMAGE_PATH, predictions=None, classified_segments=None):
     img = cv2.imread(cleaned_image_path)
