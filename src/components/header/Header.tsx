@@ -53,7 +53,7 @@ export default async function Header() {
         <div className="flex items-center justify-between h-16">
           {/* App Title */}
           <Link href="/" className="flex items-center">
-            <h1 className="text-xl sm:text-2xl font-bold text-primary">
+            <h1 className={`text-xl sm:text-2xl font-bold ${text}`}>
               AI-Powered Recruitment
             </h1>
           </Link>
