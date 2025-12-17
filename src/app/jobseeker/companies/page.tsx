@@ -9,6 +9,7 @@ import ButtonFilledPrimary from "@/components/shared/buttons/ButtonFilledPrimary
 import JobCard from "@/components/jobseeker/jobs/JobCard";
 import SearchBar from "@/components/jobseeker/shared/SearchBar";
 import CompaniesLoading from "./loading";
+import RecruiterCard from "@/components/jobseeker/companies/RecruiterCard";
 
 // Type for company data from API with additional fields
 type CompanyWithJobs = {
@@ -491,39 +492,25 @@ export default function CompaniesPage() {
 
                 {/* People Section */}
                 <section id="people" className="mt-8">
-                  <h3 className="text-xl font-semibold text-gray-700 mb-3">People</h3>
+                  <h3 className="text-xl font-semibold text-gray-700 mb-3">
+                    People
+                  </h3>
 
-                  {!selectedCompany.recruiters || selectedCompany.recruiters.length === 0 ? (
-                    <p className="text-gray-500 italic">No recruiters available currently.</p>
+                  {!selectedCompany.recruiters ||
+                    selectedCompany.recruiters.length === 0 ? (
+                    <p className="text-gray-500 italic">
+                      No recruiters available currently.
+                    </p>
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                       {selectedCompany.recruiters.map((rec: any) => (
-                        <div
+                        <RecruiterCard
                           key={rec.recruiter_id}
-                          className="border rounded-lg p-4 bg-white shadow-sm flex gap-4 items-center"
-                        >
-                          {rec.avatar ? (
-                            <Image
-                              src={rec.avatar}
-                              alt={rec.name}
-                              width={56}
-                              height={56}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <span className="text-lg font-semibold text-gray-600">
-                              {rec.name?.[0]?.toUpperCase() || "U"}
-                            </span>
-                          )}
-
-                          <div className="flex flex-col">
-                            <p className="font-semibold text-gray-800">{rec.name}</p>
-                            <p className="text-gray-600">{rec.position || "Recruiter"}</p>
-                            {rec.email && (
-                              <p className="text-blue-600 text-sm mt-1">{rec.email}</p>
-                            )}
-                          </div>
-                        </div>
+                          name={rec.name}
+                          position={rec.position}
+                          email={rec.email}
+                          profilePicturePath={rec.profile_picture_path}
+                        />
                       ))}
                     </div>
                   )}
