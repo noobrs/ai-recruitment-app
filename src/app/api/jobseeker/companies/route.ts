@@ -162,6 +162,8 @@ export async function GET(req: Request) {
             : null,
         })) || [];
 
+      const openJobs = jobs.length;
+
       return NextResponse.json(
         {
           company: {
@@ -180,6 +182,9 @@ export async function GET(req: Request) {
 
             jobs,
             recruiters,
+
+            total_jobs: openJobs,
+            benefit_tag: openJobs > 5 ? "High Benefit" : "Growing Team",
           },
         },
         { status: 200 }

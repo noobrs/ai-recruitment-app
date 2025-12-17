@@ -137,10 +137,24 @@ export default function CompaniesPage() {
       const data = await res.json();
       if (data.company) {
         setCompanies((prev) =>
-          prev.map((c) => (c.comp_id === id ? data.company : c))
+          prev.map((c) =>
+            c.comp_id === id
+              ? {
+                ...c,             
+                ...data.company, 
+              }
+              : c
+          )
         );
         setFilteredCompanies((prev) =>
-          prev.map((c) => (c.comp_id === id ? data.company : c))
+          prev.map((c) =>
+            c.comp_id === id
+              ? {
+                ...c,
+                ...data.company,
+              }
+              : c
+          )
         );
       }
     } catch (err) {
