@@ -1,12 +1,9 @@
 import os
 import logging
 import cv2
-import tempfile
 
 from api.image.builder import build_final_response, convert_image_resume_to_data
 from api.types.types import ApiResponse
-
-
 from .preprocessing import (
     mask_segments_on_image, save_temp_image_bytes, mask_to_detected_boxes,
     remove_drawing_lines, remove_bullets_symbols,
@@ -14,7 +11,7 @@ from .preprocessing import (
 )
 from .segmentation import run_detection, detections_to_predictions
 from .ocr import crop_and_ocr_boxes
-from .cleaning import clean_ocr_text
+from .postprocessing import clean_ocr_text
 from .classifier import load_text_classifier, classify_text
 from .extraction import normalize_output, run_segment_ner
 
@@ -34,18 +31,17 @@ def process_image_resume(file_bytes: bytes) -> ApiResponse:
         predictions = detections_to_predictions(detection_result)
         
         # 2. PREPROCESSING
-        segmented_path = mask_to_detected_boxes(tmp_path, predictions)
-        cleaned = remove_drawing_lines(segmented_path)
+        cleaned = adaptive_binarize_for_ocr(tmp_path)
+        cleaned = mask_to_detected_boxes(cleaned, predictions)
+        cleaned = remove_drawing_lines(cleaned)
 
         for _ in range(3):
             cleaned = remove_bullets_symbols(cleaned)
 
-        cleaned = adaptive_binarize_for_ocr(cleaned)
-
         # 3. OCR PER SEGMENT
         ocr_segments = crop_and_ocr_boxes(cleaned, predictions)
 
-        # 4. CLASSIFY + CLEAN TEXT
+        # 4. CLASSIFY + POSTPROCESS OCR TEXT CLEAN
         classifier = load_text_classifier()
         classified_segments = []
 
