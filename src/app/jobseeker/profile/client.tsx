@@ -56,6 +56,9 @@ export default function ProfileClient({ user, profileResume, allResumes }: Profi
     const [activitiesLoading, setActivitiesLoading] = useState(true);
     const [bookmarkedJobs, setBookmarkedJobs] = useState<BookmarkedJob[]>([]);
     const [appliedJobs, setAppliedJobs] = useState<AppliedJob[]>([]);
+    const [visibleBookmarkedCount, setVisibleBookmarkedCount] = useState(4);
+    const [visibleAppliedCount, setVisibleAppliedCount] = useState(4);
+
     const [profilePicture, setProfilePicture] = useState<File | null>(null);
     const [profilePicturePreview, setProfilePicturePreview] = useState<string | null>(null);
     const [formData, setFormData] = useState({
@@ -74,6 +77,8 @@ export default function ProfileClient({ user, profileResume, allResumes }: Profi
                 const data = await res.json();
                 setBookmarkedJobs(data.bookmarkedJobs || []);
                 setAppliedJobs(data.appliedJobs || []);
+                setVisibleBookmarkedCount(4);
+                setVisibleAppliedCount(4);
             } catch (error) {
                 console.error('Error loading activities:', error);
             } finally {
@@ -248,7 +253,12 @@ export default function ProfileClient({ user, profileResume, allResumes }: Profi
                 loading={activitiesLoading}
                 bookmarkLoadingId={loadingId}
                 onToggleBookmark={handleToggleBookmark}
+                visibleBookmarkedCount={visibleBookmarkedCount}
+                setVisibleBookmarkedCount={setVisibleBookmarkedCount}
+                visibleAppliedCount={visibleAppliedCount}
+                setVisibleAppliedCount={setVisibleAppliedCount}
             />
+
 
         </div>
     );
