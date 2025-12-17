@@ -108,7 +108,18 @@ export async function GET(req: Request) {
           comp_size,
           comp_description,
           comp_rating,
+
           recruiter (
+            recruiter_id,
+            position,
+
+            users (
+              id,
+              first_name,
+              last_name,
+              profile_picture_path
+            ),
+
             job:job (
               job_id,
               job_title,
@@ -122,7 +133,7 @@ export async function GET(req: Request) {
               created_at
             )
           )
-        `
+          `
         )
         .eq("company_id", companyId)
         .single();
@@ -136,9 +147,20 @@ export async function GET(req: Request) {
 
       // Filter only open jobs
       const jobs =
-        company.recruiter?.flatMap((rec: any) => 
+        company.recruiter?.flatMap((rec: any) =>
           (rec.job || []).filter((j: any) => j.job_status === "open")
         ) || [];
+
+      // Map recruiters
+      const recruiters =
+        company.recruiter?.map((rec: any) => ({
+          recruiter_id: rec.recruiter_id,
+          position: rec.position || "Recruiter",
+          name: `${rec.users?.first_name ?? ""} ${rec.users?.last_name ?? ""}`.trim(),
+          avatar: rec.users?.profile_picture_path
+            ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${rec.users.profile_picture_path}`
+            : null,
+        })) || [];
 
       return NextResponse.json(
         {
@@ -155,7 +177,9 @@ export async function GET(req: Request) {
             comp_description:
               company.comp_description || "No company description provided.",
             comp_rating: company.comp_rating || 0,
+
             jobs,
+            recruiters,
           },
         },
         { status: 200 }

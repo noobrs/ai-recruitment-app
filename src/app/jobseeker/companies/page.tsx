@@ -21,8 +21,15 @@ type CompanyWithJobs = {
   comp_rating: number | null;
   comp_description: string | null;
   comp_website: string | null;
+  comp_life: string | null;
   total_jobs: number;
   benefit_tag?: string;
+  recruiters?: Array<{
+    recruiter_id: number;
+    name: string;
+    avatar: string;
+    position: string;
+  }>;
   jobs?: Array<{
     job_id: number;
     job_title: string;
@@ -323,6 +330,13 @@ export default function CompaniesPage() {
                     <div className="h-4 w-32 bg-gray-200 rounded"></div>
                   </div>
                 </section>
+
+                {/* People Section */}
+                <section className="mt-8"></section>
+
+                {/* Life Section */}
+                <section className="mt-8"></section>
+
               </div>
             ) : selectedCompany ? (
               <>
@@ -395,82 +409,140 @@ export default function CompaniesPage() {
                         if (selectedCompany.comp_website)
                           window.open(selectedCompany.comp_website, "_blank");
                       }}
-                      className={`h-10 w-36 border border-gray-300 bg-white text-gray-800 hover:bg-gray-50 transition-all duration-200 ${!selectedCompany.comp_website &&
-                        "opacity-60 cursor-not-allowed hover:bg-white"
-                        }`}
+                      className={`h-10 w-36 border border-gray-300 bg-white text-gray-800 hover:bg-gray-50 transition-all duration-200 
+                        ${!selectedCompany.comp_website && "opacity-60 cursor-not-allowed hover:bg-white"}`}
                     />
                   </div>
                 </div>
 
                 {/* Tabs */}
                 <div className="flex gap-8 mt-5 border-b border-gray-200 text-gray-600 font-medium text-sm">
-                  <button className="pb-3 border-b-2 border-primary text-primary">
-                    About
-                  </button>
-                  <button className="pb-3 hover:text-black">Jobs</button>
-                  <button className="pb-3 hover:text-black">People</button>
-                  <button className="pb-3 hover:text-black">Life</button>
+                  {["about", "jobs", "people", "life"].map((section) => (
+                    <button
+                      key={section}
+                      onClick={() => {
+                        const el = document.getElementById(section);
+                        if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+                      }}
+                      className="pb-3 hover:text-black capitalize"
+                    >
+                      {section}
+                    </button>
+                  ))}
                 </div>
 
                 {/* About Section */}
-                <section className="mt-5">
+                <section id="about" className="mt-5">
                   <h3 className="text-xl font-semibold text-gray-700 mb-2">About</h3>
-                  <p className="text-gray-600 leading-relaxed whitespace-pre-line">
-                    {selectedCompany.comp_description ||
-                      "No company description provided."}
-                  </p>
+                  {selectedCompany.comp_description ?
+                    <p className="text-gray-500 leading-relaxed whitespace-pre-line"> {selectedCompany.comp_description} </p> :
+                    <p className="text-gray-500 italic">No company description provided.</p>
+                  }
                 </section>
 
                 {/* Jobs Section */}
-                {selectedCompany.jobs && selectedCompany.jobs.length > 0 && (
-                  <section className="mt-8">
-                    {/* Title */}
-                    <h3 className="text-xl font-semibold text-gray-700 mb-3">
-                      Jobs ({selectedCompany.jobs.length} open)
-                    </h3>
+                <section id="jobs" className="mt-8">
+                  <h3 className="text-xl font-semibold text-gray-700 mb-3">Jobs</h3>
 
-                    {/* Job Grid */}
+                  {selectedCompany.jobs && selectedCompany.jobs.length > 0 ? (
+                    <>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        {selectedCompany.jobs
+                          .slice(0, visibleJobsCount)
+                          .map((job) => (
+                            <JobCard
+                              key={job.job_id}
+                              jobId={job.job_id}
+                              compLogo={selectedCompany.comp_logo || "/default-company.png"}
+                              compName={selectedCompany.comp_name}
+                              jobTitle={job.job_title}
+                              jobLocation={job.job_location || "Unknown"}
+                              jobType={job.job_type || "N/A"}
+                              createdAt={new Date(job.created_at).toLocaleDateString()}
+                              navigateOnClick={true}
+                            />
+                          ))}
+                      </div>
+
+                      <div className="flex justify-center mt-6">
+                        {selectedCompany.jobs.length > visibleJobsCount ? (
+                          <button
+                            onClick={() => setVisibleJobsCount((prev) => prev + 4)}
+                            className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                          >
+                            Show more jobs →
+                          </button>
+                        ) : visibleJobsCount > 4 ? (
+                          <button
+                            onClick={() => setVisibleJobsCount(4)}
+                            className="text-sm text-gray-500 hover:text-gray-700"
+                          >
+                            Show less
+                          </button>
+                        ) : null}
+                      </div>
+                    </>
+                  ) : (
+                    <p className="text-gray-500 italic">
+                      No job openings available currently.
+                    </p>
+                  )}
+                </section>
+
+                {/* People Section */}
+                <section id="people" className="mt-8">
+                  <h3 className="text-xl font-semibold text-gray-700 mb-3">People</h3>
+
+                  {!selectedCompany.recruiters || selectedCompany.recruiters.length === 0 ? (
+                    <p className="text-gray-500 italic">No recruiters available currently.</p>
+                  ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                      {selectedCompany.jobs
-                        .slice(0, visibleJobsCount)
-                        .map((job) => (
-                          <JobCard
-                            key={job.job_id}
-                            jobId={job.job_id}
-                            compLogo={selectedCompany.comp_logo || "/default-company.png"}
-                            compName={selectedCompany.comp_name}
-                            jobTitle={job.job_title}
-                            jobLocation={job.job_location || "Unknown"}
-                            jobType={job.job_type || "N/A"}
-                            createdAt={new Date(job.created_at).toLocaleDateString()}
-                            navigateOnClick={true}
-                          />
-                        ))}
-                    </div>
+                      {selectedCompany.recruiters.map((rec: any) => (
+                        <div
+                          key={rec.recruiter_id}
+                          className="border rounded-lg p-4 bg-white shadow-sm flex gap-4 items-center"
+                        >
+                          {rec.avatar ? (
+                            <Image
+                              src={rec.avatar}
+                              alt={rec.name}
+                              width={56}
+                              height={56}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <span className="text-lg font-semibold text-gray-600">
+                              {rec.name?.[0]?.toUpperCase() || "U"}
+                            </span>
+                          )}
 
-                    {/* Buttons at the bottom */}
-                    <div className="flex justify-center mt-6">
-                      {selectedCompany.jobs.length > visibleJobsCount ? (
-                        <button
-                          onClick={() => {
-                            setVisibleJobsCount(prev => prev + 4);
-                            setTimeout(() => window.scrollBy({ top: 300, behavior: "smooth" }), 200);
-                          }}
-                          className="text-sm text-blue-600 hover:text-blue-800 font-medium"
-                        >
-                          Show more jobs →
-                        </button>
-                      ) : visibleJobsCount > 4 ? (
-                        <button
-                          onClick={() => setVisibleJobsCount(4)}
-                          className="text-sm text-gray-500 hover:text-gray-700"
-                        >
-                          Show less
-                        </button>
-                      ) : null}
+                          <div className="flex flex-col">
+                            <p className="font-semibold text-gray-800">{rec.name}</p>
+                            <p className="text-gray-600">{rec.position || "Recruiter"}</p>
+                            {rec.email && (
+                              <p className="text-blue-600 text-sm mt-1">{rec.email}</p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  </section>
-                )}
+                  )}
+                </section>
+
+                {/* Life Section */}
+                <section id="life" className="mt-8">
+                  <h3 className="text-xl font-semibold text-gray-700 mb-3">Life</h3>
+
+                  {selectedCompany.comp_life ? (
+                    <p className="text-gray-600 whitespace-pre-line leading-relaxed">
+                      {selectedCompany.comp_life}
+                    </p>
+                  ) : (
+                    <p className="text-gray-500 italic">No additional company life information provided.</p>
+                  )}
+                </section>
+
+
               </>
             ) : (
               <p className="text-gray-500 text-center py-20">
