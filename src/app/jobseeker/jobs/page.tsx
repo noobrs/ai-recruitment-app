@@ -10,7 +10,7 @@ import JobCard from "@/components/jobseeker/jobs/JobCard";
 import ButtonFilledPrimary from "@/components/shared/buttons/ButtonFilledPrimary";
 import SearchBar from "@/components/jobseeker/shared/SearchBar";
 import JobsLoading from "./loading";
-import { Share2 } from "lucide-react";
+import { Share2, Star } from "lucide-react";
 
 export default function JobPage() {
   const router = useRouter();
@@ -274,17 +274,17 @@ export default function JobPage() {
 
                   <div className="flex items-center gap-4">
                     <button
-                        onClick={() => {
-                          const url = window.location.href;
-                          navigator.clipboard.writeText(url);
-                          alert("Link copied to clipboard!");
-                        }}
-                        className="rounded-full text-gray-600 hover:bg-gray-100 transition cursor-pointer"
-                        title="Copy company page link"
-                      >
-                        <Share2 className="w-6 h-6 transition-transform hover:scale-110" />
-                      </button>
-                      
+                      onClick={() => {
+                        const url = window.location.href;
+                        navigator.clipboard.writeText(url);
+                        alert("Link copied to clipboard!");
+                      }}
+                      className="rounded-full text-gray-600 hover:bg-gray-100 transition cursor-pointer"
+                      title="Copy company page link"
+                    >
+                      <Share2 className="w-6 h-6 transition-transform hover:scale-110" />
+                    </button>
+
                     <Image
                       src={
                         selectedJob.is_bookmark
@@ -375,17 +375,51 @@ export default function JobPage() {
                 )}
 
                 {/* Overview */}
-                <section className="fade-in">
-                  <h3 className="text-2xl font-semibold text-gray-700 mb-2">
+                <section className="fade-in mt-6">
+                  <h3 className="text-2xl font-semibold text-gray-700 mb-3">
                     Company Overview
                   </h3>
-                  <div className="flex flex-col gap-2 text-gray-600">
+
+                  {/* Description */}
+                  <p className="text-gray-600 leading-relaxed mb-4 whitespace-pre-line">
+                    {selectedJob.company?.comp_description ||
+                      "No company description available."}
+                  </p>
+
+                  {/* Meta grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-gray-600">
                     <p>
-                      <span className="font-bold">Industry:</span>{" "}
+                      <span className="font-semibold text-gray-700">Industry:</span>{" "}
                       {selectedJob.company?.comp_industry || "N/A"}
                     </p>
+
                     <p>
-                      <span className="font-bold">Website:</span>{" "}
+                      <span className="font-semibold text-gray-700">Company Size:</span>{" "}
+                      {selectedJob.company?.comp_size || "N/A"}
+                    </p>
+
+                    <p>
+                      <span className="font-semibold text-gray-700">Founded:</span>{" "}
+                      {selectedJob.company?.comp_founded || "N/A"}
+                    </p>
+
+                    <p className="flex items-center gap-1">
+                      <span className="font-semibold text-gray-700">Rating:</span>
+                      {selectedJob.company?.comp_rating ? (
+                        <>
+                          <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
+                          <span className="font-semibold text-yellow-600">
+                            {selectedJob.company.comp_rating.toFixed(1)}
+                          </span>
+                          <span className="text-gray-400 text-sm">/ 5.0</span>
+                        </>
+                      ) : (
+                        "N/A"
+                      )}
+                    </p>
+
+                    <p className="sm:col-span-2">
+                      <span className="font-semibold text-gray-700">Website:</span>{" "}
                       {selectedJob.company?.comp_website ? (
                         <a
                           href={selectedJob.company.comp_website}
@@ -396,7 +430,7 @@ export default function JobPage() {
                           {selectedJob.company.comp_website}
                         </a>
                       ) : (
-                        <span>N/A</span>
+                        "N/A"
                       )}
                     </p>
                   </div>

@@ -58,7 +58,13 @@ export async function GET() {
             company_id,
             comp_name,
             comp_industry,
-            comp_website
+            comp_website,
+            comp_logo_path,
+            comp_size,
+            comp_location,
+            comp_rating,
+            comp_description,
+            comp_founded
           )
         ),
         job_requirement (*),
