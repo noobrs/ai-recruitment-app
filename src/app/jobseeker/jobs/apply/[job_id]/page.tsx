@@ -77,6 +77,10 @@ export default function ApplyJobPage() {
     setStep(3);
   };
 
+  const handleApplicationSuccess = () => {
+    setStep(3);
+  };
+
   // Loading while checking for active application or job details
   if (isCheckingApplication || !job) {
     return (
@@ -84,13 +88,15 @@ export default function ApplyJobPage() {
     );
   }
 
-  // Step 1: Upload resume
+  // Step 1: Upload resume (or directly submit with existing resume)
   if (step === 1) {
     return (
       <ResumeUploadStep
         job={job}
+        jobId={job_id}
         onUploadSuccess={handleUploadSuccess}
         onBack={() => router.back()}
+        onApplicationSuccess={handleApplicationSuccess}
       />
     );
   }

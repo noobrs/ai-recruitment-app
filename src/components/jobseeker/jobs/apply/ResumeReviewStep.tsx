@@ -138,7 +138,7 @@ export default function ResumeReviewStep({
                 <ButtonFilledBlack
                     text={isSubmitting ? 'Submitting...' : 'Submit Application'}
                     className="w-full py-3 mt-6"
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || !agreePolicy}
                     onClick={handleSubmit}
                 />
             </div>

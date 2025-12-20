@@ -11,11 +11,14 @@ import { JobDetails } from '@/types/job.types';
 import { Resume } from '@/types';
 import ResumeSelector from './ResumeSelector';
 import toast from 'react-hot-toast';
+import { submitApplication } from '../../../../app/jobseeker/jobs/apply/[job_id]/actions';
 
 interface ResumeUploadStepProps {
     job: JobDetails;
+    jobId: string;
     onUploadSuccess: (data: ResumeData, file: File | null, resumeId?: number, redactedUrl?: string | null) => void;
     onBack: () => void;
+    onApplicationSuccess?: () => void;
 }
 
 /**
@@ -23,8 +26,10 @@ interface ResumeUploadStepProps {
  */
 export default function ResumeUploadStep({
     job,
+    jobId,
     onUploadSuccess,
     onBack,
+    onApplicationSuccess,
 }: ResumeUploadStepProps) {
     const [mode, setMode] = useState<'select' | 'upload'>('select');
     const [existingResumes, setExistingResumes] = useState<Resume[]>([]);
@@ -33,6 +38,7 @@ export default function ResumeUploadStep({
     const [isLoading, setIsLoading] = useState(false);
     const [isExtracting, setIsExtracting] = useState(false);
     const [errorMessage, setErrorMessage] = useState('');
+    const [agreePolicy, setAgreePolicy] = useState(false);
 
     // Fetch existing resumes on mount
     useEffect(() => {
@@ -56,6 +62,11 @@ export default function ResumeUploadStep({
             return;
         }
 
+        if (!agreePolicy) {
+            setErrorMessage('Please agree to the Privacy Policy before submitting.');
+            return;
+        }
+
         setIsLoading(true);
         setErrorMessage('');
 
@@ -65,25 +76,33 @@ export default function ResumeUploadStep({
                 throw new Error('Resume not found');
             }
 
-            // Convert stored data to ResumeData format
-            const resumeData: ResumeData = {
-                candidate: {
-                    name: '',
-                    email: '',
-                    phone: '',
-                    location: '',
-                },
-                skills: selectedResume.extracted_skills ? JSON.parse(selectedResume.extracted_skills) : [],
-                experience: selectedResume.extracted_experiences ? JSON.parse(selectedResume.extracted_experiences) : [],
-                education: selectedResume.extracted_education ? JSON.parse(selectedResume.extracted_education) : [],
-                certifications: [],
-                activities: [],
-            };
+            // Parse existing resume data
+            const skills = selectedResume.extracted_skills ? JSON.parse(selectedResume.extracted_skills) : [];
+            const experiences = selectedResume.extracted_experiences ? JSON.parse(selectedResume.extracted_experiences) : [];
+            const education = selectedResume.extracted_education ? JSON.parse(selectedResume.extracted_education) : [];
 
-            onUploadSuccess(resumeData, null, selectedResumeId);
+            // Directly submit the application with existing resume
+            const formData = new FormData();
+            formData.append('job_id', jobId);
+            formData.append('existing_resume_id', selectedResumeId.toString());
+            formData.append('extracted_skills', JSON.stringify(skills));
+            formData.append('extracted_experiences', JSON.stringify(experiences));
+            formData.append('extracted_education', JSON.stringify(education));
+
+            const result = await submitApplication(formData);
+            if (result?.success) {
+                toast.success('Application submitted successfully!');
+                if (onApplicationSuccess) {
+                    onApplicationSuccess();
+                }
+            } else {
+                throw new Error('Failed to submit application');
+            }
         } catch (err) {
             console.error(err);
-            setErrorMessage('Failed to load resume data. Please try again.');
+            const errorMsg = err instanceof Error ? err.message : 'Failed to submit application. Please try again.';
+            setErrorMessage(errorMsg);
+            toast.error(errorMsg);
         } finally {
             setIsLoading(false);
         }
@@ -192,12 +211,33 @@ export default function ResumeUploadStep({
                         </div>
 
                         {existingResumes.length > 0 && (
-                            <ButtonFilledBlack
-                                text={isLoading ? 'Loading...' : 'Continue'}
-                                className="w-full py-3"
-                                disabled={isLoading || !selectedResumeId}
-                                onClick={handleSelectExisting}
-                            />
+                            <>
+                                {/* Privacy Policy Checkbox */}
+                                <div className="flex items-start gap-3 mb-4 text-sm text-gray-600">
+                                    <input
+                                        type="checkbox"
+                                        checked={agreePolicy}
+                                        onChange={(e) => setAgreePolicy(e.target.checked)}
+                                        disabled={isLoading}
+                                        className="w-4 h-4 accent-primary cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed mt-0.5"
+                                    />
+                                    <span>
+                                        By submitting this application, I agree to the{' '}
+                                        <a href="/privacy-policy" className="text-blue-600 underline">
+                                            Privacy Policy
+                                        </a>{' '}
+                                        and confirm that Jobior may store my resume information to process
+                                        my application.
+                                    </span>
+                                </div>
+
+                                <ButtonFilledBlack
+                                    text={isLoading ? 'Submitting...' : 'Submit Application'}
+                                    className="w-full py-3"
+                                    disabled={isLoading || !selectedResumeId || !agreePolicy}
+                                    onClick={handleSelectExisting}
+                                />
+                            </>
                         )}
                     </>
                 ) : (
