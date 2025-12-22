@@ -3,11 +3,12 @@ import { createClient } from "@/utils/supabase/server";
 
 export async function GET(
   req: Request,
-  { params }: { params: { job_id: string } }
+  { params }: { params: Promise<{ job_id: string }> }
 ) {
   try {
     const supabase = await createClient();
-    const jobId = await Number(params.job_id);
+    const { job_id } = await params;
+    const jobId = await Number(job_id);
 
     // 1️⃣ Auth check
     const { data: { user } } = await supabase.auth.getUser();
@@ -64,11 +65,11 @@ export async function GET(
       ...job,
       company: company
         ? {
-            ...company,
-            comp_logo: company.comp_logo_path
-              ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${company.comp_logo_path}`
-              : "/default-company.png",
-          }
+          ...company,
+          comp_logo: company.comp_logo_path
+            ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${company.comp_logo_path}`
+            : "/default-company.png",
+        }
         : null,
     };
 

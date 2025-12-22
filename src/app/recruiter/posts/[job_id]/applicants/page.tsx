@@ -230,7 +230,7 @@ export default function JobApplicantsPage() {
                     );
                 })}
             </div>
-            
+
             {/* Grouped Applicants */}
             <div className="mt-10 space-y-12">
                 {["shortlisted", "received", "rejected", "withdrawn"].map((status) => {
@@ -274,7 +274,7 @@ export default function JobApplicantsPage() {
                                                             a.score
                                                         )}`}
                                                     >
-                                                        {a.score}%
+                                                        {a.score.toFixed(0)}%
                                                     </div>
                                                     {a.applicantName}
                                                 </td>

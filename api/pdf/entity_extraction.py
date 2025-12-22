@@ -561,7 +561,7 @@ def build_certifications(groups: List[TextGroup]) -> List[CertificationOut]:
 
     for cert_group in cert_groups:
         # 1. Extract entities
-        entities = ner_model.predict_entities(cert_group.text, ["certification", "description"])
+        entities = ner_model.predict_entities(cert_group.text, ["award name", "issuing organization", "description"], threshold=0.3)
         
         # 2. Prepare temporary placeholders
         found_name = None
@@ -569,7 +569,7 @@ def build_certifications(groups: List[TextGroup]) -> List[CertificationOut]:
 
         for entity in entities:
             # Map labels to Pydantic fields
-            if entity['label'] == "certification":
+            if entity['label'] in ["award name"]:
                 # If we already found a name, this group might contain multiple items. 
                 # For simplicity, we stick to the first one or you can create a new logic to split them.
                 if not found_name: 
@@ -599,7 +599,7 @@ def build_activities(groups: List[TextGroup]) -> List[ActivityOut]:
     
     for act_group in act_groups:
         # 1. Extract entities
-        entities = ner_model.predict_entities(act_group.text, ["project", "activity", "title", "description"])
+        entities = ner_model.predict_entities(act_group.text, ["project title", "activity experience", "description"], threshold=0.3)
         
         # 2. Prepare temporary placeholders
         found_name = None
@@ -608,7 +608,7 @@ def build_activities(groups: List[TextGroup]) -> List[ActivityOut]:
         for entity in entities:
             # Map labels to Pydantic fields
             # 'project', 'activity', and 'title' all act as the 'name' of the entry
-            if entity['label'] in ["project", "activity", "title"]:
+            if entity['label'] in ["project title", "activity experience"]:
                 if not found_name:
                     found_name = entity['text']
             elif entity['label'] == "description":
