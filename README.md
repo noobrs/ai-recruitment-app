@@ -2,14 +2,6 @@
 
 A modern recruitment platform built with Next.js and FastAPI that connects job seekers with recruiters. The system features intelligent resume processing with AI-powered parsing, redaction, and skill extraction capabilities.
 
-## Features
-
-- **Job Seeker Portal**: Browse jobs, apply with resumes, track applications
-- **Recruiter Dashboard**: Post jobs, review candidates, manage applicants
-- **AI Resume Processing**: Automated resume parsing, bias redaction, and skill extraction
-- **Real-time Notifications**: Stay updated on application status changes
-- **Company Profiles**: Showcase company information and available positions
-
 ## System Requirements
 
 ### Required Versions
@@ -39,20 +31,20 @@ cd ai-recruitment-app
 Create a `.env.local` file in the root directory with the following variables:
 
 ```env
-# Supabase Configuration
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-SUPABASE_SERVICE_ROLE_KEY=
-NEXT_PUBLIC_SITE_URL=
+NEXT_PUBLIC_SUPABASE_URL=https://aonvheabwhbqguoiuowb.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFvbnZoZWFid2hicWd1b2l1b3diIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjExNjY3MjUsImV4cCI6MjA3Njc0MjcyNX0.YNZaIe0kw_NiVtZMUfL2Ss1thZWpbUNuZolt44PdaBY
+SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFvbnZoZWFid2hicWd1b2l1b3diIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MTE2NjcyNSwiZXhwIjoyMDc2NzQyNzI1fQ.jSUA5hIAEbaByzjVY3_yrYrShFQL3ibJhFoxsx4L9zk
 
-GMAIL_USERNAME=
-GMAIL_APP_PASSWORD=
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
 
-TESSERACT_PATH=
-ROBOFLOW_API_URL=
-ROBOFLOW_API_KEY=
-ROBOFLOW_MODEL_ID=
-HF_MODEL_ID=
+GMAIL_USERNAME=ai.powered.recruitment.app@gmail.com
+GMAIL_APP_PASSWORD=xszpfsowpbiizxoc
+
+TESSERACT_PATH=C:\Program Files\Tesseract-OCR\tesseract.exe
+ROBOFLOW_API_URL=https://detect.roboflow.com
+ROBOFLOW_API_KEY=67vTN3GIuCG6ku9YuVlu
+ROBOFLOW_MODEL_ID=resume-images/8
+HF_MODEL_ID=JokerYong/bert_resume_classifier_sections
 ```
 
 ### 3. Install Dependencies
@@ -83,7 +75,6 @@ pip install -r requirements.txt
 # Download spaCy language model
 python -m spacy download en_core_web_sm
 ```
-
 
 ### 4. Run the Application
 
@@ -140,14 +131,5 @@ ai-recruitment-app/
 │   ├── components/        # React components
 │   ├── services/          # Frontend services
 │   └── utils/             # Utility functions
-├── supabase/              # Database migrations
 └── public/                # Static assets
 ```
-
-## Available Scripts
-
-- `npm run dev` - Start Next.js development server
-- `npm run build` - Build Next.js for production
-- `npm start` - Start Next.js production server
-- `npm run fastapi-dev` - Start FastAPI development server
-- `npm run lint` - Run ESLint

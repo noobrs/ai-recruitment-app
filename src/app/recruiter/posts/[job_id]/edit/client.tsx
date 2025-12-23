@@ -5,6 +5,13 @@ import { updateJobAction } from "./actions";
 import { useRouter } from "next/navigation";
 import EditJobLoading from "./loading";
 
+type JobRequirementInput = {
+  job_requirement_id?: number;
+  type: string;
+  requirement: string;
+  weightage: number;
+};
+
 export default function EditJobClient({ jobId }: { jobId: string }) {
   const router = useRouter();
 
@@ -13,7 +20,7 @@ export default function EditJobClient({ jobId }: { jobId: string }) {
   const [error, setError] = useState("");
 
   const [job, setJob] = useState<any>(null);
-  const [requirements, setRequirements] = useState<any[]>([]);
+  const [requirements, setRequirements] = useState<JobRequirementInput[]>([]);
   const [form, setForm] = useState<any>(null);
 
   useEffect(() => {
@@ -25,7 +32,16 @@ export default function EditJobClient({ jobId }: { jobId: string }) {
         if (!res.ok) throw new Error(data.error);
 
         setJob(data.job);
-        setRequirements(data.requirements);
+
+        // Map requirements to the format we need
+        const mappedRequirements = (data.requirements || []).map((req: any) => ({
+          job_requirement_id: req.job_requirement_id,
+          type: req.type || "skill",
+          requirement: req.requirement || "",
+          weightage: req.weightage || 5,
+        }));
+        setRequirements(mappedRequirements);
+
         setForm({
           job_title: data.job.job_title,
           job_description: data.job.job_description,
@@ -50,10 +66,35 @@ export default function EditJobClient({ jobId }: { jobId: string }) {
     setForm((prev: any) => ({ ...prev, [field]: value }));
   };
 
+  const handleAddRequirement = () => {
+    setRequirements([
+      ...requirements,
+      {
+        type: "skill",
+        requirement: "",
+        weightage: 5,
+      },
+    ]);
+  };
+
+  const handleRemoveRequirement = (index: number) => {
+    setRequirements(requirements.filter((_, i) => i !== index));
+  };
+
+  const handleUpdateRequirement = (index: number, field: keyof JobRequirementInput, value: string | number) => {
+    const updated = [...requirements];
+    updated[index] = { ...updated[index], [field]: value };
+    setRequirements(updated);
+  };
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
-    const res = await updateJobAction(Number(jobId), form);
+
+    // Validate requirements
+    const validRequirements = requirements.filter(req => req.requirement.trim() !== "");
+
+    const res = await updateJobAction(Number(jobId), form, validRequirements);
     setSaving(false);
 
     if (!res.success) {
@@ -91,6 +132,89 @@ export default function EditJobClient({ jobId }: { jobId: string }) {
             value={form.job_description}
             onChange={(e) => handleChange("job_description", e.target.value)}
           />
+        </div>
+
+        {/* Job Requirements */}
+        <div>
+          <h3 className="block text-sm font-semibold text-gray-900 mb-4">
+            Job Requirements
+          </h3>
+
+          <div className="space-y-3">
+            {/* Requirements List */}
+            {requirements.map((req, index) => (
+              <div
+                key={index}
+                className="flex items-center gap-3 p-3 bg-white border border-gray-300 rounded-md"
+              >
+                {/* Requirement Text Input */}
+                <input
+                  type="text"
+                  value={req.requirement}
+                  onChange={(e) => handleUpdateRequirement(index, "requirement", e.target.value)}
+                  placeholder="e.g., Bachelor's in CS, React expertise, 3+ years"
+                  className="flex-1 border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+
+                {/* Skill Type Dropdown */}
+                <select
+                  value={req.type}
+                  onChange={(e) => handleUpdateRequirement(index, "type", e.target.value)}
+                  className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 capitalize"
+                >
+                  <option value="education">Education</option>
+                  <option value="skill">Skill</option>
+                  <option value="experience">Experience</option>
+                </select>
+
+                {/* Weightage Slider and Value */}
+                <div className="flex items-center gap-2 min-w-[140px]">
+                  <input
+                    type="range"
+                    min="1"
+                    max="10"
+                    value={req.weightage * 10}
+                    onChange={(e) => handleUpdateRequirement(index, "weightage", parseInt(e.target.value))}
+                    className="flex-1"
+                  />
+                  <span className="text-sm font-semibold text-gray-700 w-6 text-center">
+                    {req.weightage * 10}
+                  </span>
+                </div>
+
+                {/* Delete/Trash Icon */}
+                <button
+                  type="button"
+                  onClick={() => handleRemoveRequirement(index)}
+                  className="text-gray-400 hover:text-red-600 transition"
+                  title="Remove requirement"
+                >
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                    />
+                  </svg>
+                </button>
+              </div>
+            ))}
+
+            {/* Add Requirement Button */}
+            <button
+              type="button"
+              onClick={handleAddRequirement}
+              className="w-full text-sm border-2 border-dashed border-gray-300 rounded-md py-3 text-gray-600 font-medium hover:border-gray-400 hover:text-gray-700 transition"
+            >
+              + Add Requirement
+            </button>
+          </div>
         </div>
 
         {/* Location */}
